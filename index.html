@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tech Recruitment Hub</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            purple: '#a855f7',
+                            orange: '#f97316',
+                            tg: '#229ED9',
+                            green: '#22c55e',
+                            red: '#ef4444'
+                        }
+                    },
+                    fontFamily: {
+                        montserrat: ['Montserrat', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Space Mono', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS Variables: Light & Dark */
+        @layer base {
+            :root {
+                --bg-color: #f8fafc;
+                --text-main: #0f172a;
+                --text-muted: #475569;
+                --glass-bg: rgba(255, 255, 255, 0.65);
+                --glass-border: rgba(0, 0, 0, 0.05);
+                --card-bg: rgba(255, 255, 255, 0.8);
+                --card-border: rgba(0, 0, 0, 0.08);
+                --shadow-glow: rgba(168, 85, 247, 0.05);
+                --grid-color-purple: rgba(168, 85, 247, 0.08);
+                --grid-color-orange: rgba(249, 115, 22, 0.08);
+            }
+            html.dark {
+                --bg-color: #050505;
+                --text-main: #e5e7eb;
+                --text-muted: #9ca3af;
+                --glass-bg: rgba(15, 15, 15, 0.5);
+                --glass-border: rgba(255, 255, 255, 0.08);
+                --card-bg: rgba(20, 20, 20, 0.6);
+                --card-border: rgba(255, 255, 255, 0.08);
+                --shadow-glow: rgba(168, 85, 247, 0.15);
+                --grid-color-purple: rgba(168, 85, 247, 0.05);
+                --grid-color-orange: rgba(249, 115, 22, 0.05);
+            }
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            transition: background-color 0.4s ease, color 0.4s ease;
+            overflow-x: hidden;
+        }
+
+        /* Background Grid */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -2;
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, var(--grid-color-purple) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-color-orange) 1px, transparent 1px);
+            transition: background-image 0.4s ease;
+        }
+
+        /* Glass Panel Container */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 40px var(--shadow-glow);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        /* Tech Card */
+        .tech-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        .tech-card:hover {
+            border-color: #a855f7; /* cyber-purple */
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(168, 85, 247, 0.15);
+        }
+
+        /* Topline Gradient Accent */
+        .slide-topline {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(to right, #a855f7, transparent, #f97316);
+            opacity: 0.8;
+        }
+
+        /* Keyboard/Tech Pills */
+        .kbd {
+            font-family: 'Space Mono', monospace;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        /* Text Gradients */
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(to right, #a855f7, #f97316);
+        }
+
+        /* Animations */
+        .slide-appear {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .slide-appear.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Progress Bar */
+        #progress-bar {
+            position: fixed;
+            bottom: 0; left: 0;
+            height: 4px;
+            background: linear-gradient(to right, #a855f7, #f97316);
+            z-index: 50;
+            width: 0%;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+            transition: width 0.1s;
+        }
+
+        /* Section Spacing */
+        section {
+            padding-top: 6rem;
+            padding-bottom: 6rem;
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        
+        /* Typography overrides based on system */
+        h1, h2, h3 { font-family: 'Montserrat', sans-serif; }
+        p { font-family: 'Inter', sans-serif; color: var(--text-muted); }
+        .tech-text { color: var(--text-main); }
+    </style>
+</head>
+<body class="antialiased selection:bg-cyber-purple/30 selection:text-cyber-purple">
+
+    <!-- Fixed Backgrounds -->
+    <div class="bg-grid"></div>
+    
+    <!-- Glow Blobs -->
+    <div class="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyber-purple/10 blur-[120px] animate-pulse-slow pointer-events-none z-[-1]"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyber-orange/10 blur-[120px] animate-pulse-slow pointer-events-none z-[-1]" style="animation-delay: 3s;"></div>
+
+    <!-- Progress Bar -->
+    <div id="progress-bar"></div>
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-40 border-b border-white/5 bg-[var(--glass-bg)] backdrop-blur-md">
+        <div class="max-w-[1100px] mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2 font-montserrat font-black tracking-tighter text-xl uppercase">
+                <i data-lucide="cpu" class="text-cyber-purple w-6 h-6"></i>
+                <span>Talent<span class="text-gradient">Hub</span></span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle" class="p-2 rounded-full tech-card hover:text-cyber-purple transition-colors" aria-label="Toggle Theme">
+                    <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+                <a href="#demo" class="hidden sm:inline-flex kbd bg-cyber-purple/10 border-cyber-purple/20 text-cyber-purple hover:bg-cyber-purple hover:text-white transition-all cursor-pointer">
+                    Request Demo
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="px-4 pt-16">
+        
+        <!-- HERO SECTION -->
+        <section class="min-h-[85vh] flex flex-col justify-center slide-appear">
+            <div class="glass-panel p-8 md:p-16 text-center">
+                <div class="slide-topline"></div>
+                <div class="inline-flex kbd mb-6 text-cyber-orange border-cyber-orange/20 bg-cyber-orange/5">
+                    <i data-lucide="zap" class="w-3 h-3"></i> Version 2.0 Live
+                </div>
+                
+                <h1 class="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter uppercase mb-6 leading-[1.1] text-balance">
+                    Hire Top IT Talent<br/>
+                    <span class="text-gradient">Without the Manual Chaos</span>
+                </h1>
+                
+                <p class="text-lg md:text-xl max-w-2xl mx-auto mb-10 text-balance leading-relaxed">
+                    An AI-powered recruitment hub that aggregates, screens, and engages candidates automatically — so your HR team can focus on hiring, not sorting resumes.
+                </p>
+                
+                <div class="flex flex-wrap justify-center gap-4 mb-12">
+                    <div class="kbd"><i data-lucide="clock" class="w-3 h-3 text-cyber-purple"></i> Save 75% screening time</div>
+                    <div class="kbd"><i data-lucide="target" class="w-3 h-3 text-cyber-orange"></i> Never miss strong candidates</div>
+                    <div class="kbd"><i data-lucide="trending-up" class="w-3 h-3 text-cyber-green"></i> Scale without scaling HR</div>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row justify-center gap-4 font-mono uppercase tracking-wider text-sm">
+                    <button class="px-8 py-4 rounded-xl bg-gradient-to-r from-cyber-purple to-cyber-orange text-white font-bold hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all transform hover:-translate-y-1">
+                        Start Free Trial
+                    </button>
+                    <button class="px-8 py-4 rounded-xl tech-card font-bold hover:text-cyber-purple transition-all">
+                        Request Demo
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PROBLEM SECTION -->
+        <section class="slide-appear">
+            <div class="mb-10 text-center">
+                <div class="kbd mb-4 border-cyber-red/20 text-cyber-red bg-cyber-red/5">The Problem</div>
+                <h2 class="text-3xl md:text-5xl font-black tracking-tight uppercase">Does This Sound Familiar?</h2>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="tech-card p-6 flex flex-col gap-4">
+                    <div class="w-12 h-12 rounded-full bg-cyber-red/10 flex items-center justify-center text-cyber-red mb-2">
+                        <i data-lucide="file-warning" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-bold text-xl uppercase tracking-tight tech-text">Irrelevant Noise</h3>
+                    <p>200+ applications per vacancy — up to 80% are completely irrelevant to the tech stack required.</p>
+                </div>
+                
+                <div class="tech-card p-6 flex flex-col gap-4">
+                    <div class="w-12 h-12 rounded-full bg-cyber-orange/10 flex items-center justify-center text-cyber-orange mb-2">
+                        <i data-lucide="network" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-bold text-xl uppercase tracking-tight tech-text">Disconnected Channels</h3>
+                    <p>Candidates coming from 5–7 different channels (ATS, LinkedIn, Telegram, email) creating total chaos.</p>
+                </div>
+                
+                <div class="tech-card p-6 flex flex-col gap-4 md:col-span-2 lg:col-span-1">
+                    <div class="w-12 h-12 rounded-full bg-gray-500/10 flex items-center justify-center text-gray-400 mb-2">
+                        <i data-lucide="battery-warning" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-bold text-xl uppercase tracking-tight tech-text">Burnout & Lost Talent</h3>
+                    <p>HR specialists burned out by repetitive tasks. Strong candidates lost in the noise.</p>
+                </div>
+            </div>
+            
+            <div class="mt-8 glass-panel p-6 text-center border-l-4 border-l-cyber-orange">
+                <p class="font-mono text-sm uppercase tracking-wider tech-text">
+                    "Every extra hour spent manually screening resumes is a missed opportunity to hire top engineers."
+                </p>
+            </div>
+        </section>
+
+        <!-- SOLUTION SECTION -->
+        <section class="slide-appear">
+            <div class="glass-panel p-8 md:p-12">
+                <div class="slide-topline"></div>
+                <div class="flex flex-col md:flex-row gap-12 items-center">
+                    <div class="md:w-1/3">
+                        <div class="kbd mb-4 text-cyber-purple border-cyber-purple/20 bg-cyber-purple/5">The Solution</div>
+                        <h2 class="text-3xl md:text-4xl font-black tracking-tight uppercase mb-6 leading-tight">
+                            One AI Hub <br/>for <span class="text-gradient">IT Recruitment</span>
+                        </h2>
+                        <p class="mb-8">We consolidate your entire top-of-funnel into one intelligent dashboard.</p>
+                    </div>
+                    
+                    <div class="md:w-2/3 grid sm:grid-cols-2 gap-4">
+                        <div class="tech-card p-5">
+                            <i data-lucide="brain-circuit" class="w-6 h-6 text-cyber-purple mb-3"></i>
+                            <h4 class="font-bold mb-2 uppercase tracking-tight text-sm tech-text">Smart Screening</h4>
+                            <ul class="text-sm space-y-2">
+                                <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 mt-0.5 text-cyber-green"></i> Filters 90%+ irrelevant CVs</li>
+                                <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 mt-0.5 text-cyber-green"></i> Transparent logic</li>
+                                <li class="flex items-start gap-2"><i data-lucide="check" class="w-4 h-4 mt-0.5 text-cyber-green"></i> Human-in-the-loop</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="tech-card p-5">
+                            <i data-lucide="git-merge" class="w-6 h-6 text-cyber-orange mb-3"></i>
+                            <h4 class="font-bold mb-2 uppercase tracking-tight text-sm tech-text">Unified Pipeline</h4>
+                            <ul class="text-sm space-y-2">
+                                <li class="flex items-start gap-2"><i data-lucide="linkedin" class="w-4 h-4 mt-0.5 text-[#0077b5]"></i> LinkedIn & Job Boards</li>
+                                <li class="flex items-start gap-2"><i data-lucide="send" class="w-4 h-4 mt-0.5 text-cyber-tg"></i> Telegram & Email</li>
+                                <li class="flex items-start gap-2"><i data-lucide="database" class="w-4 h-4 mt-0.5 text-cyber-purple"></i> ATS / HRM systems</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="tech-card p-5">
+                            <i data-lucide="bot" class="w-6 h-6 text-cyber-purple mb-3"></i>
+                            <h4 class="font-bold mb-2 uppercase tracking-tight text-sm tech-text">Automated Workflows</h4>
+                            <p class="text-xs leading-relaxed mb-2">Auto-replies, interview reminders, test assignment delivery, and status updates.</p>
+                            <div class="kbd text-[10px] text-cyber-orange border-cyber-orange/20 mt-2">Zero Manual Follow-ups</div>
+                        </div>
+                        
+                        <div class="tech-card p-5">
+                            <i data-lucide="bar-chart-3" class="w-6 h-6 text-cyber-orange mb-3"></i>
+                            <h4 class="font-bold mb-2 uppercase tracking-tight text-sm tech-text">Real-Time Analytics</h4>
+                            <p class="text-xs leading-relaxed mb-2">Time-to-hire tracking, funnel metrics, and source performance ROI.</p>
+                            <div class="kbd text-[10px] text-cyber-purple border-cyber-purple/20 mt-2">Data-Driven Decisions</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VALUE PROPOSITION -->
+        <section class="slide-appear text-center">
+            <h2 class="text-3xl md:text-5xl font-black tracking-tight uppercase mb-16">What You Gain</h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+                <div class="glass-panel p-6 flex flex-col items-center justify-center border-t-2 border-t-cyber-purple relative">
+                    <span class="text-4xl md:text-5xl font-black text-gradient mb-2">75%</span>
+                    <span class="text-xs font-mono uppercase tracking-wider tech-text">Reduction in <br>screening time</span>
+                </div>
+                
+                <div class="glass-panel p-6 flex flex-col items-center justify-center border-t-2 border-t-cyber-orange relative">
+                    <span class="text-4xl md:text-5xl font-black text-gradient mb-2">70%</span>
+                    <span class="text-xs font-mono uppercase tracking-wider tech-text">Fewer repetitive <br>HR actions</span>
+                </div>
+                
+                <div class="glass-panel p-6 flex flex-col items-center justify-center border-t-2 border-t-cyber-green relative">
+                    <span class="text-4xl md:text-5xl font-black text-cyber-green mb-2"><i data-lucide="zap" class="w-10 h-10 inline-block"></i></span>
+                    <span class="text-xs font-mono uppercase tracking-wider tech-text">Faster vacancy <br>closure</span>
+                </div>
+                
+                <div class="glass-panel p-6 flex flex-col items-center justify-center border-t-2 border-t-cyber-purple relative">
+                    <span class="text-4xl md:text-5xl font-black text-cyber-purple mb-2">0</span>
+                    <span class="text-xs font-mono uppercase tracking-wider tech-text">Candidate data <br>loss</span>
+                </div>
+            </div>
+            
+            <p class="text-xl md:text-2xl font-mono tracking-tight tech-text text-balance">
+                "Your HR team focuses on qualified talent — not resume noise."
+            </p>
+        </section>
+
+        <!-- HOW IT WORKS -->
+        <section class="slide-appear">
+            <div class="glass-panel p-8 md:p-16 relative">
+                <div class="slide-topline"></div>
+                <h2 class="text-3xl md:text-5xl font-black tracking-tight uppercase mb-12 text-center">Get Started in Minutes</h2>
+                
+                <div class="flex flex-col md:flex-row justify-between gap-8 relative z-10">
+                    <div class="tech-card p-6 flex-1 text-center group hover:border-cyber-purple transition-colors">
+                        <div class="w-12 h-12 rounded-full bg-cyber-purple/10 flex items-center justify-center text-cyber-purple font-black mx-auto mb-4 border border-cyber-purple/20 group-hover:bg-cyber-purple group-hover:text-white transition-all">1</div>
+                        <h4 class="font-bold uppercase tracking-tight mb-2 tech-text">Connect</h4>
+                        <p class="text-sm">Link your sourcing channels (LinkedIn, ATS, Job boards) via native integrations.</p>
+                    </div>
+                    
+                    <div class="tech-card p-6 flex-1 text-center group hover:border-cyber-orange transition-colors">
+                        <div class="w-12 h-12 rounded-full bg-cyber-orange/10 flex items-center justify-center text-cyber-orange font-black mx-auto mb-4 border border-cyber-orange/20 group-hover:bg-cyber-orange group-hover:text-white transition-all">2</div>
+                        <h4 class="font-bold uppercase tracking-tight mb-2 tech-text">AI Filters</h4>
+                        <p class="text-sm">Smart algorithms instantly screen applications based on your tech stack requirements.</p>
+                    </div>
+                    
+                    <div class="tech-card p-6 flex-1 text-center group hover:border-cyber-purple transition-colors">
+                        <div class="w-12 h-12 rounded-full bg-cyber-purple/10 flex items-center justify-center text-cyber-purple font-black mx-auto mb-4 border border-cyber-purple/20 group-hover:bg-cyber-purple group-hover:text-white transition-all">3</div>
+                        <h4 class="font-bold uppercase tracking-tight mb-2 tech-text">Automate & Track</h4>
+                        <p class="text-sm">Communication runs automatically while you track performance in real-time dashboards.</p>
+                    </div>
+                </div>
+                
+                <div class="mt-12 text-center flex gap-4 justify-center">
+                    <span class="kbd border-cyber-green text-cyber-green bg-cyber-green/5"><i data-lucide="check-circle" class="w-3 h-3"></i> No complex implementation</span>
+                    <span class="kbd border-cyber-purple text-cyber-purple bg-cyber-purple/5"><i data-lucide="shield-check" class="w-3 h-3"></i> Risk-free free trial</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- TRUST SECTION & TARGET CUSTOMERS -->
+        <section class="slide-appear flex flex-col md:flex-row gap-8">
+            <div class="glass-panel p-8 md:w-1/2 flex flex-col justify-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #22c55e, transparent, #22c55e);"></div>
+                <h2 class="text-3xl font-black tracking-tight uppercase mb-6">Built for Real IT Hiring</h2>
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-cyber-green shadow-[0_0_8px_#22c55e]"></div> AI trained specifically for tech recruitment</li>
+                    <li class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-cyber-green shadow-[0_0_8px_#22c55e]"></div> Transparent, explainable decision logic</li>
+                    <li class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-cyber-green shadow-[0_0_8px_#22c55e]"></div> Full human control when needed</li>
+                    <li class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-cyber-green shadow-[0_0_8px_#22c55e]"></div> White-glove onboarding support</li>
+                </ul>
+                <div class="p-4 bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl font-mono text-xs uppercase tracking-wider tech-text">
+                    "Not a black box. An intelligent extension of your HR team."
+                </div>
+            </div>
+
+            <div class="glass-panel p-8 md:w-1/2">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #a855f7);"></div>
+                <div class="kbd mb-4 border-cyber-purple text-cyber-purple">Target Profile</div>
+                <h2 class="text-3xl font-black tracking-tight uppercase mb-6">Who It's For</h2>
+                
+                <div class="space-y-3">
+                    <div class="tech-card p-4 flex items-center gap-4">
+                        <i data-lucide="building-2" class="w-5 h-5 text-cyber-purple"></i>
+                        <span class="tech-text font-medium">Tech companies with 50–500 employees</span>
+                    </div>
+                    <div class="tech-card p-4 flex items-center gap-4">
+                        <i data-lucide="rocket" class="w-5 h-5 text-cyber-orange"></i>
+                        <span class="tech-text font-medium">High-volume technical hiring (100+ applicants/vacancy)</span>
+                    </div>
+                    <div class="tech-card p-4 flex items-center gap-4">
+                        <i data-lucide="users" class="w-5 h-5 text-cyber-purple"></i>
+                        <span class="tech-text font-medium">Teams with 2+ recruiters</span>
+                    </div>
+                    <div class="tech-card p-4 flex items-center gap-4">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-cyber-red"></i>
+                        <span class="tech-text font-medium">Using ATS but still struggling with overload</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROI SECTION -->
+        <section class="slide-appear">
+            <div class="glass-panel p-8 md:p-12 relative overflow-hidden">
+                <div class="slide-topline"></div>
+                
+                <!-- Decorative background elements -->
+                <div class="absolute -right-20 -top-20 w-64 h-64 bg-cyber-orange/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -left-20 -bottom-20 w-64 h-64 bg-cyber-purple/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="text-center mb-10 relative z-10">
+                    <h2 class="text-3xl md:text-5xl font-black tracking-tight uppercase">The Economics Are Simple</h2>
+                </div>
+                
+                <div class="max-w-3xl mx-auto tech-card p-6 md:p-8 flex flex-col md:flex-row items-center gap-8 text-center md:text-left relative z-10">
+                    <div class="flex-1">
+                        <div class="text-4xl md:text-5xl font-black text-gradient mb-2">20 hrs</div>
+                        <div class="font-mono text-xs uppercase tracking-wider tech-text mb-4">Spent per week screening</div>
+                        <i data-lucide="arrow-down" class="w-6 h-6 text-cyber-purple mx-auto md:mx-0 mb-4 animate-bounce"></i>
+                        <div class="text-4xl md:text-5xl font-black text-gradient mb-2">+10-15 hrs</div>
+                        <div class="font-mono text-xs uppercase tracking-wider tech-text">Given back to recruiters</div>
+                    </div>
+                    
+                    <div class="w-[1px] h-32 bg-gradient-to-b from-transparent via-cyber-purple/30 to-transparent hidden md:block"></div>
+                    <div class="w-full h-[1px] bg-gradient-to-r from-transparent via-cyber-purple/30 to-transparent block md:hidden"></div>
+                    
+                    <div class="flex-1">
+                        <p class="text-lg mb-6 leading-relaxed tech-text font-medium">
+                            That’s <span class="text-cyber-purple font-bold">0.5–1 additional recruiter</span> worth of capacity — without hiring anyone.
+                        </p>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex justify-between items-center bg-[var(--bg-color)] p-3 rounded-lg text-sm border border-[var(--glass-border)]">
+                                <span class="text-muted">Annual pricing:</span>
+                                <span class="font-mono font-bold text-cyber-purple">$5k – $20k</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-cyber-green/5 p-3 rounded-lg text-sm border border-cyber-green/20">
+                                <span class="text-cyber-green font-medium">Typical ROI:</span>
+                                <span class="font-mono font-bold text-cyber-green">Within months</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SOCIAL PROOF / CASE STUDY -->
+        <section class="slide-appear">
+            <div class="text-center mb-10">
+                <div class="kbd mb-4 text-cyber-orange border-cyber-orange/20">Case Studies</div>
+                <h2 class="text-3xl md:text-5xl font-black tracking-tight uppercase">Proven Impact</h2>
+            </div>
+            
+            <div class="glass-panel p-8 max-w-4xl mx-auto border-l-4 border-l-cyber-purple flex flex-col md:flex-row gap-8 items-center">
+                <div class="md:w-1/3 text-center md:text-left">
+                    <div class="w-16 h-16 bg-[var(--card-bg)] rounded-xl flex items-center justify-center border border-[var(--glass-border)] mx-auto md:mx-0 mb-4">
+                        <i data-lucide="building" class="w-8 h-8 text-cyber-purple"></i>
+                    </div>
+                    <h3 class="font-bold text-xl uppercase tracking-tight tech-text mb-1">Mid-Size Tech Co.</h3>
+                    <p class="text-sm font-mono tracking-wider">150 Employees</p>
+                </div>
+                
+                <div class="md:w-2/3 grid grid-cols-2 gap-4 w-full">
+                    <div class="tech-card p-4 text-center">
+                        <div class="text-3xl font-black text-cyber-purple mb-1">62%</div>
+                        <div class="text-xs font-mono uppercase tracking-wider">Reduction in screening time</div>
+                    </div>
+                    <div class="tech-card p-4 text-center">
+                        <div class="text-3xl font-black text-cyber-orange mb-1">48%</div>
+                        <div class="text-xs font-mono uppercase tracking-wider">Faster time-to-hire</div>
+                    </div>
+                    <div class="tech-card p-4 col-span-2 text-center flex items-center justify-center gap-3">
+                        <i data-lucide="smile" class="text-cyber-green w-5 h-5"></i>
+                        <div class="text-sm font-mono uppercase tracking-wider text-cyber-green">Significant increase in HR satisfaction</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FINAL CTA -->
+        <section class="min-h-[60vh] flex flex-col justify-center slide-appear mb-20">
+            <div class="glass-panel p-12 md:p-20 text-center relative overflow-hidden">
+                <div class="slide-topline" style="height: 4px;"></div>
+                
+                <!-- Heavy glow effect -->
+                <div class="absolute inset-0 bg-gradient-to-b from-cyber-purple/5 to-transparent pointer-events-none"></div>
+                
+                <h2 class="text-4xl md:text-6xl font-black tracking-tighter uppercase mb-6 relative z-10">
+                    Stop Drowning in <br/>
+                    <span class="text-gradient">Resume Noise</span>
+                </h2>
+                
+                <p class="text-xl max-w-2xl mx-auto mb-12 text-balance leading-relaxed tech-text relative z-10">
+                    Let AI handle the routine.<br/>
+                    <span class="font-bold text-cyber-purple">Your team hires the best.</span>
+                </p>
+                
+                <div class="flex flex-col sm:flex-row justify-center gap-6 font-mono uppercase tracking-wider text-sm relative z-10">
+                    <button class="px-10 py-5 rounded-xl bg-gradient-to-r from-cyber-purple to-cyber-orange text-white font-bold hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] transition-all transform hover:-translate-y-1 text-lg">
+                        Start Free Trial
+                    </button>
+                    <button class="px-10 py-5 rounded-xl tech-card font-bold hover:text-cyber-purple transition-all text-lg border-2 border-[var(--glass-border)]">
+                        Request Demo
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 bg-[var(--bg-color)] py-8 relative z-20 transition-colors duration-400">
+        <div class="max-w-[1100px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2 font-montserrat font-black tracking-tighter uppercase opacity-50">
+                <i data-lucide="cpu" class="w-5 h-5"></i>
+                <span>TalentHub</span>
+            </div>
+            <div class="text-xs font-mono uppercase tracking-wider opacity-50">
+                © 2026 AI Recruitment Hub. System Active.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Theme Toggle Logic
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+
+        // Check local storage or system preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            if (html.classList.contains('dark')) {
+                localStorage.theme = 'dark';
+            } else {
+                localStorage.theme = 'light';
+            }
+        });
+
+        // Intersection Observer for slide-appear animations
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.15
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    // observer.unobserve(entry.target); // Uncomment to animate only once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.slide-appear').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Scroll Progress Bar Logic
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById("progress-bar").style.width = scrolled + "%";
+        });
+        
+        // Initial trigger for elements already in view
+        setTimeout(() => {
+            const scrollEvent = new Event('scroll');
+            window.dispatchEvent(scrollEvent);
+        }, 100);
+    </script>
+</body>
+</html>
