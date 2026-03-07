@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Deep Research → Specification</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            purple: '#a855f7',
+                            orange: '#f97316',
+                            tg: '#229ED9',
+                            green: '#22c55e',
+                            red: '#ef4444'
+                        }
+                    },
+                    fontFamily: {
+                        montserrat: ['Montserrat', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Space Mono', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS Variables: Light & Dark */
+        @layer base {
+            :root {
+                --bg-color: #f8fafc;
+                --text-main: #0f172a;
+                --text-muted: #475569;
+                --glass-bg: rgba(255, 255, 255, 0.65);
+                --glass-border: rgba(0, 0, 0, 0.05);
+                --card-bg: rgba(255, 255, 255, 0.8);
+                --card-border: rgba(0, 0, 0, 0.08);
+                --shadow-glow: rgba(168, 85, 247, 0.05);
+                --grid-color-purple: rgba(168, 85, 247, 0.08);
+                --grid-color-orange: rgba(249, 115, 22, 0.08);
+            }
+            html.dark {
+                --bg-color: #050505;
+                --text-main: #e5e7eb;
+                --text-muted: #9ca3af;
+                --glass-bg: rgba(15, 15, 15, 0.5);
+                --glass-border: rgba(255, 255, 255, 0.08);
+                --card-bg: rgba(20, 20, 20, 0.6);
+                --card-border: rgba(255, 255, 255, 0.08);
+                --shadow-glow: rgba(168, 85, 247, 0.15);
+                --grid-color-purple: rgba(168, 85, 247, 0.05);
+                --grid-color-orange: rgba(249, 115, 22, 0.05);
+            }
+        }
+
+        /* Lock scroll completely */
+        html, body {
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            transition: background-color 0.4s ease, color 0.4s ease;
+            overscroll-behavior-x: none;
+        }
+
+        /* Background Grid */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -2;
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, var(--grid-color-purple) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-color-orange) 1px, transparent 1px);
+            transition: background-image 0.4s ease;
+        }
+
+        /* Glass Panel Container */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 40px var(--shadow-glow);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        /* Tech Card */
+        .tech-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        .tech-card:hover {
+            border-color: #a855f7;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(168, 85, 247, 0.15);
+        }
+
+        /* Topline Gradient Accent */
+        .slide-topline {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(to right, #a855f7, transparent, #f97316);
+            opacity: 0.8;
+        }
+
+        /* Keyboard/Tech Pills */
+        .kbd {
+            font-family: 'Space Mono', monospace;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        /* Text Gradients */
+        .text-gradient {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(to right, #a855f7, #f97316);
+        }
+
+        /* Animations */
+        .slide-appear {
+            opacity: 0;
+            transform: translateY(20px) scale(0.98);
+            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .slide-appear.active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Progress Bar */
+        #progress-bar {
+            position: fixed;
+            bottom: 0; left: 0;
+            height: 4px;
+            background: linear-gradient(to right, #a855f7, #f97316);
+            z-index: 50;
+            width: 0%;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+            transition: width 0.3s ease-out;
+        }
+
+        /* Slider Section Layout */
+        section {
+            width: 100vw;
+            height: 100vh;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 5rem 1.5rem 4rem 1.5rem; /* Header and Footer offset */
+        }
+        
+        .slide-content-wrapper {
+            width: 100%;
+            max-width: 1100px;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Custom scrollbar for safe-overflow inside glass panels if screen is too tiny */
+        .glass-panel {
+            max-height: 85vh;
+            overflow-y: auto;
+            scrollbar-width: none; /* Firefox */
+        }
+        .glass-panel::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+        
+        /* Typography */
+        h1, h2, h3 { font-family: 'Montserrat', sans-serif; }
+        p { font-family: 'Inter', sans-serif; color: var(--text-muted); }
+        .tech-text { color: var(--text-main); }
+
+        /* Navigation Buttons */
+        .nav-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 45;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            color: var(--text-main);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .nav-btn:hover {
+            color: #a855f7;
+            border-color: #a855f7;
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+        }
+        #prev-btn { left: 1rem; }
+        #next-btn { right: 1rem; }
+        .nav-btn:disabled { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body class="antialiased selection:bg-cyber-purple/30 selection:text-cyber-purple">
+
+    <!-- Fixed Backgrounds -->
+    <div class="bg-grid"></div>
+    <div class="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyber-purple/10 blur-[120px] animate-pulse-slow pointer-events-none z-[-1]"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyber-orange/10 blur-[120px] animate-pulse-slow pointer-events-none z-[-1]" style="animation-delay: 3s;"></div>
+
+    <!-- Progress Bar -->
+    <div id="progress-bar"></div>
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-40 border-b border-white/5 bg-[var(--glass-bg)] backdrop-blur-md">
+        <div class="max-w-[1100px] mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2 font-montserrat font-black tracking-tighter text-xl uppercase">
+                <i data-lucide="brain-circuit" class="text-cyber-purple w-6 h-6"></i>
+                <span>AI<span class="text-gradient">Dev</span></span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:block font-mono text-xs text-muted tracking-widest uppercase mr-4">
+                    Slide <span id="current-slide-num" class="text-cyber-purple font-bold">1</span> / 31
+                </div>
+                <button id="theme-toggle" class="p-2 rounded-full tech-card hover:text-cyber-purple transition-colors" aria-label="Toggle Theme">
+                    <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Arrows -->
+    <button id="prev-btn" class="nav-btn" disabled><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+    <button id="next-btn" class="nav-btn"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+
+    <!-- Main Content (Slider Container) -->
+    <main id="slider" class="flex w-full h-full transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]">
+        
+        <!-- Slide 1 -->
+        <section>
+            <div class="slide-content-wrapper">
+                <div class="glass-panel slide-appear p-6 md:p-10 text-center mx-auto w-full max-w-4xl">
+                    <div class="slide-topline"></div>
+                    <div class="inline-flex kbd mb-4 text-cyber-purple border-cyber-purple/20 bg-cyber-purple/5">
+                        <i data-lucide="book-open" class="w-3 h-3"></i> Lecture 1
+                    </div>
+                    
+                    <h1 class="text-3xl md:text-5xl lg:text-6xl font-black tracking-tighter uppercase mb-4 leading-[1.1]">
+                        AI Deep Research <br/>
+                        <i data-lucide="arrow-right" class="inline-block w-8 h-8 md:w-12 md:h-12 text-cyber-orange mx-2 align-middle"></i> <span class="text-gradient">Specification</span>
+                    </h1>
+                    
+                    <p class="text-base md:text-lg max-w-2xl mx-auto mb-6 leading-relaxed font-medium">
+                        How to transform technological research into a working product specification.
+                    </p>
+                    
+                    <div class="flex flex-wrap justify-center gap-3 mb-6">
+                        <div class="kbd"><i data-lucide="zap" class="w-3 h-3 text-cyber-orange"></i> AI generates code extremely fast</div>
+                        <div class="kbd"><i data-lucide="alert-triangle" class="w-3 h-3 text-cyber-red"></i> Contextless code leads to chaos</div>
+                        <div class="kbd"><i data-lucide="brain" class="w-3 h-3 text-cyber-purple"></i> Bottleneck is clarity of thinking</div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center justify-center gap-2 font-mono uppercase tracking-wider text-xs md:text-sm mt-6 border-t border-[var(--glass-border)] pt-6">
+                        <span class="text-muted mb-2">Modern development pipeline:</span>
+                        <div class="flex flex-wrap items-center justify-center gap-2 tech-text font-bold">
+                            <span class="tech-card px-3 py-1.5 border-cyber-purple/30 bg-cyber-purple/5">Research</span> 
+                            <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-orange"></i> 
+                            <span class="tech-card px-3 py-1.5 border-cyber-orange/30 bg-cyber-orange/5">Specification</span> 
+                            <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-green"></i> 
+                            <span class="tech-card px-3 py-1.5 border-cyber-green/30 bg-cyber-green/5">Implementation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 2 -->
+        <section>
+            <div class="slide-content-wrapper">
+                <div class="glass-panel slide-appear p-6 md:p-10 mx-auto w-full max-w-4xl">
+                    <div class="slide-topline"></div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center">Lecture Overview</h2>
+                    
+                    <div class="grid md:grid-cols-2 gap-4 mb-6">
+                        <div class="tech-card p-5 flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-cyber-purple/10 flex-shrink-0 flex items-center justify-center text-cyber-purple mt-1">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-base uppercase tracking-tight tech-text mb-1">Deep Research</h3>
+                                <p class="text-xs md:text-sm">Understanding problems, technologies and constraints.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="tech-card p-5 flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-cyber-orange/10 flex-shrink-0 flex items-center justify-center text-cyber-orange mt-1">
+                                <i data-lucide="file-text" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-base uppercase tracking-tight tech-text mb-1">Specification</h3>
+                                <p class="text-xs md:text-sm">Translating research into product behavior.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="tech-card p-5 flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-cyber-green/10 flex-shrink-0 flex items-center justify-center text-cyber-green mt-1">
+                                <i data-lucide="layers" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-base uppercase tracking-tight tech-text mb-1">Architecture</h3>
+                                <p class="text-xs md:text-sm">Defining system components and interactions.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="tech-card p-5 flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-cyber-red/10 flex-shrink-0 flex items-center justify-center text-cyber-red mt-1">
+                                <i data-lucide="terminal" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-base uppercase tracking-tight tech-text mb-1">Execution</h3>
+                                <p class="text-xs md:text-sm">Transforming specifications into tasks and implementation.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl font-mono text-center text-xs md:text-sm uppercase tracking-wider tech-text">
+                        The goal is to understand the full AI-native development workflow.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3 -->
+        <section>
+            <div class="slide-content-wrapper">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Why Research Matters</h2>
+                
+                <div class="grid md:grid-cols-2 gap-4 md:gap-8 max-w-5xl mx-auto w-full">
+                    <div class="glass-panel slide-appear p-6 border-t-4 border-t-cyber-red text-left">
+                        <div class="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--glass-border)]">
+                            <i data-lucide="x-circle" class="w-6 h-6 text-cyber-red"></i>
+                            <h3 class="text-xl font-black uppercase tracking-tight tech-text">Code First</h3>
+                        </div>
+                        <ul class="space-y-3 text-sm md:text-base">
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-red mt-1.5 shadow-[0_0_8px_#ef4444]"></div> AI guesses requirements</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-red mt-1.5 shadow-[0_0_8px_#ef4444]"></div> Architecture emerges randomly</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-red mt-1.5 shadow-[0_0_8px_#ef4444]"></div> Constraints are ignored</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-red mt-1.5 shadow-[0_0_8px_#ef4444]"></div> Systems accumulate technical debt</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="glass-panel slide-appear p-6 border-t-4 border-t-cyber-green text-left">
+                        <div class="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--glass-border)]">
+                            <i data-lucide="check-circle" class="w-6 h-6 text-cyber-green"></i>
+                            <h3 class="text-xl font-black uppercase tracking-tight tech-text">Research First</h3>
+                        </div>
+                        <ul class="space-y-3 text-sm md:text-base">
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-green mt-1.5 shadow-[0_0_8px_#22c55e]"></div> Problem is clearly defined</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-green mt-1.5 shadow-[0_0_8px_#22c55e]"></div> Technologies are evaluated</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-green mt-1.5 shadow-[0_0_8px_#22c55e]"></div> Constraints are identified</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-green mt-1.5 shadow-[0_0_8px_#22c55e]"></div> Architecture becomes intentional</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4 -->
+        <section>
+            <div class="slide-content-wrapper">
+                <div class="glass-panel slide-appear p-8 md:p-12 text-center max-w-4xl mx-auto w-full">
+                    <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #a855f7);"></div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-8">AI Accelerates Thought <i data-lucide="arrow-right" class="inline w-6 h-6 md:w-8 md:h-8 text-cyber-purple align-middle"></i> Artifact</h2>
+                    
+                    <div class="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-sm md:text-lg font-bold uppercase tracking-widest tech-text mb-8 p-4 md:p-6 bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-2xl">
+                        <span class="flex items-center gap-1 md:gap-2"><i data-lucide="lightbulb" class="text-cyber-orange w-5 h-5"></i> Idea</span>
+                        <i data-lucide="arrow-right" class="text-muted w-4 h-4"></i>
+                        <span class="flex items-center gap-1 md:gap-2"><i data-lucide="bot" class="text-cyber-purple w-5 h-5"></i> Generation</span>
+                        <i data-lucide="arrow-right" class="text-muted w-4 h-4"></i>
+                        <span class="flex items-center gap-1 md:gap-2"><i data-lucide="package" class="text-cyber-green w-5 h-5"></i> Artifact</span>
+                    </div>
+                    
+                    <p class="text-base md:text-lg mb-4 leading-relaxed">
+                        AI dramatically reduces the time between an idea and a working prototype.
+                    </p>
+                    <p class="text-base md:text-lg text-cyber-red font-medium">
+                        However, poorly structured ideas will produce incorrect systems faster.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5 -->
+        <section>
+            <div class="slide-content-wrapper">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Four Layers of Research</h2>
+                
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                    <div class="tech-card slide-appear p-5 flex flex-col gap-3 text-center group hover:border-cyber-purple">
+                        <div class="w-12 h-12 rounded-full bg-cyber-purple/10 flex items-center justify-center text-cyber-purple mx-auto group-hover:bg-cyber-purple group-hover:text-white transition-all border border-cyber-purple/20">
+                            <i data-lucide="target" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="font-bold text-lg uppercase tracking-tight tech-text">Problem</h3>
+                        <div class="text-xs md:text-sm space-y-1 text-muted">
+                            <p>Who is the user?</p>
+                            <p>What job needs to be done?</p>
+                            <p>What pain exists today?</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tech-card slide-appear p-5 flex flex-col gap-3 text-center group hover:border-cyber-orange" style="transition-delay: 100ms;">
+                        <div class="w-12 h-12 rounded-full bg-cyber-orange/10 flex items-center justify-center text-cyber-orange mx-auto group-hover:bg-cyber-orange group-hover:text-white transition-all border border-cyber-orange/20">
+                            <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="font-bold text-lg uppercase tracking-tight tech-text">Market</h3>
+                        <div class="text-xs md:text-sm space-y-1 text-muted">
+                            <p>Existing products</p>
+                            <p>Alternative solutions</p>
+                            <p>Competitive landscape</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tech-card slide-appear p-5 flex flex-col gap-3 text-center group hover:border-cyber-green" style="transition-delay: 200ms;">
+                        <div class="w-12 h-12 rounded-full bg-cyber-green/10 flex items-center justify-center text-cyber-green mx-auto group-hover:bg-cyber-green group-hover:text-white transition-all border border-cyber-green/20">
+                            <i data-lucide="settings" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="font-bold text-lg uppercase tracking-tight tech-text">Technology</h3>
+                        <div class="text-xs md:text-sm space-y-1 text-muted">
+                            <p>Models</p>
+                            <p>APIs & Frameworks</p>
+                            <p>Infrastructure tools</p>
+                        </div>
+                    </div>
+
+                    <div class="tech-card slide-appear p-5 flex flex-col gap-3 text-center group hover:border-cyber-red" style="transition-delay: 300ms;">
+                        <div class="w-12 h-12 rounded-full bg-cyber-red/10 flex items-center justify-center text-cyber-red mx-auto group-hover:bg-cyber-red group-hover:text-white transition-all border border-cyber-red/20">
+                            <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="font-bold text-lg uppercase tracking-tight tech-text">Constraints</h3>
+                        <div class="text-xs md:text-sm space-y-1 text-muted">
+                            <p>Latency & Cost</p>
+                            <p>Security</p>
+                            <p>Infrastructure limits</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 relative text-center">
+                    <div class="slide-topline"></div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-8">AI Research Loop</h2>
+                    
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-3 md:gap-2 relative z-10 mb-8 bg-[var(--card-bg)] p-4 md:p-6 rounded-2xl border border-[var(--glass-border)]">
+                        <div class="flex flex-col items-center gap-1"><i data-lucide="help-circle" class="w-6 h-6 md:w-8 md:h-8 text-cyber-purple"></i><span class="font-mono text-[10px] md:text-xs uppercase font-bold tech-text">Question</span></div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-muted rotate-90 md:rotate-0"></i>
+                        <div class="flex flex-col items-center gap-1"><i data-lucide="library" class="w-6 h-6 md:w-8 md:h-8 text-cyber-orange"></i><span class="font-mono text-[10px] md:text-xs uppercase font-bold tech-text">Sources</span></div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-muted rotate-90 md:rotate-0"></i>
+                        <div class="flex flex-col items-center gap-1"><i data-lucide="scale" class="w-6 h-6 md:w-8 md:h-8 text-cyber-green"></i><span class="font-mono text-[10px] md:text-xs uppercase font-bold tech-text">Compare</span></div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-muted rotate-90 md:rotate-0"></i>
+                        <div class="flex flex-col items-center gap-1"><i data-lucide="brain-circuit" class="w-6 h-6 md:w-8 md:h-8 text-cyber-purple"></i><span class="font-mono text-[10px] md:text-xs uppercase font-bold tech-text">Synthesize</span></div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-muted rotate-90 md:rotate-0"></i>
+                        <div class="flex flex-col items-center gap-1"><i data-lucide="check-circle" class="w-6 h-6 md:w-8 md:h-8 text-cyber-orange"></i><span class="font-mono text-[10px] md:text-xs uppercase font-bold tech-text">Verify</span></div>
+                    </div>
+                    
+                    <div class="space-y-3 text-sm md:text-base">
+                        <p class="font-medium tech-text">Research is an iterative process, not a single prompt.</p>
+                        <p>Each iteration improves the understanding of technologies and trade-offs.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7 -->
+        <section>
+            <div class="slide-content-wrapper">
+                <div class="flex flex-col md:flex-row gap-6 w-full max-w-5xl mx-auto">
+                    <div class="glass-panel slide-appear p-6 md:p-8 md:w-1/2 flex flex-col justify-center text-center md:text-left">
+                        <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #a855f7);"></div>
+                        <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-4">Source Hierarchy</h2>
+                        <div class="p-3 bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl font-mono text-[10px] md:text-xs uppercase tracking-wider tech-text">
+                            "Higher levels provide stronger evidence for engineering decisions."
+                        </div>
+                    </div>
+
+                    <div class="glass-panel slide-appear p-6 md:p-8 md:w-1/2" style="transition-delay: 100ms;">
+                        <div class="space-y-3">
+                            <div class="tech-card p-3 flex items-start gap-3 border-l-4 border-l-cyber-purple">
+                                <i data-lucide="file-check-2" class="w-5 h-5 text-cyber-purple flex-shrink-0"></i>
+                                <div>
+                                    <span class="tech-text font-bold uppercase block text-xs md:text-sm">Official Documentation</span>
+                                    <span class="text-xs text-muted">API specs, technical references</span>
+                                </div>
+                            </div>
+                            <div class="tech-card p-3 flex items-start gap-3 border-l-4 border-l-cyber-orange">
+                                <i data-lucide="github" class="w-5 h-5 text-cyber-orange flex-shrink-0"></i>
+                                <div>
+                                    <span class="tech-text font-bold uppercase block text-xs md:text-sm">GitHub Repositories</span>
+                                    <span class="text-xs text-muted">Code examples, issues, limitations</span>
+                                </div>
+                            </div>
+                            <div class="tech-card p-3 flex items-start gap-3 border-l-4 border-l-cyber-green">
+                                <i data-lucide="line-chart" class="w-5 h-5 text-cyber-green flex-shrink-0"></i>
+                                <div>
+                                    <span class="tech-text font-bold uppercase block text-xs md:text-sm">Benchmarks / Cases</span>
+                                    <span class="text-xs text-muted">Performance and real deployments</span>
+                                </div>
+                            </div>
+                            <div class="tech-card p-3 flex items-start gap-3 border-l-4 border-l-gray-500">
+                                <i data-lucide="messages-square" class="w-5 h-5 text-gray-500 flex-shrink-0"></i>
+                                <div>
+                                    <span class="tech-text font-bold uppercase block text-xs md:text-sm">Community Discussions</span>
+                                    <span class="text-xs text-muted">Blogs, forums, social platforms</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 relative overflow-hidden">
+                    <div class="slide-topline"></div>
+                    <div class="text-center mb-6 relative z-10">
+                        <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-2">Technology Comparison</h2>
+                        <p class="font-mono text-xs tracking-wider tech-text">The goal is not to find the "best" technology but to understand trade-offs.</p>
+                    </div>
+                    
+                    <div class="relative z-10 overflow-x-auto">
+                        <table class="w-full text-left border-collapse tech-card overflow-hidden rounded-xl">
+                            <thead>
+                                <tr class="bg-[var(--glass-bg)] border-b border-[var(--card-border)] text-[10px] md:text-xs uppercase tracking-wider font-mono">
+                                    <th class="py-3 px-4 text-cyber-purple font-bold">Criteria</th>
+                                    <th class="py-3 px-4 tech-text font-bold">Model A</th>
+                                    <th class="py-3 px-4 tech-text font-bold">Model B</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[var(--card-border)] text-xs md:text-sm">
+                                <tr>
+                                    <td class="py-3 px-4 font-bold tech-text">Latency</td>
+                                    <td class="py-3 px-4"><span class="kbd bg-cyber-green/10 border-cyber-green/20 text-cyber-green">Low</span></td>
+                                    <td class="py-3 px-4"><span class="kbd bg-cyber-orange/10 border-cyber-orange/20 text-cyber-orange">Medium</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-bold tech-text">Cost</td>
+                                    <td class="py-3 px-4 text-cyber-green font-bold">$</td>
+                                    <td class="py-3 px-4 text-cyber-orange font-bold">$$</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-bold tech-text">Quality</td>
+                                    <td class="py-3 px-4"><span class="kbd bg-cyber-purple/10 border-cyber-purple/20 text-cyber-purple">High</span></td>
+                                    <td class="py-3 px-4"><span class="kbd bg-cyber-purple/20 border-cyber-purple/40 text-cyber-purple font-bold shadow-[0_0_10px_rgba(168,85,247,0.3)]">Very High</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9 -->
+        <section>
+            <div class="slide-content-wrapper max-w-3xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 border-l-4 border-l-cyber-orange">
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6">Deep Research Prompt</h2>
+                    
+                    <div class="relative group">
+                        <div class="absolute -inset-1 bg-gradient-to-r from-cyber-purple to-cyber-orange rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                        <pre class="relative font-mono text-xs md:text-sm leading-relaxed p-5 md:p-6 rounded-xl bg-[#0a0a0a] border border-white/10 text-gray-300 overflow-x-auto whitespace-pre-wrap"><span class="text-cyber-purple">Role:</span> Technical Research Analyst
+
+<span class="text-cyber-purple">Context:</span>
+AI-powered product architecture
+
+<span class="text-cyber-purple">Task:</span>
+Compare solutions A, B and C.
+
+<span class="text-cyber-purple">Return:</span>
+• evaluation criteria
+• comparison table
+• trade-offs
+• unknowns
+• recommendation</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 10 -->
+        <section>
+            <div class="slide-content-wrapper">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Research Outputs</h2>
+                
+                <div class="grid grid-cols-2 gap-4 max-w-4xl mx-auto w-full">
+                    <div class="tech-card slide-appear p-4 flex flex-col md:flex-row items-center md:items-start gap-3 text-center md:text-left">
+                        <div class="p-2.5 rounded-xl bg-cyber-purple/10 text-cyber-purple">
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm md:text-base uppercase tracking-tight tech-text">Research Memo</h3>
+                            <p class="text-xs text-muted">Summary of findings</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tech-card slide-appear p-4 flex flex-col md:flex-row items-center md:items-start gap-3 text-center md:text-left" style="transition-delay: 100ms;">
+                        <div class="p-2.5 rounded-xl bg-cyber-orange/10 text-cyber-orange">
+                            <i data-lucide="book-open" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm md:text-base uppercase tracking-tight tech-text">Decision Log</h3>
+                            <p class="text-xs text-muted">Why decisions were made</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tech-card slide-appear p-4 flex flex-col md:flex-row items-center md:items-start gap-3 text-center md:text-left" style="transition-delay: 200ms;">
+                        <div class="p-2.5 rounded-xl bg-cyber-red/10 text-cyber-red">
+                            <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm md:text-base uppercase tracking-tight tech-text">Risk List</h3>
+                            <p class="text-xs text-muted">Technological uncertainties</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tech-card slide-appear p-4 flex flex-col md:flex-row items-center md:items-start gap-3 text-center md:text-left" style="transition-delay: 300ms;">
+                        <div class="p-2.5 rounded-xl bg-cyber-green/10 text-cyber-green">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm md:text-base uppercase tracking-tight tech-text">Tech Comparison</h3>
+                            <p class="text-xs text-muted">Structured evaluation</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11 -->
+        <section>
+            <div class="slide-content-wrapper">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Code vs Specification</h2>
+                
+                <div class="grid md:grid-cols-2 gap-4 max-w-5xl mx-auto w-full">
+                    <div class="glass-panel slide-appear p-6 border-t-4 border-t-cyber-orange text-left">
+                        <div class="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--glass-border)]">
+                            <i data-lucide="code" class="w-6 h-6 text-cyber-orange"></i>
+                            <h3 class="text-xl font-black uppercase tracking-tight tech-text">Code First</h3>
+                        </div>
+                        <ul class="space-y-3 text-sm md:text-base">
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-orange mt-1.5"></div> Code becomes the source of truth</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-orange mt-1.5"></div> Documentation quickly drifts</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-orange mt-1.5"></div> Original intent gets lost</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="glass-panel slide-appear p-6 border-t-4 border-t-cyber-purple text-left">
+                        <div class="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--glass-border)]">
+                            <i data-lucide="file-json" class="w-6 h-6 text-cyber-purple"></i>
+                            <h3 class="text-xl font-black uppercase tracking-tight tech-text">Spec Driven</h3>
+                        </div>
+                        <ul class="space-y-3 text-sm md:text-base">
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-purple mt-1.5"></div> Specification is the system contract</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-purple mt-1.5"></div> Code implements defined behavior</li>
+                            <li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-cyber-purple mt-1.5"></div> System intent remains clear</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 12 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 relative text-center">
+                    <div class="slide-topline"></div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6">SDD Spectrum</h2>
+                    
+                    <div class="flex flex-wrap items-center justify-center gap-2 mb-6 text-xs md:text-sm">
+                        <span class="kbd border-gray-500 text-gray-500">Code-First</span>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-muted hidden md:block"></i>
+                        <span class="kbd border-cyber-orange text-cyber-orange">Spec-First</span>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-muted hidden md:block"></i>
+                        <span class="kbd border-cyber-purple text-cyber-purple">Spec-Anchored</span>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-muted hidden md:block"></i>
+                        <span class="kbd bg-cyber-green/10 border-cyber-green text-cyber-green font-bold shadow-[0_0_10px_rgba(34,197,94,0.3)]">Spec-as-Source</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 md:gap-4 text-left">
+                        <div class="tech-card p-4">
+                            <h4 class="font-bold uppercase text-[10px] md:text-xs tech-text mb-1"><span class="text-gray-500 mr-1">1.</span>Code-first</h4>
+                            <p class="text-xs text-muted">Code is the primary artifact</p>
+                        </div>
+                        <div class="tech-card p-4">
+                            <h4 class="font-bold uppercase text-[10px] md:text-xs tech-text mb-1"><span class="text-cyber-orange mr-1">2.</span>Spec-first</h4>
+                            <p class="text-xs text-muted">Requirements written before code</p>
+                        </div>
+                        <div class="tech-card p-4">
+                            <h4 class="font-bold uppercase text-[10px] md:text-xs tech-text mb-1"><span class="text-cyber-purple mr-1">3.</span>Spec-anchored</h4>
+                            <p class="text-xs text-muted">Spec and code evolve together</p>
+                        </div>
+                        <div class="tech-card p-4 border-cyber-green/50 shadow-[0_0_10px_rgba(34,197,94,0.1)]">
+                            <h4 class="font-bold uppercase text-[10px] md:text-xs tech-text mb-1"><span class="text-cyber-green mr-1">4.</span>Spec-as-source</h4>
+                            <p class="text-xs text-muted">Specification generates systems</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 13 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Spec Driven Workflow</h2>
+                
+                <div class="glass-panel slide-appear p-6 md:p-8">
+                    <div class="flex flex-wrap md:flex-nowrap justify-center items-center gap-2 mb-8 text-xs md:text-sm">
+                        <div class="kbd py-1.5 px-3 bg-cyber-purple/10 border-cyber-purple/20 text-cyber-purple">Specify</div>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-muted hidden md:block"></i>
+                        <div class="kbd py-1.5 px-3 bg-cyber-purple/10 border-cyber-purple/20 text-cyber-purple">Plan</div>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-muted hidden md:block"></i>
+                        <div class="kbd py-1.5 px-3 bg-cyber-orange/10 border-cyber-orange/20 text-cyber-orange">Tasks</div>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-muted hidden md:block"></i>
+                        <div class="kbd py-1.5 px-3 bg-cyber-orange/10 border-cyber-orange/20 text-cyber-orange">Implement</div>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-muted hidden md:block"></i>
+                        <div class="kbd py-1.5 px-3 bg-cyber-green/10 border-cyber-green/20 text-cyber-green">Validate</div>
+                    </div>
+
+                    <ul class="space-y-3 text-sm md:text-base max-w-md mx-auto">
+                        <li class="flex items-center gap-3"><span class="font-mono font-bold text-cyber-purple w-20 text-right text-xs md:text-sm">Specify</span> <span class="w-1.5 h-1.5 rounded-full bg-white/20"></span> <span class="tech-text">Define system behavior</span></li>
+                        <li class="flex items-center gap-3"><span class="font-mono font-bold text-cyber-purple w-20 text-right text-xs md:text-sm">Plan</span> <span class="w-1.5 h-1.5 rounded-full bg-white/20"></span> <span class="tech-text">Design architecture</span></li>
+                        <li class="flex items-center gap-3"><span class="font-mono font-bold text-cyber-orange w-20 text-right text-xs md:text-sm">Tasks</span> <span class="w-1.5 h-1.5 rounded-full bg-white/20"></span> <span class="tech-text">Break system into work units</span></li>
+                        <li class="flex items-center gap-3"><span class="font-mono font-bold text-cyber-orange w-20 text-right text-xs md:text-sm">Implement</span> <span class="w-1.5 h-1.5 rounded-full bg-white/20"></span> <span class="tech-text">Build components</span></li>
+                        <li class="flex items-center gap-3"><span class="font-mono font-bold text-cyber-green w-20 text-right text-xs md:text-sm">Validate</span> <span class="w-1.5 h-1.5 rounded-full bg-white/20"></span> <span class="tech-text">Verify against spec</span></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 14 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 text-center">
+                    <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #a855f7);"></div>
+                    <div class="kbd mb-3 border-cyber-tg/20 text-cyber-tg">Structure</div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-8">Feature SPEC Structure</h2>
+                    
+                    <div class="flex flex-wrap items-center justify-center gap-2 mb-8 bg-[var(--card-bg)] p-4 md:p-6 rounded-2xl border border-[var(--glass-border)] text-[10px] md:text-xs">
+                        <span class="font-bold uppercase tracking-tight tech-text">Feature</span>
+                        <i data-lucide="chevron-right" class="w-3 h-3 text-cyber-purple"></i>
+                        <span class="font-bold uppercase tracking-tight tech-text">PRD</span>
+                        <i data-lucide="chevron-right" class="w-3 h-3 text-cyber-purple"></i>
+                        <span class="font-bold uppercase tracking-tight tech-text">User Stories</span>
+                        <i data-lucide="chevron-right" class="w-3 h-3 text-cyber-purple"></i>
+                        <span class="font-bold uppercase tracking-tight tech-text">Use Cases</span>
+                        <i data-lucide="chevron-right" class="w-3 h-3 text-cyber-purple"></i>
+                        <span class="font-bold uppercase tracking-tight tech-text">UX Flow</span>
+                        <i data-lucide="chevron-right" class="w-3 h-3 text-cyber-purple"></i>
+                        <span class="font-bold uppercase tracking-tight tech-text text-cyber-green">Requirements</span>
+                    </div>
+                    
+                    <p class="text-sm md:text-base font-mono tracking-tight tech-text">
+                        "Specification gradually transforms a product idea into a precise system definition."
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 15 -->
+        <section>
+            <div class="slide-content-wrapper max-w-5xl mx-auto">
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="glass-panel slide-appear p-6 md:p-8 md:w-1/3 flex flex-col justify-center text-center md:text-left">
+                        <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #f97316);"></div>
+                        <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-4">Problem First</h2>
+                        <p class="text-xs md:text-sm text-muted">Start by deeply understanding the context before proposing a solution.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 md:w-2/3">
+                        <div class="tech-card slide-appear p-4 md:p-5 border-t-2 border-t-cyber-purple">
+                            <h3 class="font-bold uppercase tracking-tight text-cyber-purple mb-1 md:mb-2 flex items-center gap-2 text-sm md:text-base"><i data-lucide="user" class="w-4 h-4"></i> User</h3>
+                            <p class="text-xs md:text-sm tech-text">Who is using the system</p>
+                        </div>
+                        <div class="tech-card slide-appear p-4 md:p-5 border-t-2 border-t-cyber-orange" style="transition-delay: 100ms;">
+                            <h3 class="font-bold uppercase tracking-tight text-cyber-orange mb-1 md:mb-2 flex items-center gap-2 text-sm md:text-base"><i data-lucide="briefcase" class="w-4 h-4"></i> Job-to-be-done</h3>
+                            <p class="text-xs md:text-sm tech-text">What task they want to accomplish</p>
+                        </div>
+                        <div class="tech-card slide-appear p-4 md:p-5 border-t-2 border-t-cyber-red" style="transition-delay: 200ms;">
+                            <h3 class="font-bold uppercase tracking-tight text-cyber-red mb-1 md:mb-2 flex items-center gap-2 text-sm md:text-base"><i data-lucide="frown" class="w-4 h-4"></i> Pain</h3>
+                            <p class="text-xs md:text-sm tech-text">Current friction or inefficiency</p>
+                        </div>
+                        <div class="tech-card slide-appear p-4 md:p-5 border-t-2 border-t-cyber-green" style="transition-delay: 300ms;">
+                            <h3 class="font-bold uppercase tracking-tight text-cyber-green mb-1 md:mb-2 flex items-center gap-2 text-sm md:text-base"><i data-lucide="star" class="w-4 h-4"></i> Moment of value</h3>
+                            <p class="text-xs md:text-sm tech-text">When the user benefits</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 16 -->
+        <section>
+            <div class="slide-content-wrapper max-w-5xl mx-auto">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Goal / Scope / Non-Goals</h2>
+                
+                <div class="grid md:grid-cols-3 gap-4 md:gap-6">
+                    <div class="glass-panel slide-appear p-6 text-center border-b-4 border-b-cyber-green">
+                        <i data-lucide="target" class="w-8 h-8 md:w-10 md:h-10 text-cyber-green mx-auto mb-3"></i>
+                        <h3 class="text-lg md:text-xl font-black uppercase tracking-tight tech-text mb-2">Goal</h3>
+                        <p class="text-xs md:text-sm text-muted">What change the feature enables</p>
+                    </div>
+                    
+                    <div class="glass-panel slide-appear p-6 text-center border-b-4 border-b-cyber-purple" style="transition-delay: 100ms;">
+                        <i data-lucide="maximize" class="w-8 h-8 md:w-10 md:h-10 text-cyber-purple mx-auto mb-3"></i>
+                        <h3 class="text-lg md:text-xl font-black uppercase tracking-tight tech-text mb-2">Scope</h3>
+                        <p class="text-xs md:text-sm text-muted">What is included in this version</p>
+                    </div>
+                    
+                    <div class="glass-panel slide-appear p-6 text-center border-b-4 border-b-cyber-red" style="transition-delay: 200ms;">
+                        <i data-lucide="slash" class="w-8 h-8 md:w-10 md:h-10 text-cyber-red mx-auto mb-3"></i>
+                        <h3 class="text-lg md:text-xl font-black uppercase tracking-tight tech-text mb-2">Non-Goals</h3>
+                        <p class="text-xs md:text-sm text-muted">Explicitly excluded functionality</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 17 -->
+        <section>
+            <div class="slide-content-wrapper max-w-3xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 relative text-center">
+                    <div class="slide-topline"></div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6">User Story</h2>
+                    
+                    <div class="relative group mx-auto mb-6 inline-block text-left w-full sm:w-auto min-w-[280px]">
+                        <div class="absolute -inset-1 bg-gradient-to-r from-cyber-purple to-cyber-green rounded-xl blur opacity-25"></div>
+                        <pre class="relative font-mono text-sm md:text-lg leading-relaxed p-6 rounded-xl bg-[#0a0a0a] border border-white/10 text-gray-200">As a <span class="text-cyber-purple">[user]</span>
+I want <span class="text-cyber-orange">[action]</span>
+So that <span class="text-cyber-green">[value]</span></pre>
+                    </div>
+                    
+                    <p class="text-sm md:text-base tech-text">User stories translate product value into concrete actions.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 18 -->
+        <section>
+            <div class="slide-content-wrapper max-w-3xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 relative text-center">
+                    <div class="slide-topline" style="background: linear-gradient(to right, #f97316, transparent, #ef4444);"></div>
+                    <div class="kbd mb-3 border-cyber-orange text-cyber-orange">Gherkin Syntax</div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6">BDD Use Case</h2>
+                    
+                    <div class="relative group mx-auto mb-6 inline-block text-left w-full sm:w-auto min-w-[280px]">
+                        <div class="absolute -inset-1 bg-gradient-to-r from-cyber-orange to-cyber-red rounded-xl blur opacity-25"></div>
+                        <pre class="relative font-mono text-sm md:text-lg leading-relaxed p-6 rounded-xl bg-[#0a0a0a] border border-white/10 text-gray-200"><span class="text-cyber-purple font-bold">Given</span> transcript exists
+<span class="text-cyber-orange font-bold">When</span> user presses summarize
+<span class="text-cyber-green font-bold">Then</span> system generates summary</pre>
+                    </div>
+                    
+                    <p class="text-sm md:text-base tech-text">BDD describes observable system behavior.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 19 -->
+        <section>
+            <div class="slide-content-wrapper max-w-5xl mx-auto">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">UX Flow</h2>
+                
+                <div class="flex flex-wrap md:flex-nowrap justify-between gap-2 md:gap-4 mb-8">
+                    <div class="tech-card slide-appear p-4 md:p-6 flex-1 text-center min-w-[120px]">
+                        <i data-lucide="user" class="w-6 h-6 md:w-8 md:h-8 text-cyber-purple mx-auto mb-2"></i>
+                        <h4 class="font-bold uppercase tracking-tight text-xs md:text-sm tech-text">User</h4>
+                    </div>
+                    <div class="flex items-center justify-center slide-appear hidden md:flex"><i data-lucide="arrow-right" class="w-5 h-5 text-muted"></i></div>
+                    <div class="tech-card slide-appear p-4 md:p-6 flex-1 text-center border-cyber-orange/30 min-w-[120px]">
+                        <i data-lucide="terminal-square" class="w-6 h-6 md:w-8 md:h-8 text-cyber-orange mx-auto mb-2"></i>
+                        <h4 class="font-bold uppercase tracking-tight text-xs md:text-sm tech-text">Command</h4>
+                    </div>
+                    <div class="flex items-center justify-center slide-appear hidden md:flex"><i data-lucide="arrow-right" class="w-5 h-5 text-muted"></i></div>
+                    <div class="tech-card slide-appear p-4 md:p-6 flex-1 text-center border-cyber-purple/30 min-w-[120px]">
+                        <i data-lucide="cpu" class="w-6 h-6 md:w-8 md:h-8 text-cyber-purple mx-auto mb-2"></i>
+                        <h4 class="font-bold uppercase tracking-tight text-xs md:text-sm tech-text">Processing</h4>
+                    </div>
+                    <div class="flex items-center justify-center slide-appear hidden md:flex"><i data-lucide="arrow-right" class="w-5 h-5 text-muted"></i></div>
+                    <div class="tech-card slide-appear p-4 md:p-6 flex-1 text-center border-cyber-green/50 shadow-[0_0_15px_rgba(34,197,94,0.1)] min-w-[120px]">
+                        <i data-lucide="check-circle-2" class="w-6 h-6 md:w-8 md:h-8 text-cyber-green mx-auto mb-2"></i>
+                        <h4 class="font-bold uppercase tracking-tight text-xs md:text-sm tech-text">Result</h4>
+                    </div>
+                </div>
+                
+                <div class="glass-panel slide-appear p-4 text-center border-l-4 border-l-cyber-purple max-w-2xl mx-auto">
+                    <p class="font-mono text-xs md:text-sm uppercase tracking-wider tech-text">
+                        Describes the complete user journey from action to delivered value.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 20 -->
+        <section>
+            <div class="slide-content-wrapper max-w-5xl mx-auto">
+                <div class="flex flex-col md:flex-row gap-6 w-full">
+                    <div class="glass-panel slide-appear p-6 md:p-8 md:w-1/2 flex flex-col justify-center">
+                        <div class="slide-topline" style="background: linear-gradient(to right, #22c55e, transparent, #22c55e);"></div>
+                        <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-4">Acceptance Criteria</h2>
+                        <p class="text-xs md:text-sm tech-text mb-4">Clear conditions that must be met for a feature to be considered complete.</p>
+                        <i data-lucide="list-checks" class="w-12 h-12 md:w-16 md:h-16 text-cyber-green opacity-50"></i>
+                    </div>
+
+                    <div class="glass-panel slide-appear p-6 md:p-8 md:w-1/2" style="transition-delay: 100ms;">
+                        <ul class="space-y-4">
+                            <li>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <i data-lucide="file-check" class="w-4 h-4 md:w-5 md:h-5 text-cyber-green"></i>
+                                    <span class="font-bold uppercase tracking-tight tech-text text-xs md:text-sm">Valid input</span>
+                                </div>
+                                <p class="text-xs text-muted pl-6 md:pl-7">Supported formats and parameters</p>
+                            </li>
+                            <li>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <i data-lucide="eye" class="w-4 h-4 md:w-5 md:h-5 text-cyber-purple"></i>
+                                    <span class="font-bold uppercase tracking-tight tech-text text-xs md:text-sm">Expected output</span>
+                                </div>
+                                <p class="text-xs text-muted pl-6 md:pl-7">Observable system result</p>
+                            </li>
+                            <li>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <i data-lucide="shield-alert" class="w-4 h-4 md:w-5 md:h-5 text-cyber-orange"></i>
+                                    <span class="font-bold uppercase tracking-tight tech-text text-xs md:text-sm">Error handling</span>
+                                </div>
+                                <p class="text-xs text-muted pl-6 md:pl-7">System behavior under failure</p>
+                            </li>
+                            <li>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <i data-lucide="arrow-left-right" class="w-4 h-4 md:w-5 md:h-5 text-cyber-tg"></i>
+                                    <span class="font-bold uppercase tracking-tight tech-text text-xs md:text-sm">State transitions</span>
+                                </div>
+                                <p class="text-xs text-muted pl-6 md:pl-7">System lifecycle states</p>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 21 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Edge Cases</h2>
+                <div class="text-center mb-6 slide-appear"><div class="kbd text-cyber-red border-cyber-red/20">Abnormal Scenarios</div></div>
+                
+                <div class="flex flex-wrap justify-center gap-3 mb-6">
+                    <div class="tech-card slide-appear px-4 py-3 flex items-center gap-2 border-l-4 border-l-cyber-red">
+                        <i data-lucide="box-select" class="w-4 h-4 text-cyber-red"></i>
+                        <span class="font-bold uppercase text-xs md:text-sm tech-text">Empty input</span>
+                    </div>
+                    <div class="tech-card slide-appear px-4 py-3 flex items-center gap-2 border-l-4 border-l-cyber-red">
+                        <i data-lucide="file-warning" class="w-4 h-4 text-cyber-red"></i>
+                        <span class="font-bold uppercase text-xs md:text-sm tech-text">Invalid format</span>
+                    </div>
+                    <div class="tech-card slide-appear px-4 py-3 flex items-center gap-2 border-l-4 border-l-cyber-orange">
+                        <i data-lucide="timer" class="w-4 h-4 text-cyber-orange"></i>
+                        <span class="font-bold uppercase text-xs md:text-sm tech-text">Timeout</span>
+                    </div>
+                    <div class="tech-card slide-appear px-4 py-3 flex items-center gap-2 border-l-4 border-l-cyber-purple">
+                        <i data-lucide="server-crash" class="w-4 h-4 text-cyber-purple"></i>
+                        <span class="font-bold uppercase text-xs md:text-sm tech-text">External API failure</span>
+                    </div>
+                    <div class="tech-card slide-appear px-4 py-3 flex items-center gap-2 border-l-4 border-l-cyber-tg">
+                        <i data-lucide="copy" class="w-4 h-4 text-cyber-tg"></i>
+                        <span class="font-bold uppercase text-xs md:text-sm tech-text">Duplicate data</span>
+                    </div>
+                </div>
+                
+                <p class="text-center text-sm md:text-base font-mono tracking-tight tech-text slide-appear">
+                    "Reliable systems handle both ideal and abnormal scenarios."
+                </p>
+            </div>
+        </section>
+
+        <!-- Slide 22 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 relative text-center">
+                    <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #a855f7);"></div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-2 relative z-10">Data Model</h2>
+                    <div class="mb-6 relative z-10"><span class="kbd border-cyber-purple text-cyber-purple">Data Vault Architecture</span></div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 relative z-10 mb-6">
+                        <div class="tech-card p-5 border-t-2 border-t-cyber-purple flex items-center md:flex-col gap-4 md:gap-2 text-left md:text-center">
+                            <div class="w-10 h-10 rounded bg-cyber-purple/10 flex-shrink-0 flex items-center justify-center text-cyber-purple">
+                                <i data-lucide="hexagon" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-base md:text-lg uppercase tracking-tight tech-text mb-1">Hub</h3>
+                                <p class="text-xs text-muted">Core business entities</p>
+                            </div>
+                        </div>
+                        
+                        <div class="tech-card p-5 border-t-2 border-t-cyber-orange flex items-center md:flex-col gap-4 md:gap-2 text-left md:text-center">
+                            <div class="w-10 h-10 rounded bg-cyber-orange/10 flex-shrink-0 flex items-center justify-center text-cyber-orange">
+                                <i data-lucide="link" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-base md:text-lg uppercase tracking-tight tech-text mb-1">Link</h3>
+                                <p class="text-xs text-muted">Relationships between entities</p>
+                            </div>
+                        </div>
+                        
+                        <div class="tech-card p-5 border-t-2 border-t-cyber-green flex items-center md:flex-col gap-4 md:gap-2 text-left md:text-center">
+                            <div class="w-10 h-10 rounded bg-cyber-green/10 flex-shrink-0 flex items-center justify-center text-cyber-green">
+                                <i data-lucide="database" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-base md:text-lg uppercase tracking-tight tech-text mb-1">Satellite</h3>
+                                <p class="text-xs text-muted">Attributes and historical data</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl font-mono text-[10px] md:text-xs uppercase tracking-wider tech-text relative z-10">
+                        This structure enables scalability, auditability and data lineage.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 23 -->
+        <section>
+            <div class="slide-content-wrapper max-w-5xl mx-auto">
+                <div class="flex flex-col md:flex-row gap-6 w-full">
+                    <div class="glass-panel slide-appear p-6 md:p-8 md:w-1/3 flex flex-col justify-center">
+                        <div class="slide-topline" style="background: linear-gradient(to right, #f97316, transparent, #a855f7);"></div>
+                        <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-4">API Contracts</h2>
+                        <p class="text-xs md:text-sm tech-text mb-6">Strict definitions of how system components communicate.</p>
+                        <div class="kbd inline-flex self-start border-gray-500 text-gray-400">Usually OpenAPI / Swagger</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 md:w-2/3 w-full">
+                        <div class="tech-card slide-appear p-5 border-l-4 border-l-cyber-purple flex flex-col justify-center">
+                            <i data-lucide="globe" class="w-5 h-5 md:w-6 md:h-6 text-cyber-purple mb-2"></i>
+                            <h3 class="font-bold uppercase tracking-tight text-xs md:text-sm tech-text">Endpoint definition</h3>
+                        </div>
+                        <div class="tech-card slide-appear p-5 border-l-4 border-l-cyber-green flex flex-col justify-center">
+                            <i data-lucide="arrow-down-to-line" class="w-5 h-5 md:w-6 md:h-6 text-cyber-green mb-2"></i>
+                            <h3 class="font-bold uppercase tracking-tight text-xs md:text-sm tech-text">Request structure</h3>
+                        </div>
+                        <div class="tech-card slide-appear p-5 border-l-4 border-l-cyber-orange flex flex-col justify-center">
+                            <i data-lucide="arrow-up-from-line" class="w-5 h-5 md:w-6 md:h-6 text-cyber-orange mb-2"></i>
+                            <h3 class="font-bold uppercase tracking-tight text-xs md:text-sm tech-text">Response structure</h3>
+                        </div>
+                        <div class="tech-card slide-appear p-5 border-l-4 border-l-cyber-red flex flex-col justify-center">
+                            <i data-lucide="alert-octagon" class="w-5 h-5 md:w-6 md:h-6 text-cyber-red mb-2"></i>
+                            <h3 class="font-bold uppercase tracking-tight text-xs md:text-sm tech-text">Error responses</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 24 -->
+        <section>
+            <div class="slide-content-wrapper max-w-5xl mx-auto">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Non-Functional Requirements</h2>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
+                    <div class="tech-card slide-appear p-4 md:p-5">
+                        <i data-lucide="zap" class="w-5 h-5 text-cyber-orange mb-2"></i>
+                        <h4 class="font-bold mb-1 uppercase tracking-tight text-xs md:text-sm tech-text">Performance</h4>
+                        <p class="text-[10px] md:text-xs text-muted">Latency and throughput</p>
+                    </div>
+                    <div class="tech-card slide-appear p-4 md:p-5" style="transition-delay: 50ms;">
+                        <i data-lucide="lock" class="w-5 h-5 text-cyber-red mb-2"></i>
+                        <h4 class="font-bold mb-1 uppercase tracking-tight text-xs md:text-sm tech-text">Security</h4>
+                        <p class="text-[10px] md:text-xs text-muted">Authentication and access control</p>
+                    </div>
+                    <div class="tech-card slide-appear p-4 md:p-5" style="transition-delay: 100ms;">
+                        <i data-lucide="coins" class="w-5 h-5 text-cyber-green mb-2"></i>
+                        <h4 class="font-bold mb-1 uppercase tracking-tight text-xs md:text-sm tech-text">Cost</h4>
+                        <p class="text-[10px] md:text-xs text-muted">Infrastructure and inference</p>
+                    </div>
+                    <div class="tech-card slide-appear p-4 md:p-5" style="transition-delay: 150ms;">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-cyber-purple mb-2"></i>
+                        <h4 class="font-bold mb-1 uppercase tracking-tight text-xs md:text-sm tech-text">Reliability</h4>
+                        <p class="text-[10px] md:text-xs text-muted">Fault tolerance and retries</p>
+                    </div>
+                    <div class="tech-card slide-appear p-4 md:p-5" style="transition-delay: 200ms;">
+                        <i data-lucide="eye-off" class="w-5 h-5 text-gray-400 mb-2"></i>
+                        <h4 class="font-bold mb-1 uppercase tracking-tight text-xs md:text-sm tech-text">Privacy</h4>
+                        <p class="text-[10px] md:text-xs text-muted">Handling sensitive data</p>
+                    </div>
+                    <div class="tech-card slide-appear p-4 md:p-5" style="transition-delay: 250ms;">
+                        <i data-lucide="activity" class="w-5 h-5 text-cyber-tg mb-2"></i>
+                        <h4 class="font-bold mb-1 uppercase tracking-tight text-xs md:text-sm tech-text">Observability</h4>
+                        <p class="text-[10px] md:text-xs text-muted">Logs, metrics and monitoring</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 25 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 relative text-center">
+                    <div class="slide-topline"></div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6">Client Architecture</h2>
+                    
+                    <div class="flex flex-wrap md:flex-nowrap justify-center items-center gap-2 md:gap-4 mb-8">
+                        <div class="tech-card p-3 md:p-4 font-bold uppercase tech-text text-xs md:text-sm">User</div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-cyber-purple hidden md:block"></i>
+                        <div class="tech-card p-3 md:p-4 font-bold uppercase tech-text text-xs md:text-sm border-cyber-purple/50">Client Interface</div>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-cyber-orange hidden md:block"></i>
+                        <div class="tech-card p-3 md:p-4 font-bold uppercase tech-text text-xs md:text-sm border-cyber-orange/50">Backend API</div>
+                    </div>
+
+                    <div class="flex justify-center gap-4 md:gap-6 mb-8">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[var(--card-bg)] border border-[var(--glass-border)] flex items-center justify-center">
+                                <i data-lucide="hash" class="w-5 h-5 md:w-6 md:h-6 text-muted"></i>
+                            </div>
+                            <span class="text-[10px] md:text-xs font-bold uppercase tech-text">Slack</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[var(--card-bg)] border border-[var(--glass-border)] flex items-center justify-center">
+                                <i data-lucide="send" class="w-5 h-5 md:w-6 md:h-6 text-cyber-tg"></i>
+                            </div>
+                            <span class="text-[10px] md:text-xs font-bold uppercase tech-text">Telegram</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[var(--card-bg)] border border-[var(--glass-border)] flex items-center justify-center">
+                                <i data-lucide="layout-template" class="w-5 h-5 md:w-6 md:h-6 text-cyber-purple"></i>
+                            </div>
+                            <span class="text-[10px] md:text-xs font-bold uppercase tech-text">Web App</span>
+                        </div>
+                    </div>
+                    
+                    <p class="font-mono text-[10px] md:text-xs uppercase tracking-wider text-muted">
+                        Clients provide the interface for user interaction with the system.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 26 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Service Architecture</h2>
+                
+                <div class="glass-panel slide-appear p-6 max-w-4xl mx-auto border-t-4 border-t-cyber-purple mb-6 text-center">
+                    <div class="flex flex-wrap justify-center items-center gap-2 text-xs md:text-sm">
+                        <div class="font-mono font-bold tech-text">Client</div>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-purple hidden md:block"></i>
+                        <div class="font-mono font-bold text-cyber-purple">API Gateway</div>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-orange hidden md:block"></i>
+                        <div class="font-mono font-bold text-cyber-orange">AI Service</div>
+                        <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-green hidden md:block"></i>
+                        <div class="font-mono font-bold text-cyber-green">Database</div>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto w-full">
+                    <div class="tech-card slide-appear p-5">
+                        <i data-lucide="router" class="w-5 h-5 text-cyber-purple mb-2"></i>
+                        <p class="text-xs md:text-sm tech-text"><span class="font-bold">API Gateway</span> routes external requests</p>
+                    </div>
+                    <div class="tech-card slide-appear p-5" style="transition-delay: 100ms;">
+                        <i data-lucide="bot" class="w-5 h-5 text-cyber-orange mb-2"></i>
+                        <p class="text-xs md:text-sm tech-text"><span class="font-bold">AI services</span> orchestrate models and pipelines</p>
+                    </div>
+                    <div class="tech-card slide-appear p-5" style="transition-delay: 200ms;">
+                        <i data-lucide="database" class="w-5 h-5 text-cyber-green mb-2"></i>
+                        <p class="text-xs md:text-sm tech-text"><span class="font-bold">Databases</span> persist system state</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 27 -->
+        <section>
+            <div class="slide-content-wrapper max-w-5xl mx-auto">
+                <div class="flex flex-col md:flex-row gap-6 w-full">
+                    <div class="glass-panel slide-appear p-6 md:p-8 md:w-1/3 flex flex-col justify-center">
+                        <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #229ED9);"></div>
+                        <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-4">Data Flow (DFD)</h2>
+                        <div class="flex flex-row md:flex-col justify-center items-center gap-2 md:gap-3 font-mono text-[10px] md:text-xs font-bold">
+                            <span class="p-1.5 md:p-2 border border-[var(--glass-border)] rounded text-center">Input</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3 text-muted md:rotate-90"></i>
+                            <span class="p-1.5 md:p-2 border border-[var(--glass-border)] rounded text-center text-cyber-purple">Processing</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3 text-muted md:rotate-90"></i>
+                            <span class="p-1.5 md:p-2 border border-[var(--glass-border)] rounded text-center text-cyber-orange">Storage</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3 text-muted md:rotate-90"></i>
+                            <span class="p-1.5 md:p-2 border border-[var(--glass-border)] rounded text-center text-cyber-green">Output</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel slide-appear p-6 md:p-8 md:w-2/3 flex flex-col justify-center">
+                        <ul class="space-y-4">
+                            <li class="flex items-center gap-3 md:gap-4">
+                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[var(--card-bg)] border border-[var(--glass-border)] flex items-center justify-center flex-shrink-0"><i data-lucide="log-in" class="w-4 h-4 text-muted"></i></div>
+                                <span class="tech-text text-sm md:text-base">Sources generate data</span>
+                            </li>
+                            <li class="flex items-center gap-3 md:gap-4">
+                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-cyber-purple/10 border border-cyber-purple/20 flex items-center justify-center flex-shrink-0"><i data-lucide="cpu" class="w-4 h-4 text-cyber-purple"></i></div>
+                                <span class="tech-text text-sm md:text-base">Processing transforms information</span>
+                            </li>
+                            <li class="flex items-center gap-3 md:gap-4">
+                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-cyber-orange/10 border border-cyber-orange/20 flex items-center justify-center flex-shrink-0"><i data-lucide="hard-drive" class="w-4 h-4 text-cyber-orange"></i></div>
+                                <span class="tech-text text-sm md:text-base">Data stores maintain system state</span>
+                            </li>
+                            <li class="flex items-center gap-3 md:gap-4">
+                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-cyber-green/10 border border-cyber-green/20 flex items-center justify-center flex-shrink-0"><i data-lucide="log-out" class="w-4 h-4 text-cyber-green"></i></div>
+                                <span class="tech-text text-sm md:text-base">Outputs deliver value</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 28 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">Infrastructure & Platform</h2>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 w-full">
+                    <div class="tech-card slide-appear p-4 text-center flex flex-col items-center justify-center gap-2">
+                        <i data-lucide="server" class="w-6 h-6 text-cyber-purple"></i>
+                        <span class="text-[10px] md:text-xs font-bold uppercase tech-text">Backend services</span>
+                    </div>
+                    <div class="tech-card slide-appear p-4 text-center flex flex-col items-center justify-center gap-2" style="transition-delay: 50ms;">
+                        <i data-lucide="list-video" class="w-6 h-6 text-cyber-orange"></i>
+                        <span class="text-[10px] md:text-xs font-bold uppercase tech-text">Message queues</span>
+                    </div>
+                    <div class="tech-card slide-appear p-4 text-center flex flex-col items-center justify-center gap-2" style="transition-delay: 100ms;">
+                        <i data-lucide="database" class="w-6 h-6 text-cyber-green"></i>
+                        <span class="text-[10px] md:text-xs font-bold uppercase tech-text">Databases & Storage</span>
+                    </div>
+                    <div class="tech-card slide-appear p-4 text-center flex flex-col items-center justify-center gap-2" style="transition-delay: 150ms;">
+                        <i data-lucide="activity" class="w-6 h-6 text-cyber-tg"></i>
+                        <span class="text-[10px] md:text-xs font-bold uppercase tech-text">Monitoring & Observability</span>
+                    </div>
+                    <div class="tech-card slide-appear p-4 text-center flex flex-col items-center justify-center gap-2" style="transition-delay: 200ms;">
+                        <i data-lucide="infinity" class="w-6 h-6 text-cyber-purple"></i>
+                        <span class="text-[10px] md:text-xs font-bold uppercase tech-text">CI/CD pipelines</span>
+                    </div>
+                    <div class="tech-card slide-appear p-4 text-center flex flex-col items-center justify-center gap-2" style="transition-delay: 250ms;">
+                        <i data-lucide="cloud" class="w-6 h-6 text-cyber-orange"></i>
+                        <span class="text-[10px] md:text-xs font-bold uppercase tech-text">Cloud infrastructure</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 29 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <div class="glass-panel slide-appear p-6 md:p-10 relative overflow-hidden text-center">
+                    <div class="slide-topline"></div>
+                    <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-8">Tasks and Grooming</h2>
+                    
+                    <div class="flex flex-wrap justify-center items-center gap-2 mb-8">
+                        <span class="kbd bg-cyber-purple/10 border-cyber-purple/20 text-cyber-purple">SPEC</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-muted"></i>
+                        <span class="kbd bg-cyber-orange/10 border-cyber-orange/20 text-cyber-orange">Tasks</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-muted"></i>
+                        <span class="kbd bg-cyber-tg/10 border-cyber-tg/20 text-cyber-tg">Grooming</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-muted"></i>
+                        <span class="kbd bg-cyber-green/20 border-cyber-green text-cyber-green shadow-[0_0_10px_rgba(34,197,94,0.3)]">Ready</span>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-4 text-left">
+                        <div class="tech-card p-5 border-t-2 border-t-cyber-purple">
+                            <i data-lucide="split-square-horizontal" class="w-5 h-5 text-cyber-purple mb-2"></i>
+                            <p class="text-xs md:text-sm tech-text font-medium">Break specification into tasks</p>
+                        </div>
+                        <div class="tech-card p-5 border-t-2 border-t-cyber-orange">
+                            <i data-lucide="git-commit" class="w-5 h-5 text-cyber-orange mb-2"></i>
+                            <p class="text-xs md:text-sm tech-text font-medium">Define dependencies between tasks</p>
+                        </div>
+                        <div class="tech-card p-5 border-t-2 border-t-cyber-green">
+                            <i data-lucide="list-todo" class="w-5 h-5 text-cyber-green mb-2"></i>
+                            <p class="text-xs md:text-sm tech-text font-medium">Ensure tasks meet Definition of Ready</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 30 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <h2 class="text-2xl md:text-4xl font-black tracking-tight uppercase mb-6 text-center slide-appear">AI-Native Development Loop</h2>
+                
+                <div class="glass-panel slide-appear p-6 mb-6 text-center">
+                    <div class="flex flex-wrap justify-center items-center gap-x-2 gap-y-3 font-mono text-[10px] md:text-xs font-bold uppercase tech-text leading-loose">
+                        Idea <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-purple"></i>
+                        Research <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-purple"></i>
+                        <span class="text-cyber-orange px-2 py-1 bg-cyber-orange/10 rounded border border-cyber-orange/20">SPEC</span> <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-purple"></i>
+                        Architecture <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-purple"></i>
+                        Tasks <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-purple"></i>
+                        Tests <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-purple"></i>
+                        Code <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-purple"></i>
+                        Deploy <i data-lucide="arrow-right" class="w-3 h-3 text-cyber-purple"></i>
+                        Metrics
+                    </div>
+                </div>
+
+                <div class="glass-panel slide-appear p-6 md:p-10 text-center border-l-4 border-l-cyber-purple max-w-3xl mx-auto relative overflow-hidden">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-cyber-purple/20 rounded-full blur-3xl pointer-events-none"></div>
+                    <blockquote class="text-sm md:text-xl font-mono tracking-tight tech-text text-balance leading-relaxed">
+                        "The bottleneck of AI development is no longer code. <br/><span class="text-gradient font-bold mt-2 block">The bottleneck is clarity of specification.</span>"
+                    </blockquote>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 31 -->
+        <section>
+            <div class="slide-content-wrapper max-w-4xl mx-auto">
+                <div class="glass-panel slide-appear p-8 md:p-12 text-center relative overflow-hidden border-t-4 border-t-cyber-orange">
+                    <div class="slide-topline" style="height: 4px; background: linear-gradient(to right, #f97316, transparent, #a855f7);"></div>
+                    
+                    <div class="absolute inset-0 bg-gradient-to-b from-cyber-orange/5 to-transparent pointer-events-none"></div>
+                    
+                    <h2 class="text-3xl md:text-5xl font-black tracking-tighter uppercase mb-4 relative z-10 text-gradient">
+                        Seminar Assignment
+                    </h2>
+                    
+                    <p class="text-sm md:text-base max-w-2xl mx-auto mb-6 text-balance leading-relaxed tech-text relative z-10 font-medium">
+                        Apply the AI-native workflow to your own idea.
+                    </p>
+
+                    <div class="max-w-xl mx-auto relative z-10 text-left bg-[var(--card-bg)] p-6 rounded-2xl border border-[var(--glass-border)] shadow-xl mb-6">
+                        <ul class="space-y-3 text-sm md:text-base">
+                            <li class="flex items-start gap-3"><i data-lucide="check-square" class="w-4 h-4 md:w-5 md:h-5 text-cyber-orange mt-0.5"></i> <span class="tech-text">Choose a product idea or feature</span></li>
+                            <li class="flex items-start gap-3"><i data-lucide="check-square" class="w-4 h-4 md:w-5 md:h-5 text-cyber-orange mt-0.5"></i> <span class="tech-text">Conduct AI deep research</span></li>
+                            <li class="flex items-start gap-3"><i data-lucide="check-square" class="w-4 h-4 md:w-5 md:h-5 text-cyber-orange mt-0.5"></i> <span class="tech-text">Compare technologies and models</span></li>
+                            <li class="flex items-start gap-3"><i data-lucide="check-square" class="w-4 h-4 md:w-5 md:h-5 text-cyber-orange mt-0.5"></i> <span class="tech-text">Write a research memo</span></li>
+                            <li class="flex items-start gap-3"><i data-lucide="check-square" class="w-4 h-4 md:w-5 md:h-5 text-cyber-purple mt-0.5"></i> <span class="tech-text font-bold">Create a feature specification</span></li>
+                            <li class="flex items-start gap-3"><i data-lucide="check-square" class="w-4 h-4 md:w-5 md:h-5 text-cyber-purple mt-0.5"></i> <span class="tech-text">Describe architecture and data flows</span></li>
+                            <li class="flex items-start gap-3"><i data-lucide="check-square" class="w-4 h-4 md:w-5 md:h-5 text-cyber-green mt-0.5"></i> <span class="tech-text">Prepare implementation tasks</span></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="relative z-10">
+                        <button class="px-8 py-3 rounded-xl bg-gradient-to-r from-cyber-purple to-cyber-orange text-white font-bold hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all transform hover:-translate-y-1 text-sm md:text-base uppercase tracking-wider">
+                            Start Execution
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="fixed bottom-0 left-0 right-0 z-40 border-t border-white/5 bg-[var(--glass-bg)] backdrop-blur-md py-3 transition-colors duration-400">
+        <div class="max-w-[1100px] mx-auto px-6 flex flex-row justify-between items-center">
+            <div class="flex items-center gap-2 font-montserrat font-black tracking-tighter uppercase opacity-50 text-xs md:text-sm">
+                <i data-lucide="brain-circuit" class="w-4 h-4"></i>
+                <span>AIDev</span>
+            </div>
+            <div class="text-[10px] md:text-xs font-mono uppercase tracking-wider opacity-50 text-right">
+                <span class="hidden md:inline">© AI Deep Research. Specification Module.</span>
+                <span class="inline md:hidden">© AIDev Module</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Theme Toggle Logic
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+        themeToggleBtn.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+        });
+
+        // Horizontal Slider Logic
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('#slider > section');
+        const totalSlides = slides.length;
+        const sliderContainer = document.getElementById('slider');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const slideNumDisplay = document.getElementById('current-slide-num');
+
+        function updateSlider() {
+            // Move slider
+            sliderContainer.style.transform = `translateX(-${currentSlide * 100}vw)`;
+            
+            // Update UI elements
+            progressBar.style.width = `${(currentSlide / (totalSlides - 1)) * 100}%`;
+            slideNumDisplay.textContent = currentSlide + 1;
+            
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === totalSlides - 1;
+
+            // Trigger Animations for current slide
+            slides.forEach((slide, index) => {
+                const animatedElements = slide.querySelectorAll('.slide-appear');
+                if (index === currentSlide) {
+                    // Small delay to ensure transition works when sliding in
+                    setTimeout(() => {
+                        animatedElements.forEach(el => el.classList.add('active'));
+                    }, 50);
+                } else {
+                    animatedElements.forEach(el => el.classList.remove('active'));
+                }
+            });
+        }
+
+        // Event Listeners for Buttons
+        prevBtn.addEventListener('click', () => {
+            if (currentSlide > 0) { currentSlide--; updateSlider(); }
+        });
+        nextBtn.addEventListener('click', () => {
+            if (currentSlide < totalSlides - 1) { currentSlide++; updateSlider(); }
+        });
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                if (currentSlide < totalSlides - 1) { currentSlide++; updateSlider(); }
+            } else if (e.key === 'ArrowLeft') {
+                if (currentSlide > 0) { currentSlide--; updateSlider(); }
+            }
+        });
+
+        // Touch/Swipe Navigation Support
+        let touchStartX = 0;
+        let touchEndX = 0;
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const threshold = 50; // minimum distance to trigger swipe
+            if (touchStartX - touchEndX > threshold && currentSlide < totalSlides - 1) {
+                currentSlide++; updateSlider();
+            } else if (touchEndX - touchStartX > threshold && currentSlide > 0) {
+                currentSlide--; updateSlider();
+            }
+        }
+
+        // Initialize first slide
+        updateSlider();
+    </script>
+</body>
+</html>
