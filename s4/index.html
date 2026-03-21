@@ -793,16 +793,24 @@
                 <div class="flex flex-col md:flex-row gap-8 items-center justify-center max-w-4xl mx-auto">
                     <div class="tech-card p-6 w-full md:w-2/5 bg-red-500/5 border-red-500/30 relative">
                         <div class="font-bold text-cyber-red uppercase mb-4 text-xs z-10 relative">Improvisation</div>
-                        <div class="h-32 relative text-muted text-[10px] font-mono">
-                            <svg class="absolute inset-0 w-full h-full" style="z-index:0">
-                                <line x1="15%" y1="20%" x2="50%" y2="50%" stroke="currentColor" stroke-width="1" class="opacity-50"/>
-                                <line x1="50%" y1="50%" x2="85%" y2="80%" stroke="currentColor" stroke-width="1" class="opacity-50"/>
-                                <line x1="15%" y1="20%" x2="85%" y2="80%" stroke="currentColor" stroke-width="1" class="opacity-50"/>
-                                <line x1="85%" y1="20%" x2="15%" y2="80%" stroke="currentColor" stroke-width="1" class="opacity-50"/>
+                        <div class="h-32 relative text-[10px] font-mono">
+                            <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index:0">
+                                <defs>
+                                    <marker id="chaos-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" class="opacity-50"/>
+                                    </marker>
+                                </defs>
+                                <path d="M 15% 20% Q 40% 10% 85% 80%" fill="none" stroke="#ef4444" stroke-width="1.5" class="opacity-50" stroke-dasharray="4 2" marker-end="url(#chaos-arrow)"/>
+                                <path d="M 85% 80% Q 30% 90% 15% 20%" fill="none" stroke="#ef4444" stroke-width="1.5" class="opacity-50" marker-end="url(#chaos-arrow)"/>
+                                <path d="M 50% 50% Q 70% 30% 85% 20%" fill="none" stroke="#ef4444" stroke-width="1.5" class="opacity-50" marker-end="url(#chaos-arrow)"/>
+                                <path d="M 15% 80% Q 30% 60% 50% 50%" fill="none" stroke="#ef4444" stroke-width="1.5" class="opacity-50" marker-end="url(#chaos-arrow)"/>
+                                <path d="M 85% 20% Q 50% 40% 15% 80%" fill="none" stroke="#ef4444" stroke-width="1.5" class="opacity-50" stroke-dasharray="2 2" marker-end="url(#chaos-arrow)"/>
                             </svg>
-                            <div class="absolute top-2 left-2 border border-gray-500 p-1 bg-[var(--card-bg)] z-10 shadow-sm">UI</div>
-                            <div class="absolute bottom-2 right-2 border border-gray-500 p-1 bg-[var(--card-bg)] z-10 shadow-sm">DB</div>
-                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 border border-gray-500 p-1 bg-[var(--card-bg)] z-10 shadow-sm">Logic</div>
+                            <div class="absolute top-1 left-2 border border-cyber-red/50 text-cyber-red p-1 bg-[var(--card-bg)] z-10 shadow-sm rounded">UI</div>
+                            <div class="absolute bottom-1 right-2 border border-cyber-red/50 text-cyber-red p-1 bg-[var(--card-bg)] z-10 shadow-sm rounded">DB</div>
+                            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 border border-cyber-red/50 text-cyber-red p-1 bg-[var(--card-bg)] z-10 shadow-sm rounded">Logic</div>
+                            <div class="absolute top-1 right-2 border border-cyber-red/50 text-cyber-red p-1 bg-[var(--card-bg)] z-10 shadow-sm rounded">API</div>
+                            <div class="absolute bottom-1 left-2 border border-cyber-red/50 text-cyber-red p-1 bg-[var(--card-bg)] z-10 shadow-sm rounded">State</div>
                         </div>
                     </div>
                     
