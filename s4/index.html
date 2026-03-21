@@ -1,1 +1,2370 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lecture 4: Orchestration of AI Agents for Software Generation</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Montserrat:wght@800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons & Lucide (for theme toggle) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        montserrat: ['Montserrat', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Space Mono', 'monospace'],
+                    },
+                    colors: {
+                        cyber: {
+                            purple: '#a855f7',
+                            orange: '#f97316',
+                            tg: '#229ED9',
+                            green: '#22c55e',
+                            red: '#ef4444'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                        'spin-slow': 'spin 8s linear infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS Variables: Light & Dark */
+        @layer base {
+            :root {
+                --bg-color: #f8fafc;
+                --text-main: #0f172a;
+                --text-muted: #475569;
+                --glass-bg: rgba(255, 255, 255, 0.65);
+                --glass-border: rgba(0, 0, 0, 0.05);
+                --card-bg: rgba(255, 255, 255, 0.8);
+                --card-border: rgba(0, 0, 0, 0.08);
+                --shadow-glow: rgba(168, 85, 247, 0.05);
+                --grid-color-purple: rgba(168, 85, 247, 0.08);
+                --grid-color-orange: rgba(249, 115, 22, 0.08);
+            }
+            html.dark {
+                --bg-color: #050505;
+                --text-main: #e5e7eb;
+                --text-muted: #9ca3af;
+                --glass-bg: rgba(15, 15, 15, 0.5);
+                --glass-border: rgba(255, 255, 255, 0.08);
+                --card-bg: rgba(20, 20, 20, 0.6);
+                --card-border: rgba(255, 255, 255, 0.08);
+                --shadow-glow: rgba(168, 85, 247, 0.15);
+                --grid-color-purple: rgba(168, 85, 247, 0.05);
+                --grid-color-orange: rgba(249, 115, 22, 0.05);
+            }
+        }
+
+        html, body {
+            overflow: hidden; width: 100vw; height: 100vh; margin: 0; padding: 0;
+            background-color: var(--bg-color) !important; color: var(--text-main);
+            transition: background-color 0.4s ease, color 0.4s ease;
+            user-select: none; -ms-overflow-style: none; scrollbar-width: none;
+        }
+        body::-webkit-scrollbar { display: none; }
+
+        .bg-grid {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -2;
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, var(--grid-color-purple) 1px, transparent 1px),
+                              linear-gradient(to bottom, var(--grid-color-orange) 1px, transparent 1px);
+            transition: background-image 0.4s ease;
+        }
+
+        .slide-container {
+            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center;
+            overflow-y: auto; overflow-x: hidden;
+        }
+        .slide-container::-webkit-scrollbar { display: none; }
+        
+        .opacity-0.translate-y-8 { transform: translateY(20px) scale(0.98); }
+        .opacity-0.-translate-y-8 { transform: translateY(-20px) scale(0.98); }
+        .opacity-100.translate-y-0 { transform: translateY(0) scale(1); }
+
+        .content-z {
+            position: relative; z-index: 10; margin: auto; width: 100%;
+            padding: 4rem 1rem 1.5rem 1rem; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border); box-shadow: 0 10px 40px var(--shadow-glow);
+            border-radius: 24px; position: relative; overflow: hidden;
+            transition: all 0.4s ease; width: 100%; max-width: 1200px; padding: 2rem;
+        }
+        @media (min-width: 768px) { .glass-panel { padding: 3rem; } }
+
+        .tech-card {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 16px; transition: all 0.3s ease;
+        }
+        .tech-card:hover { border-color: var(--cyber-purple, #a855f7); transform: translateY(-4px); box-shadow: 0 10px 30px var(--shadow-glow); }
+
+        .slide-topline { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(to right, #a855f7, transparent, #f97316); opacity: 0.8; }
+        .kbd { font-family: 'Space Mono', monospace; background: var(--card-bg); border: 1px solid var(--glass-border); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.7rem; display: inline-flex; align-items: center; gap: 0.375rem; font-weight: 700; }
+        .text-gradient { background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-image: linear-gradient(to right, #a855f7, #f97316); }
+        .gradient-bg { background-image: linear-gradient(135deg, #a855f7, #f97316); }
+
+        h1, h2, h3 { font-family: 'Montserrat', sans-serif; }
+        .tech-text { color: var(--text-main); }
+        .text-muted { color: var(--text-muted); }
+        #progress-bar { box-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+
+        /* Utility for complex grids */
+        .grid-layout { display: grid; gap: 1rem; }
+        .flex-center { display: flex; justify-content: center; align-items: center; }
+
+        body.pdf-export-mode { overflow: auto !important; width: auto !important; height: auto !important; background: var(--bg-color) !important; }
+        body.pdf-export-mode .bg-grid, body.pdf-export-mode .fixed, body.pdf-export-mode header, body.pdf-export-mode #progress-container { display: none !important; }
+        body.pdf-export-mode .slide-container { position: relative !important; transform: none !important; opacity: 1 !important; page-break-after: always; break-after: page; min-height: 100vh; }
+        @media print {
+            html, body { overflow: visible !important; background: var(--bg-color) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .bg-grid, .fixed, header, #progress-container { display: none !important; }
+            .slide-container { position: relative !important; transform: none !important; opacity: 1 !important; page-break-after: always; min-height: 100vh; }
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-cyber-purple/30 selection:text-cyber-purple">
+
+    <!-- Backgrounds -->
+    <div class="bg-grid"></div>
+    <div class="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyber-purple/10 blur-[120px] animate-pulse-slow pointer-events-none z-[-1]"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyber-orange/10 blur-[120px] animate-pulse-slow pointer-events-none z-[-1]" style="animation-delay: 3s;"></div>
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-40 border-b border-white/5 bg-[var(--glass-bg)] backdrop-blur-md">
+        <div class="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="font-mono text-xs font-bold text-cyber-purple tracking-widest uppercase hidden sm:block">AI Engineering</div>
+            <div class="flex items-center gap-4 ml-auto">
+                <div class="font-mono text-xs text-muted tracking-widest uppercase mr-4">
+                    Slide <span id="current-slide-num" class="text-cyber-purple font-bold">1</span> / 73
+                </div>
+                <button id="theme-toggle" class="p-2 rounded-full tech-card hover:text-cyber-purple transition-colors" aria-label="Toggle Theme">
+                    <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div id="progress-container" class="fixed bottom-0 left-0 h-1 bg-[var(--glass-border)] w-full z-50">
+        <div id="progress-bar" class="h-full gradient-bg w-0 transition-all duration-300"></div>
+    </div>
+
+    <!-- SLIDE 0: Title -->
+    <div class="slide-container px-4 md:px-12 opacity-100 translate-y-0" id="slide-0">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center flex flex-col items-center justify-center min-h-[60vh]">
+                <div class="slide-topline"></div>
+                <div class="inline-flex kbd mb-6 text-cyber-purple border-cyber-purple/20 bg-cyber-purple/5">
+                    <i class="ph-bold ph-book-open"></i> Lecture 4
+                </div>
+                <h2 class="text-sm md:text-xl font-bold text-muted leading-tight mb-8">Engineering Systems with AI</h2>
+                <h1 class="text-3xl md:text-5xl lg:text-[70px] font-black mb-8 md:mb-12 leading-[1.1] tracking-tight uppercase">
+                    Orchestration of AI Agents <br class="hidden lg:block">
+                    <span class="text-gradient drop-shadow-sm">for Software Generation</span>
+                </h1>
+                <div class="border-t border-[var(--glass-border)] pt-6 md:pt-8 w-full max-w-2xl mx-auto flex justify-between items-center text-left">
+                    <div class="text-lg md:text-2xl tech-text font-bold font-montserrat tracking-tight flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-cyber-purple/20 flex items-center justify-center text-cyber-purple border border-cyber-purple/50"><i class="ph-fill ph-user"></i></div>
+                        Andre Kuzminykh
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 1: Orchestration of AI Agents -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-1">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-stretch">
+                <div class="slide-topline"></div>
+                <div class="w-full md:w-1/2 flex flex-col justify-center">
+                    <div class="kbd mb-4 text-cyber-purple">Block 1. Why This Matters</div>
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Orchestration of <span class="text-gradient">AI Agents</span></h2>
+                    <ul class="space-y-4 text-sm md:text-base tech-text font-medium leading-relaxed">
+                        <li class="flex items-start gap-3"><i class="ph-bold ph-check-circle text-cyber-purple mt-1 shrink-0"></i> AI in development is no longer a toy — it is an engineering tool</li>
+                        <li class="flex items-start gap-3"><i class="ph-bold ph-check-circle text-cyber-purple mt-1 shrink-0"></i> The goal is not generation magic, but controlled output</li>
+                        <li class="flex items-start gap-3"><i class="ph-bold ph-check-circle text-cyber-purple mt-1 shrink-0"></i> In the seminar: PRD + tests + agent + correct implementation</li>
+                        <li class="flex items-start gap-3"><i class="ph-bold ph-check-circle text-cyber-purple mt-1 shrink-0"></i> The engineer’s role is shifting from writing code to managing execution</li>
+                        <li class="flex items-start gap-3"><i class="ph-bold ph-check-circle text-cyber-purple mt-1 shrink-0"></i> The target is a verifiable green result</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex flex-col justify-center items-center">
+                    <div class="tech-card p-6 w-full bg-[var(--bg-color)] shadow-[0_0_30px_rgba(168,85,247,0.1)] relative">
+                        <h3 class="text-center font-bold text-cyber-purple uppercase mb-6 font-mono tracking-widest text-xs">AI as Engineering Discipline</h3>
+                        <div class="flex flex-col gap-2 relative z-10">
+                            <div class="flex items-center gap-4 tech-card p-3 bg-[var(--glass-bg)]"><div class="p-2 bg-cyber-purple/10 rounded"><i class="ph-duotone ph-file-text text-xl text-cyber-purple"></i></div> <span class="font-bold tech-text">PRD Specification</span></div>
+                            <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-cyber-orange"></i></div>
+                            <div class="flex items-center gap-4 tech-card p-3 bg-[var(--glass-bg)] border-cyber-orange/50"><div class="p-2 bg-cyber-orange/10 rounded"><i class="ph-duotone ph-robot text-xl text-cyber-orange"></i></div> <span class="font-bold tech-text">AI Agent</span></div>
+                            <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-cyber-orange"></i></div>
+                            <div class="flex items-center gap-4 tech-card p-3 bg-[var(--glass-bg)]"><div class="p-2 bg-cyber-tg/10 rounded"><i class="ph-duotone ph-code text-xl text-cyber-tg"></i></div> <span class="font-bold tech-text">Generated Code</span></div>
+                            <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-cyber-orange"></i></div>
+                            <div class="flex items-center gap-4 tech-card p-3 bg-[var(--glass-bg)] border-cyber-green/50"><div class="p-2 bg-cyber-green/10 rounded"><i class="ph-duotone ph-check-square text-xl text-cyber-green"></i></div> <span class="font-bold tech-text">Tests / Verification</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: Why This Topic Matters Right Now -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-2">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 text-center uppercase">Why This Matters <span class="text-gradient">Right Now</span></h2>
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="w-full md:w-1/2 tech-card p-6 flex flex-col justify-center relative overflow-hidden bg-[var(--glass-bg)]">
+                        <div class="absolute left-6 top-6 bottom-6 w-1 bg-gradient-to-b from-gray-500 via-cyber-purple to-cyber-orange rounded"></div>
+                        <div class="pl-8 space-y-6">
+                            <div><span class="text-xs font-mono text-gray-500">Past</span><h4 class="font-bold tech-text text-lg">Copilot Era</h4></div>
+                            <div><span class="text-xs font-mono text-cyber-purple font-bold">Present</span><h4 class="font-bold text-cyber-purple text-xl shadow-glow">Agent Era</h4></div>
+                            <div><span class="text-xs font-mono text-cyber-orange font-bold">Future</span><h4 class="font-black text-cyber-orange text-2xl">Engineering Systems with AI</h4></div>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2 flex flex-col gap-4">
+                        <div class="tech-card p-5 border-l-4 border-l-gray-500 bg-[var(--bg-color)]">
+                            <h4 class="font-bold text-gray-500 mb-2 font-mono uppercase text-sm flex items-center gap-2"><i class="ph-bold ph-clock"></i> Before: Helper</h4>
+                            <p class="text-sm text-muted">Model answers questions or completes lines of code.</p>
+                        </div>
+                        <div class="tech-card p-5 border-l-4 border-l-cyber-orange bg-cyber-orange/5 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+                            <h4 class="font-bold text-cyber-orange mb-2 font-mono uppercase text-sm flex items-center gap-2"><i class="ph-bold ph-lightning"></i> Now: Participant</h4>
+                            <p class="text-sm tech-text">Model participates in the full solution lifecycle, affects development structure, and requires task framing & validation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: What Exactly Has Changed -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-3">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 text-center uppercase">What Exactly Has <span class="text-gradient">Changed</span></h2>
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
+                    <div class="tech-card p-6 w-full lg:w-[40%] text-center bg-[var(--glass-bg)] opacity-70">
+                        <i class="ph-duotone ph-keyboard text-5xl text-gray-500 mb-4"></i>
+                        <h3 class="font-bold text-lg tech-text mb-2 uppercase">Manual Coding</h3>
+                        <p class="text-xs text-muted">Engineer writes every line of code manually.</p>
+                    </div>
+                    <div class="flex flex-col items-center justify-center tech-card p-3 border-cyber-purple bg-cyber-purple/10 text-cyber-purple font-bold text-xs font-mono uppercase">
+                        Shift of Effort <i class="ph-bold ph-arrow-right text-2xl mt-1 hidden lg:block"></i><i class="ph-bold ph-arrow-down text-2xl mt-1 lg:hidden"></i>
+                    </div>
+                    <div class="tech-card p-6 w-full lg:w-[40%] text-center border-cyber-purple bg-[var(--bg-color)] shadow-[0_0_20px_rgba(168,85,247,0.15)] relative">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--card-bg)] px-3 py-1 rounded-full border border-cyber-purple text-[10px] text-cyber-purple font-bold uppercase tracking-widest">New Paradigm</div>
+                        <i class="ph-duotone ph-git-merge text-5xl text-cyber-purple mb-4 mt-2"></i>
+                        <h3 class="font-bold text-lg tech-text mb-2 uppercase">Managing Execution</h3>
+                        <div class="flex flex-wrap gap-2 justify-center text-[10px] font-mono mt-3">
+                            <span class="bg-[var(--glass-bg)] border border-[var(--glass-border)] px-2 py-1 rounded">Context</span>
+                            <span class="bg-[var(--glass-bg)] border border-[var(--glass-border)] px-2 py-1 rounded">Agent</span>
+                            <span class="bg-[var(--glass-bg)] border border-[var(--glass-border)] px-2 py-1 rounded">Tests</span>
+                            <span class="bg-[var(--glass-bg)] border border-[var(--glass-border)] px-2 py-1 rounded">Arch</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center text-sm tech-text mt-8 font-medium max-w-2xl mx-auto">We are moving from manual coding to managing a machine executor. The human holds the context and boundaries.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: Assistant vs Agent -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-4">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #ef4444);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 text-center uppercase">From Assistant <span class="text-gradient">to Agent</span></h2>
+                <div class="flex flex-col md:flex-row gap-6 items-stretch">
+                    <div class="w-full md:w-1/2 tech-card p-6 bg-[var(--glass-bg)] flex flex-col items-center text-center opacity-80">
+                        <i class="ph-duotone ph-chat-circle-dots text-4xl text-cyber-tg mb-4"></i>
+                        <h3 class="font-bold text-xl tech-text mb-4 uppercase tracking-widest">Assistant</h3>
+                        <ul class="text-sm text-muted space-y-3 text-left w-full bg-[var(--bg-color)] p-4 rounded-xl border border-[var(--glass-border)]">
+                            <li>• Responds to a local request</li>
+                            <li>• Isolated context</li>
+                            <li>• Low risk of cascading failure</li>
+                        </ul>
+                    </div>
+                    <div class="w-full md:w-1/2 tech-card p-6 border-cyber-orange bg-cyber-orange/5 flex flex-col items-center text-center shadow-[0_0_20px_rgba(249,115,22,0.1)] relative">
+                        <i class="ph-duotone ph-robot text-4xl text-cyber-orange mb-4"></i>
+                        <h3 class="font-bold text-xl text-cyber-orange mb-4 uppercase tracking-widest">Agent</h3>
+                        <div class="flex items-center gap-2 text-xs font-mono font-bold text-cyber-orange bg-[var(--bg-color)] border border-cyber-orange/30 rounded-lg p-2 mb-4 w-full justify-center">
+                            Repo <i class="ph-bold ph-arrow-right"></i> Patch <i class="ph-bold ph-arrow-right"></i> Test <i class="ph-bold ph-arrow-right"></i> Fix
+                        </div>
+                        <ul class="text-sm tech-text space-y-3 text-left w-full">
+                            <li>• Acts inside the engineering cycle</li>
+                            <li>• Edits files, runs tests</li>
+                            <li>• Needs workflow & rules</li>
+                        </ul>
+                        <div class="mt-auto pt-4 w-full">
+                            <div class="bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-bold uppercase p-2 rounded tracking-widest">Higher Cost of Error</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: Goal of the Lecture -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-5">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Goal of the <span class="text-gradient">Lecture</span></h2>
+                <div class="relative w-full max-w-[500px] h-[350px] mx-auto flex items-center justify-center">
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 tech-card border-cyber-purple bg-[var(--bg-color)] p-4 w-40 h-40 rounded-full flex items-center justify-center flex-col shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+                        <i class="ph-duotone ph-shield-check text-3xl text-cyber-purple mb-1"></i>
+                        <span class="text-[10px] font-black uppercase text-cyber-purple leading-tight">Controlled<br>AI Env</span>
+                    </div>
+                    <!-- Nodes -->
+                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 tech-card p-2 text-[10px] font-mono font-bold w-24 z-10 bg-[var(--glass-bg)]">PRD</div>
+                    <div class="absolute top-[30%] right-0 tech-card p-2 text-[10px] font-mono font-bold w-24 z-10 bg-[var(--glass-bg)]">Rules</div>
+                    <div class="absolute bottom-[10%] right-[15%] tech-card p-2 text-[10px] font-mono font-bold w-24 z-10 bg-[var(--glass-bg)]">Tests</div>
+                    <div class="absolute bottom-[10%] left-[15%] tech-card p-2 text-[10px] font-mono font-bold w-24 z-10 bg-[var(--glass-bg)]">Arch</div>
+                    <div class="absolute top-[30%] left-0 tech-card p-2 text-[10px] font-mono font-bold w-24 z-10 bg-[var(--glass-bg)]">Quality</div>
+                    <!-- Lines connecting center to nodes (SVG) -->
+                    <svg class="absolute inset-0 w-full h-full -z-10" viewBox="0 0 500 350">
+                        <line x1="250" y1="175" x2="250" y2="20" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4"/>
+                        <line x1="250" y1="175" x2="450" y2="105" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4"/>
+                        <line x1="250" y1="175" x2="380" y2="315" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4"/>
+                        <line x1="250" y1="175" x2="120" y2="315" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4"/>
+                        <line x1="250" y1="175" x2="50" y2="105" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4"/>
+                    </svg>
+                </div>
+                <div class="flex flex-wrap justify-center gap-3 mt-4">
+                    <span class="kbd">Move from "prompt magic" to engineering</span>
+                    <span class="kbd">Verifiable & safe results</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: Goal of the Seminar -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-6">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Goal of the <span class="text-gradient">Seminar</span></h2>
+                <p class="text-sm text-muted mb-10 max-w-2xl mx-auto">Generate code against spec, bring solution to passing state, don't break architecture.</p>
+                <div class="flex flex-col md:flex-row justify-between items-center w-full gap-2">
+                    <div class="tech-card p-3 flex-1 w-full bg-[var(--bg-color)] text-xs font-bold font-mono uppercase text-muted">PRD</div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-3 flex-1 w-full bg-[var(--bg-color)] text-xs font-bold font-mono uppercase text-muted">Read Tests</div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-3 flex-1 w-full border-cyber-purple bg-cyber-purple/5 text-xs font-bold font-mono uppercase text-cyber-purple">Prompt Agent</div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-3 flex-1 w-full border-cyber-orange bg-cyber-orange/5 text-xs font-bold font-mono uppercase text-cyber-orange">Gen Code</div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-3 flex-1 w-full bg-[var(--bg-color)] text-xs font-bold font-mono uppercase text-muted">Run Tests</div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-3 flex-1 w-full border-cyber-green bg-cyber-green/10 text-xs font-black font-mono uppercase text-cyber-green shadow-[0_0_15px_rgba(34,197,94,0.2)]">Green</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: What Is Agentic Development -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-7">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <div class="kbd mb-4 text-cyber-tg border-cyber-tg/20 bg-cyber-tg/5">Block 2. Agentic Development</div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">What Is <span class="text-gradient">Agentic Development?</span></h2>
+                <div class="tech-card bg-[var(--bg-color)] p-6 max-w-3xl mx-auto mb-8 relative border-t-2 border-t-cyber-purple">
+                    <p class="text-sm md:text-lg font-medium tech-text leading-relaxed">
+                        It is not just text generation and not just "the model writes code".<br>
+                        The model participates in the <b class="text-cyber-purple uppercase tracking-wide">engineering workflow</b>.
+                    </p>
+                    <!-- Floating tiny icons -->
+                    <i class="ph-duotone ph-file-code absolute top-2 left-4 text-2xl text-muted opacity-50 animate-float"></i>
+                    <i class="ph-duotone ph-terminal absolute bottom-2 right-4 text-2xl text-muted opacity-50 animate-float" style="animation-delay: 1s;"></i>
+                    <i class="ph-duotone ph-flask absolute top-4 right-8 text-xl text-muted opacity-50 animate-float" style="animation-delay: 2s;"></i>
+                </div>
+                <div class="flex justify-center items-center gap-4 text-xs font-mono font-bold uppercase tracking-widest text-muted">
+                    <span class="bg-[var(--glass-bg)] px-3 py-2 rounded-lg border border-[var(--glass-border)] text-cyber-tg">Understand</span>
+                    <i class="ph-bold ph-arrow-right"></i>
+                    <span class="bg-[var(--glass-bg)] px-3 py-2 rounded-lg border border-[var(--glass-border)] text-cyber-orange">Act</span>
+                    <i class="ph-bold ph-arrow-right"></i>
+                    <span class="bg-[var(--glass-bg)] px-3 py-2 rounded-lg border border-[var(--glass-border)] text-cyber-green">Verify</span>
+                    <i class="ph-bold ph-arrow-right"></i>
+                    <span class="bg-[var(--glass-bg)] px-3 py-2 rounded-lg border border-[var(--glass-border)] text-cyber-purple">Improve</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 8: The Agent as an Orchestration Layer -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-8">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col items-center text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Agent as an <span class="text-gradient">Orchestration Layer</span></h2>
+                <div class="relative w-[300px] h-[300px] md:w-[400px] md:h-[400px]">
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 md:w-32 md:h-32 rounded-full bg-cyber-purple/10 border-2 border-cyber-purple flex items-center justify-center font-black text-cyber-purple uppercase tracking-widest z-20 shadow-[0_0_20px_rgba(168,85,247,0.3)]">Agent</div>
+                    <!-- Spokes -->
+                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 tech-card p-2 text-xs font-mono bg-[var(--bg-color)] z-10 w-24 border-t-2 border-t-gray-500">Task</div>
+                    <div class="absolute top-[25%] right-0 tech-card p-2 text-xs font-mono bg-[var(--bg-color)] z-10 w-24 border-t-2 border-t-cyber-tg">Context</div>
+                    <div class="absolute bottom-[10%] right-[10%] tech-card p-2 text-xs font-mono bg-[var(--bg-color)] z-10 w-24 border-t-2 border-t-cyber-orange">Tools</div>
+                    <div class="absolute bottom-[10%] left-[10%] tech-card p-2 text-xs font-mono bg-[var(--bg-color)] z-10 w-24 border-t-2 border-t-cyber-green">Validation</div>
+                    <div class="absolute top-[25%] left-0 tech-card p-2 text-xs font-mono bg-[var(--bg-color)] z-10 w-24 border-t-2 border-t-cyber-red">Fix</div>
+                    <!-- Circular arrows -->
+                    <svg class="absolute inset-0 w-full h-full -z-10" viewBox="0 0 400 400">
+                        <circle cx="200" cy="200" r="140" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="10 10" opacity="0.3"/>
+                    </svg>
+                </div>
+                <p class="text-sm text-muted mt-6 max-w-lg">Its strength is not in one answer, but in the sequence of actions. Orchestration matters more than raw code generation.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 9: What the Agent's Strength Is Made Of -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-9">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 text-center uppercase">Agent Strength <span class="text-gradient">Components</span></h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="tech-card p-6 bg-[var(--glass-bg)] border-t-4 border-t-cyber-tg text-center">
+                        <i class="ph-duotone ph-books text-4xl text-cyber-tg mb-4"></i>
+                        <h3 class="font-bold text-lg tech-text mb-2 uppercase">Context</h3>
+                        <p class="text-xs text-muted">Repository structure, PRD, tests, constraints.</p>
+                    </div>
+                    <div class="tech-card p-6 bg-[var(--glass-bg)] border-t-4 border-t-cyber-orange text-center">
+                        <i class="ph-duotone ph-wrench text-4xl text-cyber-orange mb-4"></i>
+                        <h3 class="font-bold text-lg tech-text mb-2 uppercase">Tools</h3>
+                        <p class="text-xs text-muted">Files, terminal, APIs, commands, patches.</p>
+                    </div>
+                    <div class="tech-card p-6 bg-[var(--glass-bg)] border-t-4 border-t-cyber-green text-center">
+                        <i class="ph-duotone ph-check-square-offset text-4xl text-cyber-green mb-4"></i>
+                        <h3 class="font-bold text-lg tech-text mb-2 uppercase">Validation</h3>
+                        <p class="text-xs text-muted">Tests, linters, schemas, definition of done.</p>
+                    </div>
+                </div>
+                <div class="w-full bg-cyber-red/10 border border-cyber-red text-cyber-red text-center p-3 rounded-lg text-xs md:text-sm font-bold tracking-widest uppercase font-mono shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                    No context = hallucinations | No tools = uselessness | No validation = false confidence
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 10: Syntax Is No Longer the Bottleneck -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-10">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row items-center gap-8">
+                <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #a855f7);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Syntax is <span class="text-cyber-red line-through decoration-4">Not</span> the Bottleneck</h2>
+                    <p class="text-sm tech-text font-medium mb-4">Syntax is increasingly produced by the machine. Prompt engineering alone is not enough without context engineering.</p>
+                </div>
+                <div class="w-full md:w-1/2 flex gap-4 items-stretch">
+                    <div class="tech-card p-6 w-1/3 bg-[var(--glass-bg)] opacity-50 flex flex-col justify-center items-center text-center relative border-cyber-red">
+                        <div class="absolute inset-0 bg-cyber-red/10 flex items-center justify-center backdrop-blur-[1px]"><i class="ph-bold ph-x text-6xl text-cyber-red/50"></i></div>
+                        <h3 class="font-bold text-muted uppercase">Syntax</h3>
+                    </div>
+                    <div class="tech-card p-6 w-2/3 bg-cyber-purple/5 border-cyber-purple flex flex-col justify-center gap-3 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+                        <div class="bg-[var(--bg-color)] border border-[var(--glass-border)] p-2 text-center text-xs font-bold uppercase tech-text rounded">Context</div>
+                        <div class="bg-[var(--bg-color)] border border-[var(--glass-border)] p-2 text-center text-xs font-bold uppercase tech-text rounded">Constraints</div>
+                        <div class="bg-[var(--bg-color)] border border-[var(--glass-border)] p-2 text-center text-xs font-bold uppercase tech-text rounded">Architecture</div>
+                        <div class="bg-[var(--bg-color)] border border-[var(--glass-border)] p-2 text-center text-xs font-bold uppercase tech-text rounded">Validation</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 11: Core Problem of Agentic Development -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-11">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel">
+                <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 text-center uppercase">The Core <span class="text-gradient">Problem</span></h2>
+                <div class="flex flex-col md:flex-row gap-8 items-center justify-center">
+                    <!-- Unconstrained -->
+                    <div class="tech-card p-6 w-full md:w-1/2 border-cyber-red/50 bg-cyber-red/5 relative flex flex-col items-center">
+                        <i class="ph-duotone ph-warning-circle text-4xl text-cyber-red mb-3"></i>
+                        <h3 class="font-bold text-cyber-red uppercase mb-4 tracking-widest text-center">Unconstrained Agent</h3>
+                        <ul class="text-xs text-muted space-y-2 font-mono">
+                            <li class="flex items-center gap-2"><i class="ph-bold ph-x text-cyber-red"></i> Tool misuse</li>
+                            <li class="flex items-center gap-2"><i class="ph-bold ph-x text-cyber-red"></i> Wrong assumptions</li>
+                            <li class="flex items-center gap-2"><i class="ph-bold ph-x text-cyber-red"></i> Architectural drift</li>
+                            <li class="flex items-center gap-2"><i class="ph-bold ph-x text-cyber-red"></i> Regressions</li>
+                        </ul>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-3xl text-muted hidden md:block"></i>
+                    <!-- Constrained -->
+                    <div class="tech-card p-6 w-full md:w-1/2 border-cyber-green bg-cyber-green/5 relative flex flex-col items-center shadow-[0_0_20px_rgba(34,197,94,0.1)]">
+                        <i class="ph-duotone ph-shield-check text-4xl text-cyber-green mb-3"></i>
+                        <h3 class="font-bold text-cyber-green uppercase mb-4 tracking-widest text-center">Constrained Agent</h3>
+                        <ul class="text-xs tech-text space-y-2 font-mono">
+                            <li class="flex items-center gap-2"><i class="ph-bold ph-check text-cyber-green"></i> Tests</li>
+                            <li class="flex items-center gap-2"><i class="ph-bold ph-check text-cyber-green"></i> Rules</li>
+                            <li class="flex items-center gap-2"><i class="ph-bold ph-check text-cyber-green"></i> Bounds</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 12: Self-Healing Loop -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-12">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #a855f7);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Self-Healing <span class="text-gradient">Loop</span></h2>
+                <div class="relative w-[250px] h-[250px] md:w-[350px] md:h-[350px] mx-auto mb-8">
+                    <!-- Circle -->
+                    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 350 350">
+                        <circle cx="175" cy="175" r="120" fill="none" stroke="currentColor" class="text-cyber-purple opacity-30" stroke-width="4"/>
+                        <path d="M 175 55 A 120 120 0 0 1 295 175" fill="none" stroke="#a855f7" stroke-width="6"/>
+                        <polygon points="295,175 285,160 305,160" fill="#a855f7" transform="rotate(0 295 175)"/>
+                    </svg>
+                    <!-- Nodes -->
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 tech-card p-2 bg-[var(--bg-color)] border-cyber-green text-cyber-green text-[10px] font-bold uppercase w-20 shadow-md">Run tests</div>
+                    <div class="absolute top-1/2 right-0 -translate-y-1/2 translate-x-4 tech-card p-2 bg-[var(--bg-color)] border-cyber-red text-cyber-red text-[10px] font-bold uppercase w-24 shadow-md">Read traceback</div>
+                    <div class="absolute bottom-0 left-1/2 -translate-x-1/2 tech-card p-2 bg-[var(--bg-color)] border-cyber-orange text-cyber-orange text-[10px] font-bold uppercase w-20 shadow-md">Patch</div>
+                    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-4 tech-card p-2 bg-[var(--bg-color)] border-cyber-tg text-cyber-tg text-[10px] font-bold uppercase w-20 shadow-md">Re-run</div>
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                        <span class="font-black uppercase tracking-widest text-xs tech-text block">Self-healing<br>loop</span>
+                    </div>
+                </div>
+                <p class="text-sm text-muted font-medium max-w-xl mx-auto">Useful only inside architectural constraints. Without guardrails, it treats symptoms and breaks adjacent parts.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 13: Summary Block 2 -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-13">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center flex flex-col items-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">Main <span class="text-gradient">Takeaway</span></h2>
+                <div class="tech-card p-8 bg-[#0a0a0a] border-cyber-purple text-gray-200 shadow-[0_0_30px_rgba(168,85,247,0.2)] mb-8 w-full max-w-4xl">
+                    <div class="font-mono text-xs text-cyber-purple font-bold tracking-widest uppercase mb-4">AI Value Formula</div>
+                    <div class="text-lg md:text-3xl font-black leading-relaxed flex flex-wrap justify-center items-center gap-x-2 gap-y-4">
+                        <span class="text-white">Model</span> <i class="ph-bold ph-x text-cyber-purple/50"></i>
+                        <span class="text-cyber-tg">Context</span> <i class="ph-bold ph-x text-cyber-purple/50"></i>
+                        <span class="text-cyber-orange">Tools</span> <i class="ph-bold ph-x text-cyber-purple/50"></i>
+                        <span class="text-cyber-green">Validation</span> <i class="ph-bold ph-x text-cyber-purple/50"></i>
+                        <span class="text-cyber-red">Constraints</span>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium">Mature work with AI starts with discipline, not prompt luck. The engineer builds the system in which AI can work correctly.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 14: Agent Operating Surfaces -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-14">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #a855f7);"></div>
+                <div class="kbd mb-4 text-cyber-tg border-cyber-tg/20 bg-cyber-tg/5">Block 3. Where Agent Operates</div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Agent Operating <span class="text-gradient">Surfaces</span></h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="tech-card p-6 bg-[var(--glass-bg)] border-t-4 border-t-cyber-purple">
+                        <i class="ph-duotone ph-code text-4xl text-cyber-purple mb-4"></i>
+                        <h3 class="font-black text-lg mb-1 uppercase">IDE</h3>
+                        <div class="kbd mb-4 border-cyber-purple/30 text-cyber-purple text-[8px]">code context</div>
+                    </div>
+                    <div class="tech-card p-6 bg-[var(--glass-bg)] border-t-4 border-t-cyber-orange">
+                        <i class="ph-duotone ph-terminal-window text-4xl text-cyber-orange mb-4"></i>
+                        <h3 class="font-black text-lg mb-1 uppercase">CLI</h3>
+                        <div class="kbd mb-4 border-cyber-orange/30 text-cyber-orange text-[8px]">strict loop</div>
+                    </div>
+                    <div class="tech-card p-6 bg-[var(--glass-bg)] border-t-4 border-t-cyber-tg">
+                        <i class="ph-duotone ph-browser text-4xl text-cyber-tg mb-4"></i>
+                        <h3 class="font-black text-lg mb-1 uppercase">Web</h3>
+                        <div class="kbd mb-4 border-cyber-tg/30 text-cyber-tg text-[8px]">rapid prototyping</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 15: IDE Mode -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-15">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #a855f7);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Mode: <span class="text-cyber-purple">IDE</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• Best mode for working with a real codebase</li>
+                        <li>• Agent sees files, imports, relationships, and IDE errors</li>
+                        <li>• Good for backend code, refactoring, and feature integration</li>
+                        <li>• Strongest when a human remains in the decision loop</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2">
+                    <div class="tech-card bg-[#1e1e1e] text-gray-300 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(168,85,247,0.2)] border-cyber-purple/50">
+                        <div class="bg-[#2d2d2d] px-4 py-2 flex gap-2 border-b border-white/10">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div><div class="w-3 h-3 rounded-full bg-yellow-500"></div><div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="text-[10px] font-mono text-gray-400 ml-4">Agent inside repository context</span>
+                        </div>
+                        <div class="flex h-48">
+                            <div class="w-1/4 border-r border-white/10 p-2 text-[8px] font-mono space-y-1 text-gray-500">
+                                <div><i class="ph-fill ph-folder text-blue-400"></i> src</div>
+                                <div class="pl-2"><i class="ph-fill ph-file-code text-yellow-400"></i> main.py</div>
+                                <div class="pl-2"><i class="ph-fill ph-file-code text-yellow-400"></i> utils.py</div>
+                            </div>
+                            <div class="w-1/2 p-4 text-[10px] font-mono text-green-400 border-r border-white/10">
+                                def calculate_logic():<br>&nbsp;&nbsp;&nbsp;&nbsp;return True
+                            </div>
+                            <div class="w-1/4 p-2 text-[8px] font-mono">
+                                <div class="text-cyber-purple font-bold mb-2">AI Agent Chat</div>
+                                <div class="bg-cyber-purple/20 p-1 rounded text-gray-200 mb-1">Applying patch...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 16: CLI Mode -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-16">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #f97316, transparent, #f97316);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Mode: <span class="text-cyber-orange">CLI</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• Gives a strict and reproducible engineering loop</li>
+                        <li>• Core logic: test → error → patch → rerun</li>
+                        <li>• Ideal for pytest, linters, scripts, and CI/CD</li>
+                        <li>• Less noisy context, more discipline</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2">
+                    <div class="tech-card bg-black text-green-500 font-mono text-xs p-4 rounded-xl shadow-[0_0_20px_rgba(249,115,22,0.2)] border-cyber-orange/50 h-48 flex flex-col justify-end overflow-hidden">
+                        <div class="opacity-50">> pytest test_auth.py</div>
+                        <div class="text-red-500">FAILED test_auth.py::test_login - AssertionError</div>
+                        <div class="opacity-50 mt-2">> claude code "Fix test_login error"</div>
+                        <div class="text-cyber-orange">Thinking... Reading test_auth.py...</div>
+                        <div class="text-cyber-orange">Patching auth/service.py...</div>
+                        <div class="opacity-50 mt-2">> pytest test_auth.py</div>
+                        <div class="text-green-400">PASSED test_auth.py::test_login</div>
+                        <div class="animate-pulse">_</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 17: Web Mode -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-17">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #229ED9);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Mode: <span class="text-cyber-tg">Web</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• Great for starting, ideation, PRDs, prototypes</li>
+                        <li>• Useful when uncertainty is still high</li>
+                        <li>• Much weaker for deep work inside a large repo</li>
+                        <li>• Mature workflow: web for framing, IDE/CLI for real integration</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex items-center justify-between gap-4">
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-tg/50 grid grid-cols-2 gap-2 w-2/3">
+                        <div class="bg-cyber-tg/10 border border-cyber-tg/30 p-2 text-[10px] text-center rounded font-bold uppercase tech-text">PRD</div>
+                        <div class="bg-cyber-tg/10 border border-cyber-tg/30 p-2 text-[10px] text-center rounded font-bold uppercase tech-text">Prototype</div>
+                        <div class="bg-cyber-tg/10 border border-cyber-tg/30 p-2 text-[10px] text-center rounded font-bold uppercase tech-text">Idea</div>
+                        <div class="bg-cyber-tg/10 border border-cyber-tg/30 p-2 text-[10px] text-center rounded font-bold uppercase tech-text">Stakeholders</div>
+                    </div>
+                    <div class="flex flex-col items-center justify-center w-1/3">
+                        <i class="ph-bold ph-arrow-right text-2xl text-cyber-tg mb-1"></i>
+                        <span class="text-[8px] font-mono text-center uppercase text-muted font-bold">Move to<br>production work<br>(IDE/CLI)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 18: Tool != Workflow -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-18">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-3xl md:text-5xl font-black mb-12 uppercase text-gradient">Tool ≠ Workflow</h2>
+                <div class="flex flex-col md:flex-row gap-8 justify-center items-stretch">
+                    <div class="tech-card p-6 w-full md:w-1/2 border-cyber-red bg-cyber-red/5 flex flex-col items-center">
+                        <i class="ph-duotone ph-warning text-4xl text-cyber-red mb-4"></i>
+                        <h3 class="font-bold uppercase tracking-widest text-cyber-red mb-2">No Workflow</h3>
+                        <p class="text-sm tech-text font-medium">Without process, tool only accelerates chaos.</p>
+                    </div>
+                    <div class="tech-card p-6 w-full md:w-1/2 border-cyber-green bg-cyber-green/5 flex flex-col items-center shadow-[0_0_20px_rgba(34,197,94,0.1)]">
+                        <i class="ph-duotone ph-check-circle text-4xl text-cyber-green mb-4"></i>
+                        <h3 class="font-bold uppercase tracking-widest text-cyber-green mb-2">Strong Workflow</h3>
+                        <p class="text-sm tech-text font-medium">Validation, correction, constraints = useful acceleration.</p>
+                    </div>
+                </div>
+                <p class="text-sm text-muted mt-8 font-mono">A strong engineer chooses not a product, but an execution mode.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 19: Baseline Workflow -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-19">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center overflow-x-auto">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Baseline <span class="text-gradient">Workflow</span></h2>
+                <div class="flex items-center min-w-max md:min-w-0 md:justify-center gap-2 md:gap-3 mb-6 pb-4">
+                    <div class="tech-card p-3 bg-[var(--bg-color)] text-[10px] md:text-xs font-bold uppercase tech-text">PRD</div>
+                    <i class="ph-bold ph-arrow-right text-muted"></i>
+                    <div class="tech-card p-3 bg-[var(--bg-color)] text-[10px] md:text-xs font-bold uppercase tech-text">Scope</div>
+                    <i class="ph-bold ph-arrow-right text-muted"></i>
+                    <div class="tech-card p-3 bg-[var(--bg-color)] text-[10px] md:text-xs font-bold uppercase tech-text">Codegen</div>
+                    <i class="ph-bold ph-arrow-right text-muted"></i>
+                    <div class="tech-card p-3 bg-[var(--bg-color)] text-[10px] md:text-xs font-bold uppercase tech-text">Tests</div>
+                    <i class="ph-bold ph-arrow-right text-muted"></i>
+                    <div class="tech-card p-3 border-cyber-orange bg-cyber-orange/10 text-[10px] md:text-xs font-black uppercase text-cyber-orange shadow-[0_0_15px_rgba(249,115,22,0.2)] relative">
+                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[8px] whitespace-nowrap text-cyber-orange">Critical Stage</div>
+                        FIX
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-muted"></i>
+                    <div class="tech-card p-3 border-cyber-green bg-cyber-green/10 text-[10px] md:text-xs font-black uppercase text-cyber-green">Green</div>
+                </div>
+                <p class="text-sm tech-text font-medium max-w-2xl mx-auto">The critical stage is not generation, but correct fixing (minimal patch, then rerun). AI is useful only inside a repeatable engineering sequence.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 20: Why Architecture Must Be Defined -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-20">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <div class="kbd mb-4 text-cyber-purple border-cyber-purple/20 bg-cyber-purple/5">Block 4. Architectural Frame</div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">Architecture <span class="text-gradient">Cannot Be Improvised</span></h2>
+                <div class="flex flex-col lg:flex-row items-center justify-between gap-6 mb-6">
+                    <div class="tech-card p-6 w-full lg:w-[40%] text-center border-cyber-red bg-cyber-red/5 relative h-48 flex items-center justify-center">
+                        <svg class="absolute inset-0 w-full h-full" viewBox="0 0 200 150">
+                            <path d="M 50 50 L 150 100 M 150 50 L 50 100 M 100 20 L 100 130" stroke="#ef4444" stroke-width="2" opacity="0.5"/>
+                        </svg>
+                        <span class="relative z-10 font-bold text-cyber-red uppercase tracking-widest bg-[var(--bg-color)] px-2 py-1 rounded border border-cyber-red/30">Chaos</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center font-mono text-[8px] text-muted uppercase tracking-widest font-bold">
+                        From improvisation <i class="ph-bold ph-arrow-right text-2xl my-1 hidden lg:block"></i><i class="ph-bold ph-arrow-down text-2xl my-1 lg:hidden"></i> to constraints
+                    </div>
+                    <div class="tech-card p-6 w-full lg:w-[40%] text-center border-cyber-green bg-[var(--bg-color)] shadow-[0_0_20px_rgba(34,197,94,0.1)] h-48 flex flex-col gap-2 justify-center items-center">
+                        <div class="w-2/3 h-6 bg-cyber-green/20 border border-cyber-green rounded"></div>
+                        <div class="w-full h-6 bg-cyber-green/40 border border-cyber-green rounded"></div>
+                        <div class="w-4/5 h-6 bg-cyber-green/60 border border-cyber-green rounded shadow-[0_0_10px_rgba(34,197,94,0.3)]"></div>
+                    </div>
+                </div>
+                <p class="text-sm text-muted">If architecture is not defined, the agent will invent it (usually wrong). Architecture defines the solution space.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 21: Bot and Backend Are Separate -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-21">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #229ED9);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Bot & Backend Are <span class="text-cyber-tg">Separate</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• The Telegram bot is the interface layer.</li>
+                        <li>• The backend is the layer of logic, data, and integrations.</li>
+                        <li>• The bot must not become the whole application.</li>
+                        <li>• Separation makes the system mature and extensible.</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex items-stretch justify-center gap-6">
+                    <div class="tech-card p-4 flex flex-col items-center w-32 border-cyber-tg bg-cyber-tg/5">
+                        <i class="ph-duotone ph-telegram-logo text-4xl text-cyber-tg mb-2"></i>
+                        <span class="font-bold text-cyber-tg uppercase text-xs tracking-widest border-b border-cyber-tg/30 pb-1 w-full text-center mb-2">Bot</span>
+                        <span class="text-[8px] text-muted text-center mt-auto">Interface Layer</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center">
+                        <span class="text-[8px] font-mono font-bold text-muted uppercase mb-1">API</span>
+                        <i class="ph-bold ph-arrows-left-right text-2xl text-muted"></i>
+                    </div>
+                    <div class="tech-card p-4 flex flex-col items-center w-40 bg-[var(--glass-bg)] border-gray-500">
+                        <i class="ph-duotone ph-server text-4xl text-gray-500 mb-2"></i>
+                        <span class="font-bold tech-text uppercase text-xs tracking-widest border-b border-[var(--glass-border)] pb-1 w-full text-center mb-2">Backend</span>
+                        <div class="text-[8px] text-muted text-center flex flex-col gap-1 w-full">
+                            <span class="bg-[var(--bg-color)] rounded border border-[var(--glass-border)] p-1">Services</span>
+                            <span class="bg-[var(--bg-color)] rounded border border-[var(--glass-border)] p-1">Data</span>
+                            <span class="bg-[var(--bg-color)] rounded border border-[var(--glass-border)] p-1">Integrations</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 22: Bot Must Not Access DB Directly -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-22">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">No Direct <span class="text-cyber-red">DB Access</span></h2>
+                <div class="flex flex-col items-center max-w-2xl mx-auto gap-6 mb-8">
+                    <!-- Bad -->
+                    <div class="flex items-center justify-center gap-4 w-full tech-card p-4 bg-cyber-red/5 border-cyber-red/50">
+                        <div class="flex flex-col items-center"><i class="ph-duotone ph-telegram-logo text-2xl text-cyber-tg mb-1"></i><span class="text-[10px] font-bold">Bot</span></div>
+                        <div class="flex-1 flex justify-center relative"><div class="absolute inset-0 flex items-center justify-center"><div class="h-1 w-full bg-cyber-red"></div></div><i class="ph-bold ph-x text-3xl text-[var(--bg-color)] bg-cyber-red rounded-full p-1 z-10 relative"></i></div>
+                        <div class="flex flex-col items-center"><i class="ph-duotone ph-database text-2xl text-muted mb-1"></i><span class="text-[10px] font-bold">DB</span></div>
+                    </div>
+                    <!-- Good -->
+                    <div class="flex items-center justify-center gap-4 w-full tech-card p-4 bg-cyber-green/5 border-cyber-green/50">
+                        <div class="flex flex-col items-center"><i class="ph-duotone ph-telegram-logo text-2xl text-cyber-tg mb-1"></i><span class="text-[10px] font-bold">Bot</span></div>
+                        <i class="ph-bold ph-arrow-right text-cyber-green text-xl"></i>
+                        <div class="flex flex-col items-center border border-cyber-green bg-[var(--bg-color)] px-4 py-2 rounded text-cyber-green text-[10px] font-bold">Backend API</div>
+                        <i class="ph-bold ph-arrow-right text-cyber-green text-xl"></i>
+                        <div class="flex flex-col items-center"><i class="ph-duotone ph-database text-2xl text-muted mb-1"></i><span class="text-[10px] font-bold">DB</span></div>
+                    </div>
+                </div>
+                <p class="text-sm text-muted font-medium">Direct DB access destroys the boundary of responsibility. Business logic leaks into the bot layer.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 23: Rule: Bot Talks Only to Backend API -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-23">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Rule: Bot Talks Only to <span class="text-gradient">Backend API</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• The bot should know only the backend API contract.</li>
+                        <li>• It should not know internal models, tables, or repositories.</li>
+                        <li>• API creates a clean boundary between interface and system.</li>
+                        <li>• Gives consistency, replaceability, and testability.</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex justify-center">
+                    <div class="tech-card p-6 border-cyber-purple bg-cyber-purple/5 w-full max-w-sm flex flex-col items-center shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+                        <div class="tech-card bg-[var(--bg-color)] p-3 w-full text-center font-bold text-cyber-tg uppercase text-xs mb-4">Bot (Client)</div>
+                        <div class="w-full border-b-2 border-dashed border-cyber-purple relative flex justify-center mb-4">
+                            <span class="absolute -top-3 bg-[var(--glass-bg)] px-2 text-[8px] font-mono font-bold text-cyber-purple uppercase">API Contract</span>
+                        </div>
+                        <div class="tech-card bg-[var(--glass-bg)] p-4 w-full text-center relative overflow-hidden">
+                            <div class="absolute inset-0 bg-gray-500/10 backdrop-blur-sm z-10 flex items-center justify-center">
+                                <span class="bg-[var(--bg-color)] px-2 py-1 rounded text-[8px] font-bold text-muted uppercase">Internal Implementation</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 opacity-30">
+                                <div class="bg-gray-300 h-6 rounded"></div><div class="bg-gray-300 h-6 rounded"></div>
+                                <div class="bg-gray-300 h-6 rounded"></div><div class="bg-gray-300 h-6 rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 24: Why Backend Must Be Layered -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-24">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Why Backend Must Be <span class="text-gradient">Layered</span></h2>
+                <div class="flex flex-col gap-2 max-w-md mx-auto mb-8">
+                    <div class="tech-card p-4 bg-cyber-tg/20 border-cyber-tg text-cyber-tg font-bold uppercase tracking-widest text-sm relative z-40 shadow-lg">API <span class="text-[8px] font-normal block normal-case tracking-normal opacity-80">Receives requests</span></div>
+                    <div class="tech-card p-4 bg-cyber-purple/20 border-cyber-purple text-cyber-purple font-bold uppercase tracking-widest text-sm relative z-30 shadow-md">Service <span class="text-[8px] font-normal block normal-case tracking-normal opacity-80">Business Logic</span></div>
+                    <div class="tech-card p-4 bg-cyber-orange/20 border-cyber-orange text-cyber-orange font-bold uppercase tracking-widest text-sm relative z-20 shadow-sm">Repository <span class="text-[8px] font-normal block normal-case tracking-normal opacity-80">Data Access</span></div>
+                    <div class="tech-card p-4 bg-cyber-green/20 border-cyber-green text-cyber-green font-bold uppercase tracking-widest text-sm relative z-10">Model <span class="text-[8px] font-normal block normal-case tracking-normal opacity-80">Data Structure</span></div>
+                </div>
+                <p class="text-sm text-muted">Each layer has a distinct responsibility. Layering improves readability, testability, and changeability.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 25: Why This Matters For AI -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-25">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Why Layers Matter <span class="text-gradient">For AI</span></h2>
+                <div class="flex flex-col md:flex-row gap-8 justify-center items-center">
+                    <div class="tech-card p-6 border-cyber-red/50 w-full md:w-1/3 bg-[var(--glass-bg)] opacity-70">
+                        <h3 class="font-bold text-cyber-red mb-4 text-sm uppercase">Monolith File</h3>
+                        <div class="h-32 bg-[var(--bg-color)] border border-[var(--glass-border)] rounded relative overflow-hidden">
+                            <div class="absolute top-2 left-2 right-2 h-2 bg-gray-500/20"></div>
+                            <div class="absolute top-6 left-2 right-8 h-2 bg-gray-500/20"></div>
+                            <div class="absolute top-12 left-4 w-12 h-6 bg-cyber-red/50 rounded animate-pulse"></div> <!-- Chaotic patch -->
+                            <div class="absolute top-20 left-2 right-4 h-2 bg-gray-500/20"></div>
+                        </div>
+                        <p class="text-[10px] text-muted mt-2">Agent fixes locally, breaks globally</p>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-2xl text-muted hidden md:block"></i>
+                    <div class="tech-card p-6 border-cyber-green w-full md:w-1/3 bg-cyber-green/5 shadow-[0_0_20px_rgba(34,197,94,0.1)]">
+                        <h3 class="font-bold text-cyber-green mb-4 text-sm uppercase">Layered System</h3>
+                        <div class="flex flex-col gap-1 h-32">
+                            <div class="flex-1 bg-[var(--bg-color)] border border-[var(--glass-border)] rounded"></div>
+                            <div class="flex-1 bg-cyber-green/20 border border-cyber-green rounded relative flex items-center justify-center">
+                                <span class="text-[8px] font-mono text-cyber-green uppercase font-bold text-center">Agent acts<br>only here</span>
+                            </div>
+                            <div class="flex-1 bg-[var(--bg-color)] border border-[var(--glass-border)] rounded"></div>
+                        </div>
+                        <p class="text-[10px] tech-text font-bold mt-2">Narrow tasks, reduced solution space</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 26: Widget Architecture for Bot -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-26">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #229ED9);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Widget Architecture <span class="text-cyber-tg">for Bot</span></h2>
+                <div class="flex flex-col md:flex-row justify-center items-stretch gap-4 max-w-3xl mx-auto mb-8">
+                    <div class="tech-card p-4 flex-1 bg-[var(--glass-bg)] border-t-2 border-t-cyber-tg">
+                        <h3 class="font-bold text-cyber-tg uppercase tracking-widest mb-2">Trigger</h3>
+                        <p class="text-xs text-muted mb-4 h-10">Handles the incoming event</p>
+                        <div class="kbd text-[8px] border-cyber-tg/30">callback / command</div>
+                    </div>
+                    <div class="flex items-center justify-center"><i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i></div>
+                    <div class="tech-card p-4 flex-1 bg-cyber-tg/10 border border-cyber-tg shadow-[0_0_15px_rgba(34,158,217,0.2)]">
+                        <h3 class="font-bold text-cyber-tg uppercase tracking-widest mb-2">Code</h3>
+                        <p class="text-xs tech-text font-medium mb-4 h-10">UI-level logic & API calls</p>
+                        <div class="kbd text-[8px] border-cyber-tg text-cyber-tg">route / fetch</div>
+                    </div>
+                    <div class="flex items-center justify-center"><i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i></div>
+                    <div class="tech-card p-4 flex-1 bg-[var(--glass-bg)] border-t-2 border-t-cyber-tg">
+                        <h3 class="font-bold text-cyber-tg uppercase tracking-widest mb-2">Answer</h3>
+                        <p class="text-xs text-muted mb-4 h-10">Text, keyboard, render</p>
+                        <div class="kbd text-[8px] border-cyber-tg/30">message render</div>
+                    </div>
+                </div>
+                <p class="text-sm text-muted font-medium">Makes the bot modular and easier for AI to work with.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 27: Traceability -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-27">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Traceability as <span class="text-gradient">Architecture</span></h2>
+                <div class="flex flex-col md:flex-row items-center justify-between w-full max-w-4xl mx-auto gap-2 mb-10">
+                    <div class="tech-card p-3 bg-cyber-purple/10 border-cyber-purple w-full md:w-auto flex-1 shadow-[0_0_10px_rgba(168,85,247,0.2)]">
+                        <span class="font-mono text-[10px] text-cyber-purple font-bold block uppercase">Feature ID</span>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-3 bg-cyber-orange/10 border-cyber-orange w-full md:w-auto flex-1 shadow-[0_0_10px_rgba(249,115,22,0.2)]">
+                        <span class="font-mono text-[10px] text-cyber-orange font-bold block uppercase">Scenario ID</span>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-3 bg-cyber-tg/10 border-cyber-tg w-full md:w-auto flex-1 shadow-[0_0_10px_rgba(34,158,217,0.2)]">
+                        <span class="font-mono text-[10px] text-cyber-tg font-bold block uppercase">Module</span>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-3 bg-cyber-green/10 border-cyber-green w-full md:w-auto flex-1 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                        <span class="font-mono text-[10px] text-cyber-green font-bold block uppercase">Test</span>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium max-w-2xl mx-auto">In the AI era, team memory is no longer enough. Traceability connects PRD, code, and validation into one chain (the architectural memory of the project).</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 28: System Layers Bottom Up -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-28">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center flex flex-col items-center">
+                <div class="slide-topline"></div>
+                <div class="kbd mb-4 text-cyber-orange border-cyber-orange/20 bg-cyber-orange/5">Block 5. System Layers</div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">Layers: <span class="text-gradient">Bottom Up</span></h2>
+                <div class="flex flex-col gap-2 w-full max-w-md">
+                    <div class="tech-card p-3 bg-[var(--glass-bg)] opacity-70 border-t-2 border-gray-500 font-bold uppercase tracking-widest text-xs">Interface</div>
+                    <div class="flex justify-center"><i class="ph-bold ph-arrow-up text-muted text-xs"></i></div>
+                    <div class="tech-card p-3 bg-cyber-purple/20 border-cyber-purple text-cyber-purple font-bold uppercase tracking-widest text-xs shadow-md z-10">AI-Orchestration</div>
+                    <div class="flex justify-center"><i class="ph-bold ph-arrow-up text-muted text-xs"></i></div>
+                    <div class="tech-card p-3 bg-[var(--glass-bg)] border-t-2 border-cyber-tg font-bold uppercase tracking-widest text-xs">Services</div>
+                    <div class="flex justify-center"><i class="ph-bold ph-arrow-up text-muted text-xs"></i></div>
+                    <div class="tech-card p-3 bg-[var(--glass-bg)] border-t-2 border-cyber-orange font-bold uppercase tracking-widest text-xs">Data</div>
+                    <div class="flex justify-center"><i class="ph-bold ph-arrow-up text-muted text-xs"></i></div>
+                    <div class="tech-card p-3 bg-[var(--card-bg)] border-2 border-cyber-green text-cyber-green font-black uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(34,197,94,0.15)]">Infrastructure</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 29: Infra Layer -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-29">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #22c55e, transparent, #22c55e);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Layer: <span class="text-cyber-green">Infrastructure</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• Includes runtime, env, database, containers, deployment, monitoring, secrets.</li>
+                        <li>• Code without an execution environment is not yet a system.</li>
+                        <li>• In Telegram architecture, includes webhook/polling and bot runtime.</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex justify-center">
+                    <div class="tech-card p-6 w-full max-w-sm border-2 border-cyber-green bg-cyber-green/5 shadow-[0_0_30px_rgba(34,197,94,0.15)] relative">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--bg-color)] px-2 py-1 border border-cyber-green text-[10px] text-cyber-green font-bold uppercase tracking-widest rounded">Base Stack</div>
+                        <div class="grid grid-cols-3 gap-3 text-center text-muted">
+                            <div><i class="ph-duotone ph-docker-logo text-3xl"></i></div>
+                            <div><i class="ph-duotone ph-database text-3xl"></i></div>
+                            <div><i class="ph-duotone ph-file-code text-3xl"></i><div class="text-[8px] font-mono mt-1">.env</div></div>
+                            <div><i class="ph-duotone ph-rocket text-3xl"></i><div class="text-[8px] font-mono mt-1">CI/CD</div></div>
+                            <div><i class="ph-duotone ph-chart-line-up text-3xl"></i><div class="text-[8px] font-mono mt-1">Logs</div></div>
+                            <div><i class="ph-duotone ph-plugs text-3xl"></i><div class="text-[8px] font-mono mt-1">Webhook</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 30: Why Infra is Arch -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-30">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Infrastructure <span class="text-gradient">IS</span> Architecture</h2>
+                <div class="flex flex-col md:flex-row gap-8 justify-center items-center mb-8">
+                    <div class="tech-card p-6 w-full md:w-1/3 bg-[var(--glass-bg)] border-cyber-green/50 flex flex-col items-center">
+                        <i class="ph-duotone ph-file-code text-4xl text-cyber-green mb-2"></i>
+                        <span class="font-bold tech-text uppercase tracking-widest">Correct Code</span>
+                    </div>
+                    <div class="text-2xl font-black text-muted">+</div>
+                    <div class="tech-card p-6 w-full md:w-1/3 bg-cyber-red/5 border-cyber-red/50 flex flex-col items-center">
+                        <i class="ph-duotone ph-server text-4xl text-cyber-red mb-2"></i>
+                        <span class="font-bold text-cyber-red uppercase tracking-widest">Broken Env</span>
+                    </div>
+                </div>
+                <div class="tech-card p-4 border-cyber-orange bg-cyber-orange/10 text-cyber-orange font-black uppercase text-lg shadow-[0_0_20px_rgba(249,115,22,0.2)] max-w-lg mx-auto">
+                    = System fails in production
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 31: Data Layer -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-31">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #f97316, transparent, #f97316);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Layer: <span class="text-cyber-orange">Data</span></h2>
+                <div class="tech-card p-8 border-2 border-cyber-orange bg-[var(--bg-color)] shadow-[0_0_30px_rgba(249,115,22,0.1)] w-full max-w-3xl mx-auto relative overflow-hidden">
+                    <div class="absolute -right-10 -bottom-10 opacity-10"><i class="ph-fill ph-database text-[150px] text-cyber-orange"></i></div>
+                    <h3 class="font-black text-xl text-cyber-orange uppercase tracking-widest border-b border-cyber-orange/30 pb-4 mb-6 relative z-10">System State Model</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 relative z-10 text-[10px] md:text-xs font-mono font-bold uppercase">
+                        <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-3 rounded text-center text-muted">ORM Models</div>
+                        <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-3 rounded text-center text-muted">Schemas</div>
+                        <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-3 rounded text-center text-muted">Repositories</div>
+                        <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-3 rounded text-center text-muted">Migrations</div>
+                        <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-3 rounded text-center text-muted">Event Log</div>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium mt-8">The data layer is more than just tables. State must be handled separately from UI and orchestration.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 32: Data != UI -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-32">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Don't Mix Data <span class="text-cyber-red">with UI</span></h2>
+                <div class="flex flex-col md:flex-row gap-8 justify-center items-center">
+                    <div class="tech-card p-6 border-cyber-red/50 bg-cyber-red/5 relative flex flex-col items-center w-full md:w-[45%]">
+                        <h3 class="font-bold text-cyber-red uppercase mb-4 text-xs tracking-widest">Bad: UI ↔ DB</h3>
+                        <div class="flex justify-between w-full px-4 mb-4 text-3xl text-muted">
+                            <i class="ph-duotone ph-desktop"></i>
+                            <div class="flex flex-col justify-center text-cyber-red text-lg"><i class="ph-bold ph-arrows-left-right"></i><i class="ph-bold ph-arrows-left-right"></i><i class="ph-bold ph-arrows-left-right"></i></div>
+                            <i class="ph-duotone ph-database"></i>
+                        </div>
+                        <p class="text-[10px] text-muted">Fragile, tightly coupled</p>
+                    </div>
+                    <div class="tech-card p-6 border-cyber-green bg-cyber-green/5 relative flex flex-col items-center w-full md:w-[45%] shadow-[0_0_20px_rgba(34,197,94,0.1)]">
+                        <h3 class="font-bold text-cyber-green uppercase mb-4 text-xs tracking-widest">Good: Via Services</h3>
+                        <div class="flex justify-between items-center w-full text-2xl text-muted">
+                            <i class="ph-duotone ph-desktop"></i>
+                            <i class="ph-bold ph-arrow-right text-cyber-green text-sm"></i>
+                            <div class="text-[8px] font-mono font-bold bg-[var(--bg-color)] px-2 py-1 rounded border border-[var(--glass-border)]">API/Services</div>
+                            <i class="ph-bold ph-arrow-right text-cyber-green text-sm"></i>
+                            <i class="ph-duotone ph-database"></i>
+                        </div>
+                        <p class="text-[10px] tech-text mt-4 font-bold">Bot handler does not build SQL</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 33: Services Layer -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-33">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #229ED9);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">Layer: <span class="text-cyber-tg">Services</span></h2>
+                <div class="relative w-full max-w-2xl mx-auto flex flex-col items-center gap-6">
+                    <div class="tech-card p-3 w-40 text-center bg-[var(--glass-bg)] text-xs font-bold uppercase text-muted border-t-2 border-gray-400">Interface / API</div>
+                    <i class="ph-bold ph-arrow-down text-cyber-tg"></i>
+                    <div class="tech-card p-6 w-full bg-cyber-tg/10 border-2 border-cyber-tg shadow-[0_0_20px_rgba(34,158,217,0.2)]">
+                        <h3 class="font-black text-xl text-cyber-tg uppercase tracking-widest mb-2">Business Logic</h3>
+                        <p class="text-[10px] md:text-xs tech-text font-medium">Use cases, decisions, domain rules.</p>
+                    </div>
+                    <div class="flex w-full justify-center gap-8 text-cyber-tg">
+                        <div class="flex flex-col items-center"><i class="ph-bold ph-arrow-down mb-2"></i><div class="tech-card p-3 w-32 text-center bg-[var(--glass-bg)] text-[10px] font-mono font-bold uppercase text-muted">Repositories</div></div>
+                        <div class="flex flex-col items-center"><i class="ph-bold ph-arrow-down mb-2"></i><div class="tech-card p-3 w-32 text-center bg-[var(--glass-bg)] text-[10px] font-mono font-bold uppercase text-muted">External APIs</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 34: Services as Meaning Center -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-34">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #229ED9);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Services: <span class="text-cyber-tg">The Meaning Center</span></h2>
+                <div class="flex flex-col md:flex-row items-center justify-center gap-6 mb-8">
+                    <div class="tech-card p-4 text-center bg-[var(--glass-bg)] opacity-70 w-32"><span class="block text-[10px] uppercase font-bold text-muted mb-1">API</span><span class="text-sm font-mono tech-text">Receives</span></div>
+                    <div class="tech-card p-6 border-cyber-tg bg-cyber-tg/5 w-64 shadow-[0_0_20px_rgba(34,158,217,0.15)] md:transform md:scale-110 z-10">
+                        <h3 class="font-black text-lg text-cyber-tg uppercase tracking-widest mb-2">Service</h3>
+                        <div class="bg-cyber-tg text-[var(--bg-color)] px-3 py-1 rounded text-xs font-bold uppercase inline-block">Decides what happens</div>
+                    </div>
+                    <div class="tech-card p-4 text-center bg-[var(--glass-bg)] opacity-70 w-32"><span class="block text-[10px] uppercase font-bold text-muted mb-1">Repository</span><span class="text-sm font-mono tech-text">Stores</span></div>
+                </div>
+                <p class="text-sm text-muted max-w-lg mx-auto">Constraints, conflicts, side effects, and correct outcomes live here. This localization is especially important for AI.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 35: AI Services Layer -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-35">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #a855f7);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">Layer: <span class="text-gradient">AI Orchestration</span></h2>
+                <div class="flex flex-col items-center max-w-md mx-auto gap-2">
+                    <div class="tech-card p-3 w-full text-center bg-[var(--glass-bg)] opacity-70 font-bold uppercase tracking-widest text-xs">Interface</div>
+                    <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-cyber-purple"></i></div>
+                    
+                    <div class="tech-card p-5 w-full bg-cyber-purple/10 border-2 border-cyber-purple text-cyber-purple shadow-[0_0_30px_rgba(168,85,247,0.2)] transform scale-105 z-10 relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-cyber-purple/10 to-transparent"></div>
+                        <h3 class="font-black uppercase tracking-widest text-lg mb-1 relative z-10">AI Services</h3>
+                        <p class="text-[10px] font-mono font-bold uppercase relative z-10">Execution Management Layer</p>
+                    </div>
+
+                    <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-cyber-purple"></i></div>
+                    <div class="tech-card p-3 w-full text-center bg-[var(--glass-bg)] opacity-70 font-bold uppercase tracking-widest text-xs border-t-2 border-cyber-tg">Services</div>
+                </div>
+                <p class="text-sm tech-text font-medium mt-8">AI is a separate execution-management layer using PRD, rules, tools, tests, and constraints. The difference between chaos and engineering.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 36: What is Included in AI Layer -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-36">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #a855f7);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 text-center uppercase">Inside the <span class="text-gradient">AI Layer</span></h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 relative">
+                    <!-- Center overlay -->
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-0 opacity-10">
+                        <i class="ph-fill ph-brain text-[200px] text-cyber-purple"></i>
+                    </div>
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-purple/30 z-10 text-center"><span class="font-bold tech-text uppercase text-xs tracking-wide">Prompts</span></div>
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-purple/30 z-10 text-center"><span class="font-bold tech-text uppercase text-xs tracking-wide">Project Rules<br><span class="text-[8px] font-mono text-muted">claude.md</span></span></div>
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-purple/30 z-10 text-center"><span class="font-bold tech-text uppercase text-xs tracking-wide">Workflows</span></div>
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-purple/30 z-10 text-center"><span class="font-bold tech-text uppercase text-xs tracking-wide">Tool Calling</span></div>
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-purple/30 z-10 text-center"><span class="font-bold tech-text uppercase text-xs tracking-wide">Validation Loop</span></div>
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-purple/30 z-10 text-center"><span class="font-bold tech-text uppercase text-xs tracking-wide">Self-Healing</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 37: Interface Layer -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-37">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #f8fafc, transparent, #f8fafc);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">Layer: <span class="text-muted">Interface</span></h2>
+                <div class="tech-card p-6 max-w-3xl mx-auto bg-[var(--card-bg)] border-t-4 border-t-gray-400 relative overflow-hidden">
+                    <div class="absolute top-2 right-2 text-[8px] font-mono font-bold text-gray-400 uppercase">User-facing surface</div>
+                    <div class="flex justify-center gap-6 mb-6 text-3xl text-gray-500">
+                        <i class="ph-duotone ph-chat-circle-text"></i>
+                        <i class="ph-duotone ph-mouse-left-click"></i>
+                        <i class="ph-duotone ph-device-mobile"></i>
+                        <i class="ph-duotone ph-arrows-out"></i>
+                    </div>
+                    <p class="text-sm tech-text font-medium leading-relaxed">
+                        Translates internal mechanics into understandable user experience.<br>
+                        Includes screens, text, buttons, responses, scenarios, states.<br>
+                        <span class="text-cyber-red font-bold mt-2 block uppercase text-xs tracking-widest">Does not create business truth. Does not store data.</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 38: E2E System Flow -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-38">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center overflow-x-auto">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">End-to-End <span class="text-gradient">System Flow</span></h2>
+                <div class="flex items-center min-w-max md:min-w-0 md:justify-center gap-1 md:gap-2 mb-6 pb-4">
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-muted bg-[var(--glass-bg)]">User Action</div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-muted bg-[var(--glass-bg)] border-gray-400">Interface</div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-cyber-purple bg-cyber-purple/10 border-cyber-purple">AI / Service Orchestration</div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-cyber-tg bg-cyber-tg/10 border-cyber-tg">Business Services</div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-cyber-orange bg-cyber-orange/10 border-cyber-orange">Data / Infra</div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-muted bg-[var(--glass-bg)]">Response</div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-black uppercase text-cyber-green bg-cyber-green/10 border-cyber-green">Validation</div>
+                </div>
+                <p class="text-sm text-muted">Layers work as a single flow. This helps identify where logic belongs and where to search for errors.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 39: Interface Layer Details -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-39">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <div class="kbd mb-4 text-gray-500 border-gray-500/20 bg-gray-500/5">Block 6. Interface Layer</div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">The <span class="text-muted">Interface</span></h2>
+                <div class="relative w-full max-w-2xl mx-auto h-64 tech-card bg-[var(--card-bg)] border-gray-400 flex items-center justify-center overflow-hidden">
+                    <i class="ph-duotone ph-device-mobile text-[150px] text-gray-300 dark:text-gray-800 opacity-50 absolute"></i>
+                    <div class="absolute top-4 left-4 tech-card p-2 text-[10px] font-bold bg-[var(--bg-color)] shadow-sm">Messages</div>
+                    <div class="absolute top-4 right-4 tech-card p-2 text-[10px] font-bold bg-[var(--bg-color)] shadow-sm">States</div>
+                    <div class="absolute bottom-4 left-4 tech-card p-2 text-[10px] font-bold bg-[var(--bg-color)] shadow-sm">Actions</div>
+                    <div class="absolute bottom-4 right-4 tech-card p-2 text-[10px] font-bold bg-[var(--bg-color)] shadow-sm">Feedback</div>
+                    <h3 class="font-black text-xl tech-text relative z-10 uppercase tracking-widest bg-[var(--bg-color)]/80 backdrop-blur px-4 py-2 rounded-lg border border-[var(--glass-border)]">Full Form of User Interaction</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 40: Client Layer -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-40">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Who The <span class="text-muted">Client</span> Is</h2>
+                <div class="flex flex-col items-center max-w-lg mx-auto gap-4">
+                    <div class="tech-card p-4 bg-[var(--bg-color)] w-32 rounded-full border-gray-400 font-bold uppercase text-xs">User</div>
+                    <i class="ph-bold ph-arrow-down text-muted"></i>
+                    <div class="tech-card p-6 bg-gray-500/10 border-2 border-gray-500 w-full shadow-lg relative">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--bg-color)] px-2 py-1 border border-gray-500 rounded text-[8px] font-bold uppercase tracking-widest text-gray-500">Entry point, not source of truth</div>
+                        <h3 class="font-black text-xl text-gray-500 uppercase tracking-widest mt-2">Client</h3>
+                    </div>
+                    <i class="ph-bold ph-arrow-down text-muted"></i>
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-gray-400 w-48 font-bold uppercase text-xs text-muted">Backend</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 41: Our Clients -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-41">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #229ED9);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Our Clients: <span class="text-cyber-tg">Telegram</span></h2>
+                <div class="flex justify-center gap-8 mb-8">
+                    <div class="tech-card p-6 w-48 bg-cyber-tg/10 border-cyber-tg flex flex-col items-center shadow-[0_0_15px_rgba(34,158,217,0.2)]">
+                        <i class="ph-fill ph-telegram-logo text-4xl text-cyber-tg mb-2"></i>
+                        <h3 class="font-bold text-cyber-tg uppercase text-sm">Bot</h3>
+                    </div>
+                    <div class="tech-card p-6 w-48 bg-cyber-tg/10 border-cyber-tg flex flex-col items-center shadow-[0_0_15px_rgba(34,158,217,0.2)]">
+                        <i class="ph-duotone ph-app-window text-4xl text-cyber-tg mb-2"></i>
+                        <h3 class="font-bold text-cyber-tg uppercase text-sm">Mini App</h3>
+                    </div>
+                </div>
+                <div class="flex flex-col items-center">
+                    <i class="ph-bold ph-arrows-merge text-3xl text-muted mb-2"></i>
+                    <div class="tech-card p-4 w-64 border-gray-500 bg-[var(--card-bg)] font-bold text-sm uppercase tracking-widest shadow-md">Shared Backend<br><span class="text-[8px] font-normal tracking-normal text-muted">(Source of Truth)</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 42: Conversational UI -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-42">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row items-center gap-8">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #a855f7);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Conversational <span class="text-cyber-tg">UI</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• Full scenario-based interface, not just messaging</li>
+                        <li>• Strong for onboarding, notifications, guided flow</li>
+                        <li>• Leads the user step by step</li>
+                        <li>• A distinct interface form with its own strengths</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex justify-center relative">
+                    <div class="tech-card bg-[var(--card-bg)] border-[var(--glass-border)] w-64 h-80 rounded-3xl p-4 flex flex-col shadow-xl">
+                        <div class="w-full h-4 border-b border-[var(--glass-border)] mb-2 flex justify-center"><div class="w-12 h-1 bg-gray-300 rounded-full"></div></div>
+                        <div class="flex flex-col gap-2 overflow-hidden flex-1">
+                            <div class="bg-gray-200 dark:bg-gray-800 p-2 rounded-lg rounded-tl-none self-start w-3/4 text-[8px] text-gray-600 dark:text-gray-300">Welcome! Let's set up your agent. What's the name?</div>
+                            <div class="absolute -left-10 top-16 tech-card px-2 py-1 text-[8px] text-cyber-tg font-bold uppercase bg-[var(--bg-color)]">Onboarding</div>
+                            <div class="bg-cyber-tg text-white p-2 rounded-lg rounded-tr-none self-end text-[8px]">SupportBot</div>
+                            <div class="bg-gray-200 dark:bg-gray-800 p-2 rounded-lg rounded-tl-none self-start w-4/5 text-[8px] text-gray-600 dark:text-gray-300">Great. Choose the primary language:</div>
+                            <div class="flex gap-1 self-start w-full mt-1">
+                                <div class="bg-[var(--glass-bg)] border border-cyber-tg text-cyber-tg p-1 rounded text-[8px] flex-1 text-center">EN</div>
+                                <div class="bg-[var(--glass-bg)] border border-cyber-tg text-cyber-tg p-1 rounded text-[8px] flex-1 text-center">RU</div>
+                            </div>
+                            <div class="absolute -left-10 bottom-24 tech-card px-2 py-1 text-[8px] text-cyber-tg font-bold uppercase bg-[var(--bg-color)]">Guided Flow</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 43: Visual UI -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-43">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #f97316);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">Visual <span class="text-cyber-orange">UI (Mini App)</span></h2>
+                <div class="flex justify-center items-center gap-6 mb-6">
+                    <!-- Bot -->
+                    <div class="tech-card bg-[var(--card-bg)] w-40 h-56 rounded-2xl p-3 flex flex-col shadow-lg opacity-70">
+                        <div class="w-full h-3 border-b border-[var(--glass-border)] mb-2"></div>
+                        <div class="bg-gray-200 dark:bg-gray-800 p-2 rounded text-[6px] mb-1 w-3/4">We need more details.</div>
+                        <div class="bg-cyber-tg text-white p-2 rounded text-[6px] text-center uppercase font-bold mt-2">Open Settings</div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center">
+                        <i class="ph-bold ph-arrows-left-right text-2xl text-muted"></i>
+                        <span class="text-[8px] font-mono text-muted uppercase font-bold mt-1">Context Handoff</span>
+                    </div>
+
+                    <!-- Mini App -->
+                    <div class="tech-card bg-[var(--bg-color)] w-48 h-64 rounded-xl border-cyber-orange p-3 flex flex-col shadow-[0_0_20px_rgba(249,115,22,0.15)] relative transform scale-105">
+                        <div class="w-full h-4 flex justify-between items-center mb-2">
+                            <span class="text-[8px] font-bold">Settings</span> <i class="ph-bold ph-x text-[8px]"></i>
+                        </div>
+                        <div class="flex-1 bg-[var(--card-bg)] rounded p-2 flex flex-col gap-2">
+                            <div class="h-4 border border-[var(--glass-border)] rounded w-full flex items-center px-1"><span class="text-[6px] text-muted">API Key...</span></div>
+                            <div class="h-10 border border-[var(--glass-border)] rounded w-full flex items-center justify-center text-[6px] text-muted">Complex Form Area</div>
+                            <div class="h-10 border border-[var(--glass-border)] rounded w-full flex flex-col gap-1 p-1">
+                                <div class="h-2 bg-gray-300 w-full rounded"></div>
+                                <div class="h-2 bg-gray-300 w-full rounded"></div>
+                                <div class="h-2 bg-gray-300 w-3/4 rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium">Needed when chat flow is no longer enough. Bot and Mini App complement each other.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 44: Interface as the Last Design Point -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-44">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Interface is the <span class="text-gradient">Last Design Point</span></h2>
+                
+                <div class="flex flex-col gap-8 items-center max-w-3xl mx-auto">
+                    <!-- Right order -->
+                    <div class="w-full">
+                        <span class="text-[10px] font-mono font-bold text-cyber-green uppercase tracking-widest block mb-2">Right Order</span>
+                        <div class="flex items-center justify-center gap-2 tech-card p-4 border-cyber-green/50 bg-cyber-green/5">
+                            <div class="tech-card p-2 text-xs font-bold bg-[var(--bg-color)]">Data</div>
+                            <i class="ph-bold ph-arrow-right text-cyber-green"></i>
+                            <div class="tech-card p-2 text-xs font-bold bg-[var(--bg-color)]">Services</div>
+                            <i class="ph-bold ph-arrow-right text-cyber-green"></i>
+                            <div class="tech-card p-2 text-xs font-bold bg-[var(--bg-color)]">API Contract</div>
+                            <i class="ph-bold ph-arrow-right text-cyber-green"></i>
+                            <div class="tech-card p-2 text-xs font-black border-cyber-green text-cyber-green bg-[var(--bg-color)]">UI</div>
+                        </div>
+                    </div>
+
+                    <!-- Wrong order -->
+                    <div class="w-full opacity-60">
+                        <span class="text-[10px] font-mono font-bold text-cyber-red uppercase tracking-widest block mb-2">Wrong Order</span>
+                        <div class="flex items-center justify-center gap-2 tech-card p-4 border-cyber-red/50 bg-cyber-red/5 relative">
+                            <div class="absolute inset-0 flex items-center justify-center"><div class="h-1 w-full bg-cyber-red/50"></div></div>
+                            <div class="tech-card p-2 text-xs font-black border-cyber-red text-cyber-red bg-[var(--bg-color)] z-10">Start from screens</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm text-muted mt-8 font-medium">If designed in isolation, the interface starts guessing how the backend works. A good interface rests on an assembled foundation.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 45: PRD and Tests -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-45">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <div class="kbd mb-4 text-cyber-purple border-cyber-purple/20 bg-cyber-purple/5">Block 7. Executable Spec</div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">PRD + Tests = <span class="text-gradient">Executable Spec</span></h2>
+                
+                <div class="flex flex-col md:flex-row justify-center items-center gap-6 max-w-3xl mx-auto">
+                    <div class="tech-card p-6 border-t-4 border-cyber-tg bg-[var(--glass-bg)] flex-1 w-full relative">
+                        <h3 class="font-black text-xl tech-text mb-2">PRD</h3>
+                        <p class="text-xs text-muted font-mono uppercase">Answers: "What are we building?"</p>
+                    </div>
+                    <i class="ph-bold ph-plus text-3xl text-muted"></i>
+                    <div class="tech-card p-6 border-t-4 border-cyber-orange bg-[var(--glass-bg)] flex-1 w-full relative">
+                        <h3 class="font-black text-xl tech-text mb-2">Tests</h3>
+                        <p class="text-xs text-muted font-mono uppercase">Answers: "How will we know it is correct?"</p>
+                    </div>
+                </div>
+                <i class="ph-bold ph-arrow-down text-3xl text-cyber-purple my-4"></i>
+                <div class="tech-card p-6 border-2 border-cyber-purple bg-cyber-purple/10 max-w-lg mx-auto shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+                    <h3 class="font-black text-2xl text-cyber-purple uppercase tracking-widest">Deterministic Frame</h3>
+                    <p class="text-[10px] tech-text mt-2">AI works best when both meaning and independent validation are present.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 46: Without PRD -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-46">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #22c55e);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Without PRD, Agent <span class="text-cyber-red">Invents the Product</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• The model fills the gaps with its own assumptions.</li>
+                        <li>• Invents user cases, constraints, and success criteria.</li>
+                        <li>• Creates product-level errors (looks like initiative).</li>
+                        <li>• PRD is the source of truth about intent.</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex items-center justify-center gap-4">
+                    <div class="relative w-40 h-40 tech-card bg-cyber-red/5 border-cyber-red border-dashed flex items-center justify-center text-center p-2 rounded-full">
+                        <span class="text-[10px] font-bold text-cyber-red uppercase">Missing<br>Product Context</span>
+                        <!-- Branches -->
+                        <div class="absolute -top-4 right-0 bg-[var(--bg-color)] border border-[var(--glass-border)] p-1 text-[6px] rounded">Wrong UI</div>
+                        <div class="absolute top-1/2 -right-6 bg-[var(--bg-color)] border border-[var(--glass-border)] p-1 text-[6px] rounded">Missed Edge Case</div>
+                        <div class="absolute -bottom-4 right-0 bg-[var(--bg-color)] border border-[var(--glass-border)] p-1 text-[6px] rounded">Invented Feature</div>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-muted text-2xl"></i>
+                    <div class="tech-card p-4 border-cyber-green bg-cyber-green/5 flex flex-col items-center">
+                        <i class="ph-duotone ph-file-text text-3xl text-cyber-green mb-2"></i>
+                        <span class="text-[10px] font-bold text-cyber-green uppercase tracking-widest text-center">Structured<br>PRD</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 47: Without Tests -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-47">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #f97316, transparent, #22c55e);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Without Tests, Agent <span class="text-cyber-orange">Invents Correctness</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• Agent decides for itself what "correct" means.</li>
+                        <li>• Plausible solution ≠ correct behavior.</li>
+                        <li>• Tests create an external and independent boundary of truth.</li>
+                        <li>• Prevent the model from declaring success by intuition.</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex items-center justify-center gap-6">
+                    <div class="tech-card p-6 border-cyber-orange bg-cyber-orange/5 text-center flex-1 shadow-md">
+                        <i class="ph-duotone ph-warning-circle text-4xl text-cyber-orange mb-2"></i>
+                        <h3 class="font-bold text-cyber-orange uppercase text-sm">Looks Correct</h3>
+                        <span class="text-[8px] text-muted">Model's Intuition</span>
+                    </div>
+                    <div class="tech-card p-6 border-cyber-green bg-cyber-green/5 text-center flex-1 shadow-[0_0_20px_rgba(34,197,94,0.15)] transform scale-110 z-10">
+                        <i class="ph-duotone ph-check-circle text-4xl text-cyber-green mb-2"></i>
+                        <h3 class="font-black text-cyber-green uppercase text-sm">Passes Tests</h3>
+                        <span class="text-[8px] text-muted font-bold">Independent Truth</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 48: TDD in AI Era -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-48">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">TDD Matters <span class="text-gradient">Even More</span></h2>
+                
+                <div class="relative w-64 h-64 mx-auto mb-8 flex items-center justify-center">
+                    <div class="absolute inset-0 bg-cyber-purple/5 rounded-full border border-cyber-purple/20"></div>
+                    <!-- TDD Cycle -->
+                    <div class="absolute top-4 left-1/2 -translate-x-1/2 tech-card px-4 py-2 border-cyber-red bg-cyber-red/10 text-cyber-red font-black uppercase shadow-md">Red</div>
+                    <div class="absolute bottom-4 right-4 tech-card px-4 py-2 border-cyber-green bg-cyber-green/10 text-cyber-green font-black uppercase shadow-md">Green</div>
+                    <div class="absolute bottom-4 left-4 tech-card px-4 py-2 border-cyber-tg bg-cyber-tg/10 text-cyber-tg font-black uppercase shadow-md">Refactor</div>
+                    <!-- Overlay label -->
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 tech-card p-2 bg-[var(--card-bg)] shadow-xl text-[10px] font-bold tech-text uppercase tracking-widest text-center whitespace-nowrap z-20">
+                        Especially<br>important<br>with AI
+                    </div>
+                    <svg class="absolute inset-0 w-full h-full -z-10" viewBox="0 0 256 256">
+                        <circle cx="128" cy="128" r="90" fill="none" stroke="currentColor" class="text-muted opacity-30" stroke-width="2" stroke-dasharray="4 4"/>
+                    </svg>
+                </div>
+                <p class="text-sm tech-text font-medium max-w-2xl mx-auto">If the agent writes code first and then writes the tests, it legalizes its own mistakes. TDD turns AI into an executor inside a quality-proof system.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 49: How to read prd.json -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-49">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 text-center uppercase">How to read <span class="text-cyber-tg">prd.json</span></h2>
+                <div class="flex flex-col md:flex-row gap-8 items-center">
+                    <div class="w-full md:w-1/3 text-sm tech-text font-medium">
+                        PRD must be read as a working map of implementation. Feature is usually too broad; scenario is the correct work unit.
+                    </div>
+                    <div class="w-full md:w-2/3">
+                        <div class="tech-card bg-[var(--card-bg)] p-4 font-mono text-xs overflow-hidden shadow-sm">
+                            <div class="text-cyber-tg font-bold">Feature <span class="text-muted font-normal">"Auth"</span></div>
+                            <div class="pl-4 border-l-2 border-[var(--glass-border)] ml-2 mt-2">
+                                <div class="text-cyber-orange font-bold">Scenario <span class="text-muted font-normal">"SC001_Login"</span> <span class="bg-cyber-orange/20 text-[8px] px-1 rounded ml-2">Work Unit</span></div>
+                                <div class="pl-4 border-l-2 border-[var(--glass-border)] ml-2 mt-2">
+                                    <div class="text-cyber-purple font-bold">Rules</div>
+                                    <div class="pl-4 text-muted">- Max 3 attempts</div>
+                                    <div class="text-cyber-green font-bold mt-2">Acceptance Criteria</div>
+                                    <div class="pl-4 text-muted">- Returns JWT</div>
+                                    <div class="text-gray-500 font-bold mt-2">Test Cases</div>
+                                    <div class="pl-4 text-muted">- test_login_success</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 50: Scenario as Atomic Unit -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-50">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Scenario: <span class="text-gradient">Atomic Unit of Work</span></h2>
+                <div class="relative max-w-2xl mx-auto flex flex-col items-center gap-8 mb-8">
+                    <div class="tech-card p-6 border-2 border-cyber-orange bg-cyber-orange/10 shadow-[0_0_30px_rgba(249,115,22,0.2)] z-10 w-48 relative">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--bg-color)] px-2 py-1 border border-cyber-orange rounded-full text-[8px] font-bold text-cyber-orange uppercase">Bridge</div>
+                        <h3 class="font-black text-3xl text-cyber-orange tracking-widest">SC001</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                        <div class="tech-card p-3 bg-[var(--glass-bg)] border-t-2 border-cyber-tg flex flex-col items-center">
+                            <span class="text-[8px] text-muted font-mono uppercase font-bold mb-1">Source</span>
+                            <span class="text-xs font-bold tech-text">PRD</span>
+                        </div>
+                        <div class="tech-card p-3 bg-[var(--glass-bg)] border-t-2 border-cyber-green flex flex-col items-center">
+                            <span class="text-[8px] text-muted font-mono uppercase font-bold mb-1">Validation</span>
+                            <span class="text-xs font-bold tech-text">Test File</span>
+                        </div>
+                        <div class="tech-card p-3 bg-[var(--glass-bg)] border-t-2 border-gray-500 flex flex-col items-center">
+                            <span class="text-[8px] text-muted font-mono uppercase font-bold mb-1">Target</span>
+                            <span class="text-xs font-bold tech-text">Service Layer</span>
+                        </div>
+                        <div class="tech-card p-3 bg-[var(--glass-bg)] border-t-2 border-cyber-purple flex flex-col items-center">
+                            <span class="text-[8px] text-muted font-mono uppercase font-bold mb-1">Execution</span>
+                            <span class="text-xs font-bold tech-text">Agent Task</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium">Work should be scoped by scenario_id, not by the whole feature. In the seminar, the right command is not "build the feature," but "implement SC001".</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 51: Tests as Specification -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-51">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #22c55e, transparent, #229ED9);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Tests as <span class="text-cyber-green">Specification</span></h2>
+                <div class="flex flex-col md:flex-row justify-center gap-4 mb-8">
+                    <div class="tech-card p-4 border-t-4 border-cyber-tg bg-[var(--glass-bg)] w-32 flex flex-col">
+                        <span class="font-black text-lg text-cyber-tg mb-2">Given</span>
+                        <span class="text-[10px] text-muted">Initial State</span>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-muted self-center rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-4 border-t-4 border-cyber-orange bg-[var(--glass-bg)] w-32 flex flex-col">
+                        <span class="font-black text-lg text-cyber-orange mb-2">When</span>
+                        <span class="text-[10px] text-muted">Action</span>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-muted self-center rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-4 border-t-4 border-cyber-green bg-[var(--glass-bg)] w-32 flex flex-col shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                        <span class="font-black text-lg text-cyber-green mb-2">Then</span>
+                        <span class="text-[10px] text-muted font-bold">Assertions</span>
+                    </div>
+                </div>
+                <div class="tech-card p-4 bg-[var(--card-bg)] max-w-xl mx-auto font-mono text-xs text-left relative">
+                    <div class="text-gray-500">def test_login_success():</div>
+                    <div class="pl-4 text-cyber-tg">user = create_user("admin") <span class="text-[8px] uppercase font-sans text-muted ml-2"># Given</span></div>
+                    <div class="pl-4 text-cyber-orange">token = login("admin", "pass") <span class="text-[8px] uppercase font-sans text-muted ml-2"># When</span></div>
+                    <div class="pl-4 text-cyber-green font-bold">assert token is not None <span class="text-[8px] uppercase font-sans font-black ml-2">&lt;-- Boundaries of correctness</span></div>
+                </div>
+                <p class="text-sm text-muted font-medium mt-6">Assertions define the boundaries of correctness. For AI, tests narrow the corridor of acceptable solutions.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 52: How to Connect PRD and Tests -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-52">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center overflow-x-auto">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Connecting <span class="text-gradient">PRD & Tests</span></h2>
+                <div class="flex items-center min-w-max md:min-w-0 md:justify-center gap-1 md:gap-2 mb-8 pb-4">
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-muted bg-[var(--glass-bg)]">Feature</div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-3 md:p-4 text-[10px] md:text-[12px] font-black uppercase text-cyber-orange bg-cyber-orange/10 border-cyber-orange shadow-[0_0_15px_rgba(249,115,22,0.2)] relative">
+                        <span class="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] whitespace-nowrap text-cyber-orange">Bridge</span>
+                        Scenario ID
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-muted bg-[var(--glass-bg)]">Test Case</div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-muted bg-[var(--glass-bg)]">Test File</div>
+                    <i class="ph-bold ph-arrow-right text-muted text-xs"></i>
+                    <div class="tech-card p-2 md:p-3 text-[8px] md:text-[10px] font-bold uppercase text-cyber-green bg-cyber-green/5 border-cyber-green">Expected Behavior</div>
+                </div>
+                <p class="text-sm tech-text font-medium max-w-2xl mx-auto">Requirements and tests must be tightly traceable. Without this link, orphan artifacts and technical debt appear.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 53: Do Not Change Tests -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-53">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #ef4444);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase text-cyber-red">Do Not Change <span class="text-gradient">Tests</span></h2>
+                
+                <div class="tech-card p-6 bg-[var(--card-bg)] border-cyber-red/50 shadow-[0_0_30px_rgba(239,68,68,0.15)] max-w-lg mx-auto relative mb-8">
+                    <i class="ph-fill ph-lock-key text-5xl text-cyber-red absolute -top-6 left-1/2 -translate-x-1/2 bg-[var(--bg-color)] rounded-full p-2 border border-cyber-red"></i>
+                    <h3 class="font-black text-2xl tracking-widest uppercase mt-4 mb-6 tech-text">TESTS</h3>
+                    <ul class="text-sm font-mono space-y-3 text-left w-full mx-auto inline-block">
+                        <li class="flex items-center gap-2 text-muted line-through decoration-cyber-red decoration-2"><i class="ph-bold ph-x text-cyber-red"></i> Weaken assertions</li>
+                        <li class="flex items-center gap-2 text-muted line-through decoration-cyber-red decoration-2"><i class="ph-bold ph-x text-cyber-red"></i> Comment out tests</li>
+                        <li class="flex items-center gap-2 text-muted line-through decoration-cyber-red decoration-2"><i class="ph-bold ph-x text-cyber-red"></i> Change expectations</li>
+                    </ul>
+                </div>
+                <p class="text-sm tech-text font-medium max-w-xl mx-auto">The independent criterion of truth must not be adapted to the generated code. Otherwise implementation turns into reward hacking. Tests are the law.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 54: Tools Evolution -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-54">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <div class="kbd mb-4 text-cyber-purple border-cyber-purple/20 bg-cyber-purple/5">Block 8. Practical Agent Env</div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Evolution of <span class="text-gradient">Tools</span></h2>
+                <div class="flex flex-col md:flex-row gap-4 items-stretch justify-center">
+                    <div class="tech-card p-4 w-full md:w-1/3 bg-[var(--glass-bg)] opacity-60 flex flex-col justify-center">
+                        <span class="font-mono text-[10px] text-muted font-bold uppercase mb-2 block">Stage 1</span>
+                        <h3 class="font-bold tech-text uppercase tracking-wide">Manual Dev</h3>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-2xl text-muted self-center rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-4 w-full md:w-1/3 bg-[var(--glass-bg)] opacity-80 flex flex-col justify-center">
+                        <span class="font-mono text-[10px] text-muted font-bold uppercase mb-2 block">Stage 2</span>
+                        <h3 class="font-bold tech-text uppercase tracking-wide">No-Code / Low-Code</h3>
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-2xl text-muted self-center rotate-90 md:rotate-0"></i>
+                    <div class="tech-card p-6 w-full md:w-1/3 bg-cyber-purple/10 border-cyber-purple shadow-[0_0_20px_rgba(168,85,247,0.2)] md:transform md:scale-110 flex flex-col justify-center z-10 relative">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyber-purple text-white px-2 py-1 text-[8px] font-bold uppercase rounded-full tracking-widest">New Speed Layer</div>
+                        <span class="font-mono text-[10px] text-cyber-purple font-bold uppercase mb-2 block">Stage 3</span>
+                        <h3 class="font-black text-cyber-purple uppercase tracking-wide text-lg">AI-First Environments</h3>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium mt-10">AI now participates in design, testing, fixing, and delivery. It accelerates engineering, but does not replace it.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 55: Claude Code -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-55">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #f97316, transparent, #a855f7);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Why <span class="text-gradient">Claude Code</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• Works not as a chat, but as part of the project.</li>
+                        <li>• Sees files, keeps long context, plans steps, and continues work.</li>
+                        <li>• Shortens the path from idea to working workflow.</li>
+                        <li>• Becomes useful only inside project context and process.</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2">
+                    <div class="tech-card p-4 bg-[var(--card-bg)] border-[var(--glass-border)] shadow-xl h-64 flex relative">
+                        <!-- Pseudo IDE -->
+                        <div class="w-2/3 border-r border-[var(--glass-border)] p-2">
+                            <div class="w-full h-4 bg-gray-300 dark:bg-gray-700 rounded mb-2"></div>
+                            <div class="w-3/4 h-4 bg-gray-200 dark:bg-gray-800 rounded mb-2"></div>
+                        </div>
+                        <!-- Agent Panel -->
+                        <div class="w-1/3 bg-cyber-purple/5 p-2 flex flex-col justify-between">
+                            <div class="font-bold text-[8px] text-cyber-purple uppercase border-b border-cyber-purple/20 pb-1 mb-2">Claude Code</div>
+                            <div class="space-y-1">
+                                <span class="bg-cyber-purple/20 text-cyber-purple text-[6px] px-1 rounded block">Context</span>
+                                <span class="bg-cyber-purple/20 text-cyber-purple text-[6px] px-1 rounded block">Planning</span>
+                                <span class="bg-cyber-purple/20 text-cyber-purple text-[6px] px-1 rounded block">Patching</span>
+                                <span class="bg-cyber-purple/20 text-cyber-purple text-[6px] px-1 rounded block">Continuity</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 56: Base Environment -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-56">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">The Base <span class="text-gradient">Environment</span></h2>
+                <div class="tech-card bg-[var(--card-bg)] p-6 max-w-2xl mx-auto shadow-lg relative border-t-4 border-t-cyber-tg">
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--bg-color)] px-4 py-1 border border-cyber-tg rounded-full text-xs font-bold text-cyber-tg uppercase tracking-widest whitespace-nowrap">Agent inside repository</div>
+                    <div class="flex items-center justify-center gap-4 text-3xl text-muted mb-6 mt-4">
+                        <i class="ph-duotone ph-file-code"></i> <span class="text-xl font-bold">+</span>
+                        <i class="ph-duotone ph-robot text-cyber-purple drop-shadow-md"></i> <span class="text-xl font-bold">+</span>
+                        <i class="ph-duotone ph-folder-open text-cyber-orange drop-shadow-md"></i>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 font-mono text-[10px] font-bold text-muted uppercase">
+                        <div class="bg-[var(--glass-bg)] p-2 rounded">context/</div>
+                        <div class="bg-[var(--glass-bg)] p-2 rounded">src/</div>
+                        <div class="bg-[var(--glass-bg)] p-2 rounded">tests/</div>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium mt-8 max-w-xl mx-auto">The agent should live inside the repository, not in an abstract chat. Only there can it see structure, dependencies, and rules.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 57: claude.md and Planning -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-57">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #229ED9);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Rules & <span class="text-gradient">Planning</span></h2>
+                <div class="flex flex-col md:flex-row items-stretch justify-center gap-6 mb-8">
+                    <div class="tech-card p-4 flex-1 bg-[var(--glass-bg)] border-cyber-purple/30">
+                        <h3 class="font-bold text-cyber-purple uppercase text-sm mb-2">claude.md</h3>
+                        <p class="text-[10px] text-muted mb-4 h-6">Project's operational memory</p>
+                        <div class="bg-[var(--bg-color)] p-2 text-[6px] font-mono text-left border border-[var(--glass-border)] rounded text-muted">
+                            # Rules<br>- Use Layered Arch<br>- No DB in bot
+                        </div>
+                    </div>
+                    <div class="tech-card p-4 flex-1 bg-[var(--glass-bg)] border-cyber-orange/30">
+                        <h3 class="font-bold text-cyber-orange uppercase text-sm mb-2">WAT</h3>
+                        <p class="text-[10px] text-muted mb-4 h-6">Workflows, Agents, Tools</p>
+                        <div class="flex justify-center items-center h-16 relative">
+                            <div class="absolute top-0 text-[8px] font-bold">Workflows</div>
+                            <div class="absolute bottom-0 left-4 text-[8px] font-bold">Agents</div>
+                            <div class="absolute bottom-0 right-4 text-[8px] font-bold">Tools</div>
+                            <svg class="w-12 h-12 text-cyber-orange opacity-50" viewBox="0 0 100 100" fill="none" stroke="currentColor"><polygon points="50,10 10,90 90,90" stroke-width="2"/></svg>
+                        </div>
+                    </div>
+                    <div class="tech-card p-4 flex-1 bg-[var(--glass-bg)] border-cyber-tg/30">
+                        <h3 class="font-bold text-cyber-tg uppercase text-sm mb-2">Planning</h3>
+                        <p class="text-[10px] text-muted mb-4 h-6">Understand first, implement second</p>
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="bg-[var(--bg-color)] border border-cyber-tg p-1 text-[8px] rounded uppercase font-bold text-cyber-tg">Plan</span>
+                            <i class="ph-bold ph-arrow-right text-xs"></i>
+                            <span class="bg-[var(--bg-color)] border border-cyber-tg p-1 text-[8px] rounded uppercase font-bold text-cyber-tg">Execute</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 58: Production Discipline -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-58">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Production <span class="text-gradient">Discipline</span></h2>
+                <div class="flex flex-col gap-6 max-w-2xl mx-auto mb-8">
+                    <div class="flex justify-center gap-4 text-xs font-mono font-bold uppercase tracking-widest text-muted">
+                        <div class="tech-card p-3 flex-1 bg-[var(--glass-bg)]">Project <span class="block text-[8px] font-normal normal-case mt-1">Local context</span></div>
+                        <div class="tech-card p-3 flex-1 bg-[var(--glass-bg)]">Skills <span class="block text-[8px] font-normal normal-case mt-1">Reusable expertise</span></div>
+                        <div class="tech-card p-3 flex-1 bg-[var(--glass-bg)]">MCP <span class="block text-[8px] font-normal normal-case mt-1">External bridge</span></div>
+                    </div>
+                    <div class="text-2xl font-black text-muted">+</div>
+                    <div class="tech-card p-4 border-2 border-cyber-green bg-cyber-green/10 shadow-[0_0_20px_rgba(34,197,94,0.15)] flex flex-wrap justify-center gap-4 relative pt-6">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--bg-color)] px-3 py-1 border border-cyber-green rounded-full text-[10px] font-bold text-cyber-green uppercase tracking-widest">Production Discipline</div>
+                        <div class="flex items-center gap-1 text-[10px] font-bold tech-text"><i class="ph-duotone ph-lock text-lg text-cyber-green"></i> Security</div>
+                        <div class="flex items-center gap-1 text-[10px] font-bold tech-text"><i class="ph-duotone ph-rocket text-lg text-cyber-green"></i> Deploy</div>
+                        <div class="flex items-center gap-1 text-[10px] font-bold tech-text"><i class="ph-duotone ph-chart-line-up text-lg text-cyber-green"></i> Logs</div>
+                        <div class="flex items-center gap-1 text-[10px] font-bold tech-text"><i class="ph-duotone ph-key text-lg text-cyber-green"></i> Secrets</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 59: AI Design -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-59">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #f97316, transparent, #a855f7);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">AI Design: <span class="text-gradient">Agent Eyes</span></h2>
+                <div class="relative w-[300px] h-[300px] mx-auto mb-6">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="tech-card bg-[var(--card-bg)] p-2 shadow-xl border-cyber-purple w-24 h-32 flex flex-col justify-between">
+                            <div class="w-full h-2 bg-gray-300 rounded"></div>
+                            <div class="w-full h-16 bg-cyber-purple/20 rounded border border-cyber-purple/50"></div>
+                            <div class="w-1/2 h-2 bg-gray-300 rounded"></div>
+                        </div>
+                    </div>
+                    <!-- Hexagon or Circle flow -->
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tech-text bg-[var(--glass-bg)] p-1 rounded border border-[var(--glass-border)]">Spec</div>
+                    <div class="absolute top-1/4 right-0 text-[10px] font-bold uppercase tech-text bg-[var(--glass-bg)] p-1 rounded border border-[var(--glass-border)]">Code</div>
+                    <div class="absolute bottom-1/4 right-0 text-[10px] font-bold uppercase text-cyber-orange bg-cyber-orange/10 p-1 rounded border border-cyber-orange">Screenshot</div>
+                    <div class="absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase text-cyber-purple bg-cyber-purple/10 p-1 rounded border border-cyber-purple">Review</div>
+                    <div class="absolute bottom-1/4 left-0 text-[10px] font-bold uppercase tech-text bg-[var(--glass-bg)] p-1 rounded border border-[var(--glass-border)]">Fix</div>
+                    <div class="absolute top-1/4 left-0 text-[10px] font-bold uppercase tech-text bg-[var(--glass-bg)] p-1 rounded border border-[var(--glass-border)]">Polish</div>
+                    <svg class="absolute inset-0 w-full h-full -z-10" viewBox="0 0 300 300">
+                        <circle cx="150" cy="150" r="120" fill="none" stroke="currentColor" class="text-muted opacity-30" stroke-width="2" stroke-dasharray="4 4"/>
+                    </svg>
+                </div>
+                <p class="text-sm tech-text font-medium max-w-xl mx-auto">The model can see code, but not the interface result. Needs screenshots, Playwright, visual review. Visual feedback changes UI quality dramatically.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 60: Seminar Setup -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-60">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-8 uppercase">Seminar <span class="text-gradient">Setup</span></h2>
+                <div class="flex flex-col items-center gap-6 max-w-2xl mx-auto mb-8">
+                    <div class="flex justify-center gap-4">
+                        <div class="tech-card p-3 bg-[var(--glass-bg)] font-bold text-xs uppercase text-muted">VS Code</div>
+                        <div class="tech-card p-3 bg-[var(--glass-bg)] font-bold text-xs uppercase text-muted">JetBrains</div>
+                        <div class="tech-card p-3 bg-[var(--glass-bg)] font-bold text-xs uppercase text-muted">Web</div>
+                    </div>
+                    <i class="ph-bold ph-arrow-down text-2xl text-cyber-tg"></i>
+                    <div class="tech-card p-6 border-2 border-cyber-tg bg-cyber-tg/5 w-full flex items-center justify-between shadow-[0_0_20px_rgba(34,158,217,0.15)] relative">
+                        <h3 class="font-black text-2xl text-cyber-tg uppercase tracking-widest absolute -top-4 bg-[var(--bg-color)] px-4 rounded-full border border-cyber-tg left-1/2 -translate-x-1/2">GIT Repository</h3>
+                        <div class="grid grid-cols-2 gap-2 text-[10px] font-mono font-bold uppercase text-muted mt-4">
+                            <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-2 rounded">PRD</div>
+                            <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-2 rounded">Tests</div>
+                            <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-2 rounded">Src</div>
+                            <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-2 rounded">Docs</div>
+                        </div>
+                        <i class="ph-bold ph-plus text-2xl text-muted mx-4"></i>
+                        <div class="tech-card border-cyber-purple bg-cyber-purple/10 text-cyber-purple font-black uppercase text-sm p-4 w-32 shadow-md">
+                            Claude Code
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium">The seminar starts from a concrete codebase, not from an abstract prompt. Tooling matters only when embedded into a workflow.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 61: Repo as Environment -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-61">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #ef4444);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Repo as <span class="text-gradient">Execution Env</span></h2>
+                <div class="tech-card p-6 md:p-10 bg-[var(--card-bg)] border border-[var(--glass-border)] max-w-3xl mx-auto relative overflow-hidden text-left font-mono shadow-xl">
+                    <div class="text-cyber-purple mb-4 flex items-center gap-2"><i class="ph-fill ph-folder-open text-xl"></i> <b>project/</b></div>
+                    <div class="pl-6 space-y-3">
+                        <div class="flex items-center gap-2 relative">
+                            <i class="ph-fill ph-file-text text-muted"></i> prd.json 
+                            <span class="absolute left-32 bg-[var(--bg-color)] border border-cyber-orange text-cyber-orange px-2 py-0.5 rounded text-[8px] uppercase tracking-widest shadow-sm">Source of Truth</span>
+                        </div>
+                        <div class="flex items-center gap-2 relative">
+                            <i class="ph-fill ph-check-square-offset text-muted"></i> tests/ 
+                            <span class="absolute left-32 bg-[var(--bg-color)] border border-cyber-green text-cyber-green px-2 py-0.5 rounded text-[8px] uppercase tracking-widest shadow-sm">Source of Validation</span>
+                        </div>
+                        <div class="flex items-center gap-2"><i class="ph-fill ph-folder text-muted"></i> backend/</div>
+                        <div class="flex items-center gap-2"><i class="ph-fill ph-folder text-muted"></i> bot/</div>
+                        <div class="flex items-center gap-2"><i class="ph-fill ph-file-code text-muted"></i> claude.md</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 62: First Step -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-62">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #ef4444, transparent, #f97316);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Step 1: <span class="text-gradient">Read Specification</span></h2>
+                <div class="flex flex-col lg:flex-row items-center justify-center gap-3 lg:gap-4 mb-8">
+                    <div class="tech-card p-3 bg-[var(--glass-bg)] font-bold uppercase text-xs">PRD</div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 lg:rotate-0"></i>
+                    <div class="tech-card p-4 border-2 border-cyber-orange bg-cyber-orange/10 font-black uppercase text-sm text-cyber-orange shadow-[0_0_20px_rgba(249,115,22,0.2)] relative">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--bg-color)] px-1 border border-cyber-orange rounded text-[6px]">Routing Point</div>
+                        Scenario
+                    </div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 lg:rotate-0"></i>
+                    <div class="tech-card p-3 bg-[var(--glass-bg)] font-bold uppercase text-xs">Tests</div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 lg:rotate-0"></i>
+                    <div class="tech-card p-3 bg-[var(--glass-bg)] font-bold uppercase text-xs">Layer</div>
+                    <i class="ph-bold ph-arrow-right text-muted rotate-90 lg:rotate-0"></i>
+                    <div class="tech-card p-3 border-cyber-purple bg-cyber-purple/5 font-bold uppercase text-xs text-cyber-purple">Agent Task</div>
+                </div>
+                <p class="text-sm tech-text font-medium">Start from specification, not from implementation guesses. Map scenario → layer → implementation task. Only then assign work to the agent.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 63: Build Layer by Layer -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-63">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Build Layer <span class="text-gradient">by Layer</span></h2>
+                    <ol class="space-y-3 text-sm tech-text font-medium list-decimal list-inside">
+                        <li>Infrastructure (local env)</li>
+                        <li>Data</li>
+                        <li>Services</li>
+                        <li>AI layer (prompts/rules)</li>
+                        <li>Interface</li>
+                        <li class="font-bold text-cyber-green mt-4">Connect through integration tests</li>
+                    </ol>
+                </div>
+                <div class="w-full md:w-1/2 flex justify-center relative">
+                    <div class="flex flex-col gap-1 w-48">
+                        <div class="tech-card p-2 bg-[var(--glass-bg)] text-center text-[10px] font-bold uppercase">5. Interface</div>
+                        <div class="tech-card p-2 bg-[var(--glass-bg)] text-center text-[10px] font-bold uppercase text-cyber-purple border-cyber-purple">4. AI / Prompts</div>
+                        <div class="tech-card p-2 bg-[var(--glass-bg)] text-center text-[10px] font-bold uppercase text-cyber-tg border-cyber-tg">3. Services</div>
+                        <div class="tech-card p-2 bg-[var(--glass-bg)] text-center text-[10px] font-bold uppercase text-cyber-orange border-cyber-orange">2. Data</div>
+                        <div class="tech-card p-2 bg-[var(--card-bg)] text-center text-[10px] font-bold uppercase border-2 border-cyber-green text-cyber-green">1. Infrastructure</div>
+                    </div>
+                    <div class="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                        <svg width="40" height="150" viewBox="0 0 40 150">
+                            <path d="M 0 10 C 20 10 20 75 40 75 C 20 75 20 140 0 140" fill="none" stroke="var(--text-muted)" stroke-width="2"/>
+                        </svg>
+                        <div class="tech-card p-2 border-cyber-green bg-cyber-green/10 text-[8px] font-bold uppercase text-cyber-green whitespace-nowrap -ml-4 mt-2">Integration Tests</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 64: Infra Layer Local -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-64">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #22c55e, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Infra Layer: <span class="text-cyber-green">Local Env First</span></h2>
+                <div class="flex flex-col gap-2 max-w-sm mx-auto mb-8 relative">
+                    <div class="tech-card p-3 bg-[var(--glass-bg)] opacity-30 text-[10px] uppercase">Interface</div>
+                    <div class="tech-card p-3 bg-[var(--glass-bg)] opacity-30 text-[10px] uppercase">Services</div>
+                    <div class="tech-card p-3 bg-[var(--glass-bg)] opacity-30 text-[10px] uppercase">Data</div>
+                    <div class="tech-card p-6 border-2 border-cyber-green bg-cyber-green/10 shadow-[0_0_30px_rgba(34,197,94,0.2)] z-10">
+                        <h3 class="font-black text-lg text-cyber-green uppercase tracking-widest mb-4">Infrastructure / Localhost</h3>
+                        <div class="flex justify-center gap-3 text-2xl text-cyber-green">
+                            <i class="ph-duotone ph-docker-logo"></i>
+                            <i class="ph-duotone ph-terminal"></i>
+                            <i class="ph-duotone ph-database"></i>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium">The seminar runs in a local environment. Infrastructure is part of the system, not an afterthought. Only after infra is stable do we move up.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 65: Data Layer Isolated -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-65">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row items-center gap-8">
+                <div class="slide-topline" style="background: linear-gradient(to right, #f97316, transparent, #f97316);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">Data Layer: <span class="text-cyber-orange">Isolated</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• Implement as an isolated responsibility.</li>
+                        <li>• Keep state management separate from business logic and UI.</li>
+                        <li>• Validate the layer with focused module tests.</li>
+                        <li>• Goal: stable and predictable state behavior.</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex justify-center">
+                    <div class="tech-card p-6 border-2 border-cyber-orange bg-cyber-orange/5 text-center w-full max-w-xs shadow-[0_0_20px_rgba(249,115,22,0.15)] relative">
+                        <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-cyber-green text-[var(--bg-color)] px-3 py-1 font-bold uppercase text-[10px] rounded shadow-md">Module Tests</div>
+                        <i class="ph-duotone ph-database text-4xl text-cyber-orange mb-4"></i>
+                        <h3 class="font-black text-lg text-cyber-orange uppercase tracking-widest mb-4">Data Layer</h3>
+                        <div class="grid grid-cols-2 gap-2 text-[10px] font-mono font-bold text-muted uppercase">
+                            <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-2 rounded">Models</div>
+                            <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-2 rounded">Schemas</div>
+                            <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-2 rounded">Repos</div>
+                            <div class="bg-[var(--glass-bg)] border border-[var(--glass-border)] p-2 rounded">Migrations</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 66: Services Layer Isolated -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-66">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #229ED9, transparent, #229ED9);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Services: <span class="text-cyber-tg">Unit Tests</span></h2>
+                <div class="flex justify-center items-center gap-8 mb-8">
+                    <!-- Service 1 -->
+                    <div class="flex flex-col items-center">
+                        <div class="tech-card p-4 border-cyber-tg bg-cyber-tg/5 w-32 shadow-md">
+                            <h4 class="font-bold text-cyber-tg uppercase text-xs mb-2">Auth Service</h4>
+                        </div>
+                        <i class="ph-bold ph-arrow-down text-muted my-1"></i>
+                        <div class="bg-cyber-green/20 border border-cyber-green text-cyber-green px-2 py-1 text-[8px] font-bold uppercase rounded flex items-center gap-1"><i class="ph-bold ph-check"></i> Unit Tests</div>
+                    </div>
+                    <!-- Service 2 -->
+                    <div class="flex flex-col items-center">
+                        <div class="tech-card p-4 border-cyber-tg bg-cyber-tg/5 w-32 shadow-md">
+                            <h4 class="font-bold text-cyber-tg uppercase text-xs mb-2">Order Service</h4>
+                        </div>
+                        <i class="ph-bold ph-arrow-down text-muted my-1"></i>
+                        <div class="bg-cyber-green/20 border border-cyber-green text-cyber-green px-2 py-1 text-[8px] font-bold uppercase rounded flex items-center gap-1"><i class="ph-bold ph-check"></i> Unit Tests</div>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium max-w-xl mx-auto">Unit tests check business rules in isolation. They give fast feedback and localize failures quickly. Local correctness comes before full-system correctness.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 67: AI Layer Engineered -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-67">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel flex flex-col md:flex-row gap-8 items-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #a855f7, transparent, #a855f7);"></div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-2xl md:text-4xl font-black mb-6 uppercase">AI Layer: <span class="text-cyber-purple">Engineered</span></h2>
+                    <ul class="space-y-4 text-sm tech-text font-medium leading-relaxed">
+                        <li>• AI is implemented as a separate execution layer.</li>
+                        <li>• Agent must know what it can change and cannot touch.</li>
+                        <li>• Controls generation quality and architectural discipline.</li>
+                        <li>• AI behavior is part of system design, not an afterthought.</li>
+                    </ul>
+                </div>
+                <div class="w-full md:w-1/2 flex flex-col items-center">
+                    <span class="text-[10px] font-bold text-muted uppercase tracking-widest mb-2">Agent behavior is engineered</span>
+                    <div class="tech-card p-6 border-2 border-cyber-purple bg-cyber-purple/5 text-center w-full shadow-[0_0_20px_rgba(168,85,247,0.15)]">
+                        <i class="ph-duotone ph-brain text-4xl text-cyber-purple mb-4"></i>
+                        <h3 class="font-black text-lg text-cyber-purple uppercase tracking-widest mb-4">AI Layer</h3>
+                        <div class="flex flex-wrap justify-center gap-2 text-[10px] font-mono font-bold text-muted uppercase">
+                            <span class="bg-[var(--glass-bg)] border border-[var(--glass-border)] px-2 py-1 rounded">Prompting</span>
+                            <span class="bg-[var(--glass-bg)] border border-[var(--glass-border)] px-2 py-1 rounded">Rules</span>
+                            <span class="bg-[var(--glass-bg)] border border-[var(--glass-border)] px-2 py-1 rounded">Claude.md</span>
+                            <span class="bg-[var(--glass-bg)] border border-[var(--glass-border)] px-2 py-1 rounded">Tool Calling</span>
+                            <span class="bg-[var(--glass-bg)] border border-[var(--glass-border)] px-2 py-1 rounded">Validation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 68: Interface Layer Finally -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-68">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #f8fafc, transparent, #f8fafc);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Interface: <span class="text-muted">Implement Separately</span></h2>
+                <div class="flex flex-col items-center max-w-sm mx-auto mb-8">
+                    <div class="tech-card p-4 border-t-4 border-gray-500 bg-[var(--card-bg)] w-full text-center relative shadow-lg">
+                        <div class="flex justify-center gap-4 text-2xl text-gray-500 mb-2">
+                            <i class="ph-duotone ph-desktop"></i> <i class="ph-duotone ph-device-mobile"></i> <i class="ph-duotone ph-telegram-logo"></i>
+                        </div>
+                        <h3 class="font-black text-lg uppercase tracking-widest mb-1">Interface Layer</h3>
+                        <div class="absolute -right-16 top-1/2 -translate-y-1/2 bg-cyber-red/10 border border-cyber-red text-cyber-red text-[8px] font-bold uppercase p-2 w-24 transform rotate-12 shadow-sm">No domain truth in UI</div>
+                    </div>
+                    <div class="flex justify-center w-full"><i class="ph-bold ph-arrow-down text-muted my-2"></i></div>
+                    <div class="tech-card p-2 bg-[var(--glass-bg)] text-xs font-bold uppercase text-muted w-3/4">Contracts</div>
+                    <div class="flex justify-center w-full"><i class="ph-bold ph-arrow-down text-muted my-2"></i></div>
+                    <div class="tech-card p-2 bg-[var(--glass-bg)] text-xs font-bold uppercase text-muted w-1/2">Backend</div>
+                </div>
+                <p class="text-sm tech-text font-medium">UI must consume contracts, not invent backend truth. The interface becomes the final user-facing layer.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 69: Integration Tests -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-69">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #22c55e, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Connect via <span class="text-cyber-green">Integration Tests</span></h2>
+                <div class="relative max-w-xl mx-auto h-48 flex items-center justify-center">
+                    <div class="absolute inset-0 flex flex-col justify-between py-4 z-0">
+                        <div class="h-8 tech-card bg-[var(--glass-bg)] border-gray-400 flex items-center justify-center text-[10px] font-bold uppercase opacity-50">Interface</div>
+                        <div class="h-8 tech-card bg-[var(--glass-bg)] border-cyber-purple flex items-center justify-center text-[10px] font-bold uppercase opacity-50 text-cyber-purple">AI Layer</div>
+                        <div class="h-8 tech-card bg-[var(--glass-bg)] border-cyber-tg flex items-center justify-center text-[10px] font-bold uppercase opacity-50 text-cyber-tg">Services</div>
+                        <div class="h-8 tech-card bg-[var(--glass-bg)] border-cyber-orange flex items-center justify-center text-[10px] font-bold uppercase opacity-50 text-cyber-orange">Data</div>
+                    </div>
+                    <div class="tech-card p-4 border-2 border-cyber-green bg-[var(--bg-color)]/80 backdrop-blur z-10 shadow-[0_0_20px_rgba(34,197,94,0.3)] h-full w-24 absolute right-8 flex flex-col justify-center items-center">
+                        <i class="ph-duotone ph-plugs-connected text-3xl text-cyber-green mb-2"></i>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-cyber-green text-center">Integration<br>Tests</span>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium mt-6">Integration tests verify that layers work together correctly. Checks contracts. Validates whole flow before E2E.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 70: Unit Tests per Service -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-70">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #22c55e, transparent, #229ED9);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">Unit Tests <span class="text-gradient">per Service</span></h2>
+                <div class="flex flex-wrap justify-center gap-6 mb-8">
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-tg relative pt-6 shadow-sm w-40">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyber-green text-[var(--bg-color)] px-2 py-1 rounded text-[8px] font-bold uppercase flex items-center gap-1"><i class="ph-bold ph-check"></i> Passed</div>
+                        <h4 class="font-bold tech-text uppercase text-xs mb-2">User Service</h4>
+                        <div class="bg-[var(--bg-color)] h-2 rounded w-full border border-cyber-green/50"></div>
+                    </div>
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-tg relative pt-6 shadow-sm w-40">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyber-green text-[var(--bg-color)] px-2 py-1 rounded text-[8px] font-bold uppercase flex items-center gap-1"><i class="ph-bold ph-check"></i> Passed</div>
+                        <h4 class="font-bold tech-text uppercase text-xs mb-2">Order Service</h4>
+                        <div class="bg-[var(--bg-color)] h-2 rounded w-full border border-cyber-green/50"></div>
+                    </div>
+                    <div class="tech-card p-4 bg-[var(--glass-bg)] border-cyber-tg relative pt-6 shadow-sm w-40">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyber-green text-[var(--bg-color)] px-2 py-1 rounded text-[8px] font-bold uppercase flex items-center gap-1"><i class="ph-bold ph-check"></i> Passed</div>
+                        <h4 class="font-bold tech-text uppercase text-xs mb-2">Payment Service</h4>
+                        <div class="bg-[var(--bg-color)] h-2 rounded w-full border border-cyber-green/50"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 71: E2E Validation -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-71">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center">
+                <div class="slide-topline" style="background: linear-gradient(to right, #22c55e, transparent, #22c55e);"></div>
+                <h2 class="text-2xl md:text-4xl font-black mb-10 uppercase">End-to-End <span class="text-cyber-green">Validation</span></h2>
+                <div class="relative max-w-4xl mx-auto tech-card p-8 border-2 border-cyber-green bg-cyber-green/5 shadow-[0_0_30px_rgba(34,197,94,0.15)] mb-8">
+                    <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-[var(--bg-color)] border border-cyber-green px-4 py-1 rounded-full text-xs font-black text-cyber-green uppercase tracking-widest shadow-md">E2E Testing Frame</div>
+                    
+                    <div class="flex items-center justify-between gap-2 w-full mt-4">
+                        <div class="flex flex-col items-center"><i class="ph-duotone ph-user text-2xl text-muted mb-1"></i><span class="text-[8px] uppercase font-bold">User</span></div>
+                        <i class="ph-bold ph-arrow-right text-cyber-green"></i>
+                        <div class="flex flex-col items-center"><i class="ph-duotone ph-device-mobile text-2xl text-muted mb-1"></i><span class="text-[8px] uppercase font-bold">UI</span></div>
+                        <i class="ph-bold ph-arrow-right text-cyber-green"></i>
+                        <div class="flex flex-col items-center"><i class="ph-duotone ph-gear text-2xl text-muted mb-1"></i><span class="text-[8px] uppercase font-bold">Services</span></div>
+                        <i class="ph-bold ph-arrow-right text-cyber-green"></i>
+                        <div class="flex flex-col items-center"><i class="ph-duotone ph-database text-2xl text-muted mb-1"></i><span class="text-[8px] uppercase font-bold">Data</span></div>
+                        <i class="ph-bold ph-arrow-right text-cyber-green"></i>
+                        <div class="flex flex-col items-center"><i class="ph-duotone ph-check-circle text-2xl text-cyber-green mb-1"></i><span class="text-[8px] uppercase font-bold text-cyber-green">Valid</span></div>
+                    </div>
+                </div>
+                <p class="text-sm tech-text font-medium">E2E checks the real user flow, not isolated fragments. Green means the whole system works, not just one layer.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 72: Seminar Workflow -->
+    <div class="slide-container px-4 md:px-12 opacity-0 pointer-events-none translate-y-8" id="slide-72">
+        <div class="content-z max-w-6xl">
+            <div class="glass-panel text-center flex flex-col items-center justify-center min-h-[60vh] border-t-4 border-cyber-purple relative overflow-hidden">
+                <div class="slide-topline" style="height:4px; background: linear-gradient(to right, #a855f7, transparent, #22c55e);"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-cyber-purple/5 to-transparent pointer-events-none"></div>
+                <h2 class="text-2xl md:text-5xl font-black mb-8 tracking-tighter uppercase leading-tight relative z-10">Full <span class="text-gradient">Engineering Cycle</span></h2>
+                
+                <div class="max-w-4xl mx-auto w-full mb-10 relative z-10 flex flex-wrap justify-center gap-2">
+                    <span class="tech-card px-3 py-1 text-[10px] font-bold uppercase text-muted">Tooling</span>
+                    <i class="ph-bold ph-arrow-right text-muted mt-1"></i>
+                    <span class="tech-card px-3 py-1 text-[10px] font-bold uppercase text-cyber-green border-cyber-green/50">Local Infra</span>
+                    <i class="ph-bold ph-arrow-right text-muted mt-1"></i>
+                    <span class="tech-card px-3 py-1 text-[10px] font-bold uppercase text-muted">Repo</span>
+                    <i class="ph-bold ph-arrow-right text-muted mt-1"></i>
+                    <span class="tech-card px-3 py-1 text-[10px] font-bold uppercase text-muted">PRD/Tests</span>
+                    <i class="ph-bold ph-arrow-right text-muted mt-1"></i>
+                    <span class="tech-card px-3 py-1 text-[10px] font-bold uppercase text-cyber-orange border-cyber-orange/50">Data</span>
+                    <i class="ph-bold ph-arrow-right text-muted mt-1"></i>
+                    <span class="tech-card px-3 py-1 text-[10px] font-bold uppercase text-cyber-tg border-cyber-tg/50">Services</span>
+                    <i class="ph-bold ph-arrow-right text-muted mt-1"></i>
+                    <span class="tech-card px-3 py-1 text-[10px] font-bold uppercase text-cyber-purple border-cyber-purple/50">AI</span>
+                    <i class="ph-bold ph-arrow-right text-muted mt-1"></i>
+                    <span class="tech-card px-3 py-1 text-[10px] font-bold uppercase text-gray-500 border-gray-500/50">Interface</span>
+                    <i class="ph-bold ph-arrow-right text-muted mt-1"></i>
+                    <span class="tech-card px-3 py-1 text-[10px] font-bold uppercase text-cyber-green border-cyber-green">Integ. Tests</span>
+                    <i class="ph-bold ph-arrow-right text-muted mt-1"></i>
+                    <span class="tech-card px-4 py-2 text-[12px] font-black uppercase text-[var(--bg-color)] bg-cyber-green shadow-[0_0_15px_rgba(34,197,94,0.4)]">E2E Result</span>
+                </div>
+
+                <div class="tech-card bg-[var(--card-bg)] p-8 max-w-2xl mx-auto shadow-xl relative z-10">
+                    <p class="text-sm md:text-xl font-medium tech-text text-center uppercase tracking-wide">
+                        The result is not demo code,<br>but an <b class="font-black text-cyber-purple drop-shadow-sm">engineering-grade implementation</b>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                html.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+            }
+            
+            themeToggleBtn.addEventListener('click', () => {
+                html.classList.toggle('dark');
+                localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+            });
+
+            // Slides Logic
+            const totalSlides = 73;
+            let currentSlide = 0;
+            const progressBar = document.getElementById('progress-bar');
+            const slideNumDisplay = document.getElementById('current-slide-num');
+            const body = document.body;
+            const params = new URLSearchParams(window.location.search);
+            const exportMode = params.has('pdf') || params.get('mode') === 'pdf' || window.location.hash === '#pdf';
+
+            function updateProgress() {
+                if (progressBar) progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+                if (slideNumDisplay) slideNumDisplay.textContent = currentSlide + 1;
+            }
+
+            function updateSlides() {
+                for (let i = 0; i < totalSlides; i++) {
+                    const slide = document.getElementById(`slide-${i}`);
+                    if (!slide) continue;
+                    if (i === currentSlide) {
+                        slide.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-8', '-translate-y-8');
+                        slide.classList.add('opacity-100', 'translate-y-0');
+                    } else if (i < currentSlide) {
+                        slide.classList.remove('opacity-100', 'translate-y-0', 'translate-y-8');
+                        slide.classList.add('opacity-0', 'pointer-events-none', '-translate-y-8');
+                    } else {
+                        slide.classList.remove('opacity-100', 'translate-y-0', '-translate-y-8');
+                        slide.classList.add('opacity-0', 'pointer-events-none', 'translate-y-8');
+                    }
+                }
+                updateProgress();
+            }
+
+            function showAllSlidesForPdf() {
+                body.classList.add('pdf-export-mode');
+                for (let i = 0; i < totalSlides; i++) {
+                    const slide = document.getElementById(`slide-${i}`);
+                    if (!slide) continue;
+                    slide.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-8', '-translate-y-8');
+                    slide.classList.add('opacity-100');
+                    slide.style.transform = 'none';
+                    slide.style.pointerEvents = 'auto';
+                }
+                if (progressBar) progressBar.style.width = '100%';
+            }
+
+            function restoreInteractiveMode() {
+                body.classList.remove('pdf-export-mode');
+                for (let i = 0; i < totalSlides; i++) {
+                    const slide = document.getElementById(`slide-${i}`);
+                    if (!slide) continue;
+                    slide.style.transform = '';
+                    slide.style.pointerEvents = '';
+                }
+                updateSlides();
+            }
+
+            function nextSlide() {
+                if (currentSlide < totalSlides - 1) { currentSlide++; updateSlides(); }
+            }
+
+            function prevSlide() {
+                if (currentSlide > 0) { currentSlide--; updateSlides(); }
+            }
+
+            window.addEventListener('beforeprint', showAllSlidesForPdf);
+            window.addEventListener('afterprint', () => { if (!exportMode) restoreInteractiveMode(); });
+            if (exportMode) { showAllSlidesForPdf(); return; }
+
+            window.addEventListener('keydown', (e) => {
+                if (['ArrowRight', ' ', 'Enter', 'PageDown'].includes(e.key)) nextSlide();
+                else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) prevSlide();
+            });
+
+            window.addEventListener('contextmenu', e => e.preventDefault());
+            window.addEventListener('mousedown', (e) => {
+                if (e.target.closest('header')) return;
+                if (e.button === 0) nextSlide();
+                if (e.button === 2) prevSlide();
+            });
+
+            let touchStartX = 0;
+            window.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+            window.addEventListener('touchend', e => {
+                const touchEndX = e.changedTouches[0].screenX;
+                const swipeThreshold = 50;
+                if (touchStartX - touchEndX > swipeThreshold) nextSlide();
+                else if (touchEndX - touchStartX > swipeThreshold) prevSlide();
+            }, { passive: true });
+
+            updateSlides();
+        });
+    </script>
+</body>
+</html>
