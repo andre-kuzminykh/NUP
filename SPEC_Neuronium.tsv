@@ -1,0 +1,240 @@
+SPEC Template — NEURONIUM AI (Commitment-aware AI Super Agent)
+
+1. Feature Context
+Section	Fill In
+Feature	NEURONIUM AI — Commitment-aware AI Super Agent with Action Graph (DAG) planning, hybrid memory (GraphRAG + agentic retrieval), verification critics, typed contracts, and audit/replay trace
+Description (Goal / Scope)	Build an open-source Python framework that converts a high-level user objective into a Hierarchical Task Network (HTN), compiles it into a deterministic Directed Acyclic Graph (DAG) of typed nodes (ModelNode/CodeNode/McpToolNode), executes it with pause/stop/revise/replan control, persists every step into content-addressable storage and an index (SQLite/Postgres+pgvector), records a canonical trace, validates outputs through critic verifiers, and supports full offline replay. Scope covers: public Python API (AgentRunner), CLI (neuronium-agent), TOML configuration, FS CAS / SQLite local mode, Postgres + Redis + RQ production mode, MCP tool integration, GraphRAG-lite memory, Docker code sandbox.
+Client	Dataism Lab (open-source community); target adopters — AI engineering teams in mid/large enterprises, R&D labs, regulated industries (fintech, medtech, govtech) and AI agent platform builders that need auditable and reproducible agent execution
+Problem	Modern LLM-agent frameworks (LangChain, AutoGen, CrewAI) are non-deterministic, hard to audit, opaque under failure, lack reproducible replay, mix planning with execution, and have no first-class commitment/control protocol. This blocks enterprise adoption where SLA, compliance, root-cause analysis and reproducibility are mandatory.
+Solution	A layered framework that (a) separates Plan → Execute → Verify → Adapt, (b) compiles plans into typed DAGs with canonical JSON for byte-identical replay, (c) records every transition into an append-only trace with content-addressed artifacts, (d) exposes a declarative control protocol (continue/pause/revise/replan/stop/escalate) over a state machine, (e) provides critic-based verification before commit, (f) allows scaling local single-process runs to distributed Redis+RQ workers without code change.
+Metrics	1) Replay determinism rate ≥ 99% on identical seed/config (byte-equality of artifact_id). 2) Mean time to resume from PAUSED checkpoint ≤ 2s (local) / 10s (distributed). 3) Trace coverage = 100% of state transitions and node executions persisted. 4) Critic precision/recall ≥ 0.9 on benchmark verification suite. 5) Time-to-onboard new node type by 3rd-party developer ≤ 1 day. 6) p95 end-to-end latency for ≤10-node DAG ≤ 30s with gpt-4.1-mini. 7) Zero data loss on graceful pause/stop (all checkpoints flushed).
+
+2. User Stories and Use Cases
+
+User Story 1
+Role	AI Engineer / Agent Operator
+User Story ID	US-1
+User Story	As an AI Engineer, I want to launch a deterministic AI-agent run from an objective and interactively control it (pause / resume / stop / revise), so that I can ship reliable agents without losing work on interruptions and without re-running expensive LLM calls.
+UX / User Flow	1) Engineer writes neuronium.toml and exports NEURONIUM_OPENAI_API_KEY. 2) Runs `neuronium-agent run -o "<objective>" --interactive`. 3) CLI prints a human-readable timeline (plan → nodes → critics). 4) Engineer presses keys to send pause/stop or types a revise payload. 5) On pause, a checkpoint is written; on resume, run continues from latest phase boundary. 6) Engineer inspects rendered HTML artifact and the run summary.
+
+Use Case (+ Edges) BDD 1
+
+Use Case ID	UC-1.1
+Given	A valid neuronium.toml exists, NEURONIUM_OPENAI_API_KEY is set, blob backend = fs_cas and index backend = sqlite are reachable, no run with the same execution_id is active.
+When	The user invokes `neuronium-agent run -o "<objective>"` (or calls AgentRunner.start(RunRequest(objective=...))) and the orchestrator transitions PENDING → RUNNING.
+Then	A RunHandle (trace_id, execution_id, created_at) is returned, the HTN planner produces a DAG, nodes execute in topological order, every transition is appended to the trace, artifacts are written into FS CAS by canonical artifact_id, and the run terminates in COMPLETED with progress=1.0; if any node fails non-retryably the run terminates in FAILED with FailureClass recorded.
+Input	RunRequest{ objective: str, constraints: list[str]=[], mode: "batch"|"supervised"|"interactive"|None, metadata: dict={} }; AppConfig loaded from neuronium.toml; environment variables.
+Output	RunHandle, RunStatus(state=COMPLETED|FAILED, progress, current_node_ref, message), trace events in index, rendered HTML artifact path, content-addressed artifacts in CAS.
+State	Run state machine: PENDING → RUNNING → (PAUSED ⇄ RUNNING)* → COMPLETED|FAILED|CANCELLED. Each node: PENDING → READY → RUNNING → COMPLETED|FAILED|TIMEOUT|RETRYING|CANCELLED.
+Functional Requirements
+Req ID	Requirement
+FR-1	The system SHALL accept a RunRequest and return a RunHandle synchronously containing trace_id and execution_id generated as canonical UUIDv7-style identifiers.
+FR-2	The HTN planner SHALL convert the objective + constraints into an Action Graph (DAG) of typed nodes (ModelNode, CodeNode, McpToolNode) with declared inputs/outputs and no cycles, validated before execution.
+FR-3	The deterministic executor SHALL execute nodes in valid topological order, respect llm_temperature=0.0 and default_random_seed from determinism config, and persist each transition (NODE_STARTED, NODE_COMPLETED, NODE_FAILED) into the trace store.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-1	Determinism: identical (config, seed, inputs) MUST yield identical canonical artifact_id values across runs (byte-equality), targeting ≥ 99% on the test corpus.
+NFR-2	Performance: orchestrator overhead per node transition SHALL be ≤ 50 ms p95 on local SQLite/FS CAS (excluding LLM and tool latency).
+NFR-3	Reliability: trace and CAS writes SHALL be crash-safe (fsync on commit), so a SIGKILL never produces a partially indexed artifact or torn trace event.
+
+Use Case (+ Edges) BDD 2
+Field	Fill In
+Use Case ID	UC-1.2
+Given	A run is in state RUNNING with trace_id T and at least one node has reached a phase boundary checkpoint.
+When	The operator sends ControlCommand(type ∈ {pause, stop, revise, replan, continue, escalate}, payload) via AgentRunner.control(handle, cmd) or interactive CLI keystroke; in the pause/stop case an InterruptRequest(mode="graceful"|"immediate") may be supplied.
+Then	The orchestrator performs declarative state-transition → checkpoint → trace decision WITHOUT executing further DAG nodes; on pause, latest resume_context is persisted and exposed via get_latest_pause_context; on continue/resume_run, execution restarts from the latest phase-boundary checkpoint with no duplicate side-effects; on revise/replan, the planner regenerates the affected sub-DAG and appends a CONTROL_APPLIED event.
+Input	ControlCommand{ type, payload: dict }, optional InterruptRequest{ command, mode, export_path }; existing RunHandle.
+Output	Updated RunStatus reflecting new state (PAUSED/RUNNING/CANCELLED), CONTROL_APPLIED trace event, optionally exported partial trace at export_path, resume_context dict on pause.
+State	Allowed transitions: RUNNING → PAUSED (pause), PAUSED → RUNNING (continue/resume_run), RUNNING|PAUSED → CANCELLED (stop), RUNNING → RUNNING with new sub-DAG (revise/replan), any → ESCALATED on escalate. Invalid transitions are rejected with a typed error.
+Functional Requirements
+Req ID	Requirement
+FR-4	The Orchestrator.apply_control method SHALL be idempotent: replaying the same ControlCommand on the same checkpoint MUST produce the same state and trace decision.
+FR-5	resume_run(trace_id) SHALL restart execution from the last successfully written phase-boundary checkpoint and SHALL NOT re-execute already-COMPLETED nodes.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-4	Control latency: time from control() call to RunStatus reflecting new state SHALL be ≤ 500 ms p95 on local backends.
+NFR-5	Safety: no control command SHALL ever cause data loss; on graceful pause/stop all in-flight checkpoints MUST be flushed before state transition.
+
+User Story 2
+Role	Auditor / Compliance Officer / QA Engineer
+User Story ID	US-2
+User Story	As an Auditor, I want to export and deterministically replay any past agent run from its trace, so that I can verify the agent's decisions, reproduce incidents, and produce evidence for compliance reviews.
+UX / User Flow	1) Auditor receives a trace_id from production. 2) Runs `neuronium-agent` Python API: AgentRunner.export_trace(handle, "jsonl", "trace.jsonl") to obtain a portable trace bundle. 3) Imports the trace into an analysis env (Postgres/SQLite). 4) Calls AgentRunner.replay(trace_id) in strict offline mode → re-executes nodes against recorded artifacts only (no live LLM/tool calls). 5) Compares replay artifacts to original by artifact_id; mismatches are flagged. 6) Reads rendered HTML and critic evidence to assemble an audit report.
+
+Use Case BDD 1
+
+Use Case ID	UC-2.1
+Given	A completed (or failed) run with trace_id T exists in the index store, all referenced artifacts are present in CAS, the auditor has read access to both stores.
+When	The auditor calls AgentRunner.export_trace(handle, format ∈ {"jsonl", "json", "zip"}, path) or `neuronium-agent run --trace-id T --export-trace path`.
+Then	An ordered, append-only trace file is produced at `path` containing every state transition, node start/finish, control event, critic verdict and artifact_id reference; for "zip" the bundle additionally embeds the referenced artifact bytes; checksum/manifest is included so any third party can re-import the bundle without access to the source store.
+Input	RunHandle or trace_id, TraceExportFormat, target file path, optional include-artifacts flag (implicit for zip).
+Output	A trace file (jsonl/json/zip) on disk; success boolean; manifest with event count, artifact count, sha256 digests.
+State	Source store remains read-only; no run state changes; export operation appends an EXPORT_PERFORMED audit event referencing the export digest.
+Functional Requirements
+Req ID	Requirement
+FR-6	export_trace SHALL emit events in deterministic chronological order keyed by (trace_id, sequence_no) with no gaps and no reordering.
+FR-7	The exported bundle SHALL be self-describing: include a manifest with neuronium-v1 canonical-json schema id, event counts, and per-artifact sha256 digests so the bundle is verifiable offline.
+FR-8	Re-importing an exported bundle into an empty store SHALL recreate a queryable run that passes the same get_trace_events / read_artifact_json calls byte-for-byte.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-6	Throughput: export of a 10k-event trace SHALL complete in ≤ 10s p95 on local SSD.
+NFR-7	Integrity: every exported artifact reference SHALL match its sha256-based artifact_id; any mismatch MUST abort the export with a typed error.
+
+Use Case (+ Edges) BDD 2
+Field	Fill In
+Use Case ID	UC-2.2
+Given	A trace_id T is available in the local store (or imported from a bundle) and all referenced artifacts are reachable via the configured BlobStore.
+When	The auditor calls AgentRunner.replay(trace_id=T) which runs the executor in strict offline mode.
+Then	The DAG is re-executed using recorded inputs only; every ModelNode/McpToolNode SHALL be served from the recorded artifact instead of a live call; each newly produced artifact_id is compared against the recorded one; the run finishes in COMPLETED with a replay_report listing matches, mismatches and any missing artifacts; on any mismatch the run is marked REPLAY_DIVERGED for investigation.
+Input	trace_id, optional replay options (e.g., compare_mode = strict|loose).
+Output	RunHandle for the replay run, replay_report{ matched: int, diverged: list[node_ref], missing: list[artifact_id] }, new trace events tagged origin="replay".
+State	A new replay run is created with state RUNNING → COMPLETED|FAILED; original run is untouched; replay events are appended with parent_trace_id pointing to T.
+Functional Requirements
+Req ID	Requirement
+FR-9	Strict replay mode SHALL block any outbound network call (LLM, MCP, web) and SHALL raise NetworkAttemptInReplayError if a node attempts one without a recorded artifact.
+FR-10	The replay engine SHALL surface a structured replay_report and SHALL classify divergences as TRANSIENT (timestamp-only), PERSISTENT (output bytes differ), or CRITICAL (DAG topology differs).
+Non-Functional Requirements
+Req ID	Requirement
+NFR-8	Reproducibility: ≥ 99% of recorded runs in the regression suite SHALL replay byte-identical given identical config and CAS contents.
+NFR-9	Isolation: replay SHALL run in a sandboxed process with no write access to the production index store; only a dedicated replay_index is mutated.
+
+User Story 3
+
+User Story ID	US-3
+User Story	As a Platform / Backend Developer, I want to deploy Neuronium in production with Postgres + Redis + RQ workers and pluggable critics/MCP tools, so that I can run many agent jobs concurrently with horizontal scalability, persistent storage, and policy-grade verification.
+UX / User Flow	1) DevOps provisions Postgres (with pgvector) and Redis. 2) Updates neuronium.toml: storage.index_backend="postgres", queue=redis, llm.provider, optional embeddings. 3) Runs `pip install -e ".[all]"` on worker images. 4) Starts API/control plane using AgentRunner; starts N workers with `neuronium-agent worker`. 5) Submits jobs through Python API or CLI; jobs are enqueued to RQ; workers pick them, execute DAG, write to shared CAS+Postgres. 6) Developer plugs in custom MCP tools and custom critics, configures recovery policies, and monitors progress via trace_event_listener / dashboards.
+
+Use Case (+ Edges) BDD 1
+
+Use Case ID	UC-3.1
+Given	Postgres ≥14 with pgvector, Redis ≥6, shared blob storage (FS or object) are reachable; neuronium.toml points to them; Docker is available for CodeNode sandbox; required MCP tool servers are running and authenticated.
+When	An operator deploys ≥1 control-plane process and ≥N worker processes (`neuronium-agent worker`), then submits RunRequests at rate R via the public API; workers concurrently consume RQ jobs and execute DAG nodes; custom critics validate outputs; recovery policies handle TRANSIENT failures.
+Then	The system SHALL distribute work without duplicate execution (RQ job dedupe by execution_id), persist all artifacts/trace into the shared backends, isolate CodeNode execution in a Docker sandbox, surface health and progress via trace_event_listener, and degrade gracefully (DLQ + recovery policy) on PERSISTENT failures while keeping CRITICAL failures from cascading across runs.
+Input	neuronium.toml with storage=postgres + queue=redis, env vars (DB URL, REDIS_URL, OPENAI_API_KEY), optional MCP tool registry, optional custom critic and recovery-policy modules.
+Output	Per-job RunHandle, persisted runs/artifacts/trace_events in Postgres, indexed embeddings (if pgvector enabled), worker logs/metrics, rendered HTML artifacts, RQ job statuses.
+State	Cluster-wide: each run owned by exactly one worker at a time (lease-based); Postgres tables (runs, artifacts, trace_events, artifact_index, embeddings) updated atomically per phase boundary; Redis holds queues + leases.
+Functional Requirements
+Req ID	Requirement
+FR-11	The system SHALL support pluggable backends behind two interfaces (BlobStore, IndexStore) with at minimum: blob = fs_cas; index = sqlite, postgres; selection driven by neuronium.toml without code changes.
+FR-12	The system SHALL provide a worker entry point (`neuronium-agent worker`) that consumes RQ jobs, leases runs by execution_id, executes the DAG, and releases the lease on terminal state; orphaned leases MUST expire and be re-claimable.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-10	Scalability: linear throughput up to 32 concurrent workers on the standard benchmark DAG (≥ 0.85 scaling efficiency); no global locks on the hot path.
+NFR-11	Security: CodeNode SHALL execute in a Docker sandbox with no host network and read-only mounts of approved inputs; secrets (API keys) are read from env/secret store and never persisted into trace or artifacts.
+
+3. Architecture / Solution
+
+3.1 Client Side
+Area	Fill In
+Client Type	(a) CLI `neuronium-agent` (Click-based) for human operators; (b) Python API `neuronium_agent.api.create_runner()` / `AgentRunner` for programmatic integration; (c) optional rendered HTML artifact viewer for read-only inspection. No first-party Web/Telegram/Slack UI in scope; integrations are left to adopters via the public API and trace_event_listener callback.
+User Entry Points	CLI commands: `neuronium-agent run`, `neuronium-agent run --interactive`, `neuronium-agent run --trace-id <id>` (resume), `neuronium-agent run --replay <id>`, `neuronium-agent worker`, `neuronium-agent run -v` / `--summary`. Python API entry: `from neuronium_agent.api import create_runner`. Config entry: `neuronium.toml` + env var `NEURONIUM_OPENAI_API_KEY`.
+Main Screens / Commands	Timeline view (default): plan → node-by-node progress → critic verdicts → final summary. Verbose view (-v): stdout/stderr per node + critic evidence. Summary view (--summary): execution_id, trace_id, totals, durations, terminal state. Interactive view: keystroke control (p=pause, s=stop, r=revise). Worker view: job-pull log, lease info.
+Input / Output Format	Input: RunRequest JSON-compatible dict { objective: str, constraints: list[str], mode: "batch"|"supervised"|"interactive", metadata: dict }; ControlCommand { type, payload }; CLI flags. Output: RunHandle + RunStatus DTOs; trace files in jsonl|json|zip; artifacts addressed by canonical artifact_id (sha256-based); rendered HTML; structured logs.
+
+3.2 Backend Services
+Area	Fill In
+Service Name	(1) Orchestrator/Control Plane (in-process AgentRunner facade); (2) Planner Service (HTN → DAG); (3) Execution Engine (deterministic DAG executor); (4) Node Runtime (ModelNode, CodeNode in Docker sandbox, McpToolNode); (5) Trace Service (recording + export + replay); (6) Verification Service (critics: demo, generic, business); (7) Memory Service (GraphRAG-lite + agentic retrieval); (8) Storage Service (BlobStore + IndexStore); (9) Queue Service (Redis + RQ workers); (10) Recovery Service (policies for TRANSIENT/PERSISTENT/SYSTEMIC/CRITICAL).
+Responsibility	Orchestrator: state machine, control protocol, checkpoints. Planner: produce typed DAG from objective+constraints. Executor: topological execution, retries, timeouts, determinism. Node Runtime: actual side-effect (LLM, code, MCP). Trace: append-only event log + replay. Verification: pre-commit critic gates with evidence. Memory: store/retrieve graph + vector context. Storage: persist blobs (CAS) and structured rows (runs/artifacts/events). Queue: distribute jobs across workers. Recovery: classify failures and decide retry/escalate.
+Business Logic	Plan→Execute→Verify→Adapt loop: 1) AgentRunner.start writes a RUN row, calls Planner, persists DAG. 2) Executor walks the DAG, for each node it gathers inputs from CAS, calls Node Runtime, validates output via Critic, computes canonical artifact_id, writes blob + index rows, appends trace events. 3) Control commands hit the Orchestrator state machine; pause/stop write a checkpoint and gate further execution. 4) On failure, Recovery classifies and either retries or escalates; on critic FAIL, the node is rejected and revise/replan is suggested. 5) replay_run feeds recorded artifacts to nodes instead of live calls.
+API / Contract	Public Python facade `AgentRunner` (Pydantic v2 DTOs): start(RunRequest, *, on_handle_ready=None) → RunHandle; get_status(handle) → RunStatus; control(handle, ControlCommand) → RunStatus; resume_run(trace_id) → RunHandle; export_trace(handle, format, path); replay(trace_id) → RunHandle; get_latest_pause_context(trace_id); read_artifact_json(artifact_id); get_trace_events(trace_id); get_latest_rendered_artifact_path(trace_id). Factory: create_runner(config=None, *, trace_event_listener=None). Internal contracts: BlobStore (put/get/exists by artifact_id), IndexStore (insert/query runs/artifacts/trace_events), NodeProtocol (run(inputs)->outputs), CriticProtocol (verify(outputs)->Verdict).
+Request Schema	RunRequest{ objective: str (required), constraints: list[str]=[], mode: Literal["batch","supervised","interactive"]|None, metadata: dict[str,Any]={} }. ControlCommand{ type: Literal["continue","pause","revise","replan","stop","escalate"], payload: dict[str,Any]={} }. InterruptRequest{ command: Literal["pause","stop"], mode: Literal["graceful","immediate"]="graceful", export_path: str|None }.
+Response Schema	RunHandle{ trace_id: str, execution_id: str, created_at: datetime }. RunStatus{ state: Literal["PENDING","RUNNING","PAUSED","COMPLETED","FAILED","CANCELLED"], progress: float|None, current_node_ref: str|None, message: str|None }. NodeStatus{ status: Literal["PENDING","READY","RUNNING","COMPLETED","FAILED","TIMEOUT","RETRYING","CANCELLED"] }. FailureClass{ kind: Literal["TRANSIENT","PERSISTENT","SYSTEMIC","CRITICAL"], message: str, retryable: bool }. TraceExportFormat ∈ {"jsonl","json","zip"}.
+Error Handling	Typed hierarchy in `neuronium_agent.errors`: ConfigError (bad/missing config), PlanningError (invalid HTN/DAG), ExecutionError (node-level, wraps FailureClass), ControlError (illegal state transition), TraceError (corrupt/missing event), StorageError (CAS/index IO), VerificationError (critic FAIL), ReplayError (incl. NetworkAttemptInReplayError, ArtifactMissingError). Strategy: fail fast at boundaries, classify via FailureClass, persist failure into trace, apply recovery policy (retry with backoff for TRANSIENT, escalate/halt for CRITICAL); never lose a partial checkpoint.
+
+3.3 Data Architecture and Flows
+Area	Fill In
+Main Entities (ER)	Run(execution_id PK, trace_id, state, created_at, updated_at, mode, objective, metadata_json), Plan(plan_id PK, run_id FK, root_dag_id), Node(node_ref PK, run_id FK, type ∈ {model,code,mcp}, status, inputs_artifact_ids[], output_artifact_id), Artifact(artifact_id PK = canonical sha256, mime, size, blob_ref, created_at), TraceEvent(seq PK, run_id FK, ts, kind, payload_json, parent_trace_id NULL), Checkpoint(checkpoint_id PK, run_id FK, phase_boundary, resume_context_json), CriticVerdict(verdict_id PK, node_ref FK, critic_name, result ∈ {PASS,FAIL,WARN}, evidence_artifact_id), MemoryNode(id PK, kind, content_artifact_id, embedding vector(pgvector)), MemoryEdge(src FK, dst FK, relation), McpToolRegistry(tool_id PK, endpoint, schema_artifact_id), JobLease(execution_id PK, worker_id, expires_at).
+Relationships (ER)	Run 1—1 Plan; Plan 1—N Node (DAG topology in Plan/Node tables, edges in NodeEdge(src_node_ref, dst_node_ref, run_id)); Run 1—N TraceEvent; Run 1—N Checkpoint; Node 1—N CriticVerdict; Node N—1..M Artifact (inputs and one output); Artifact 1—N MemoryNode (optional); MemoryNode N—N MemoryNode via MemoryEdge; Run 0..1—1 JobLease (only one worker leases at a time).
+Data Flow (DFD)	Level 0: User → CLI/API → AgentRunner → {Planner → Executor → Nodes → Critics} → Storage{BlobStore, IndexStore} → Trace; trace_event_listener fan-out to subscribers. Level 1 (per node): Executor pulls input artifact_ids from IndexStore, fetches blobs from CAS, invokes Node (LLM/Code/MCP), receives output bytes, computes canonical artifact_id (sha256 over canonical JSON), writes blob to CAS, inserts Artifact row + Node update + TraceEvent rows transactionally per phase boundary, runs Critic, on PASS commits, on FAIL applies recovery. Replay: same flow but Node Runtime reads recorded output blob from CAS instead of calling external service.
+Input Sources	1) User objective + constraints (CLI/API). 2) neuronium.toml config. 3) Environment variables / .env (NEURONIUM_OPENAI_API_KEY, DB/REDIS URLs). 4) MCP tool servers (external). 5) Web fetch tool (HTTP). 6) Recorded trace bundles (for replay). 7) Memory store (prior runs' artifacts + embeddings). 8) Custom user-supplied node, critic, recovery-policy plugins.
+
+
+
+3.4 Infrastructure
+
+Required Hardware / Resources	Local/dev: 1 dev machine, Python 3.11+, 2 vCPU / 4 GB RAM / 10 GB disk; SQLite + FS CAS in `.neuronium/`; outbound HTTPS to OpenAI; optional Docker Desktop for CodeNode sandbox.
+	Production (small cluster): control-plane node 2 vCPU / 4 GB; 2–8 worker nodes 4 vCPU / 8 GB each (Docker engine on each for CodeNode); Postgres ≥14 with pgvector extension (4 vCPU / 16 GB / 200 GB SSD); Redis ≥6 (2 vCPU / 4 GB); shared object/blob storage or NFS for FS CAS (500 GB+); egress to OpenAI / MCP tool endpoints.
+	Software/runtime: Python ≥3.11; pydantic 2.x; click 8.x; openai 1.x–3.x; python-dotenv; beautifulsoup4; optional extras: psycopg (postgres), redis + rq (queue), pgvector, sentence-transformers + numpy (embeddings), docker SDK (sandbox).
+	Storage: BlobStore=fs_cas (content-addressable on-disk) and pluggable; IndexStore ∈ {sqlite, postgres}; migrations under `neuronium_agent/storage/migrations/`.
+	Networking: HTTPS egress to LLM provider; intra-cluster TCP to Postgres/Redis; Docker network isolation for CodeNode (no host network by default); MCP tool endpoints reachable from workers.
+	Observability: structured logs from CLI/API; trace events as the source of truth; pluggable trace_event_listener for Prometheus/Loki/OpenTelemetry adapters built by adopters.
+	Security: API keys via env / secret manager (never persisted to trace/artifacts); Docker sandbox for CodeNode (no host net, read-only mounts); Postgres role separation (RW for workers, RO for auditors); replay runs write only to a dedicated replay_index.
+	CI/CD: pytest + pytest-asyncio + coverage suite covering canonical JSON, config loading, storage, deterministic reproducibility; Hatchling build backend; pip-installable via extras `[docker], [postgres], [redis], [pgvector], [embeddings], [dev], [all]`.
+	Backups & DR: nightly pg_dump of IndexStore; CAS snapshotting (rsync/object-store versioning); trace bundles (zip) act as portable, self-verifying backups per run.
+
+4. Work Plan
+Mapping: Use Case → Tasks
+Use Case	Task ID	Task	Dependencies	DoD	Subtasks
+UC-1.1	T-1	Implement deterministic Plan→Execute pipeline: HTN planner, DAG executor, FS CAS + SQLite index, canonical artifact_id, base trace events, public AgentRunner.start/get_status, CLI `neuronium-agent run`	none (foundational)	`neuronium-agent run -o "<objective>"` finishes in COMPLETED on the demo objective; identical inputs/seed produce byte-identical artifact_id ≥ 99% of runs; trace contains every node transition; unit + integration tests green; coverage ≥ 80% on touched modules.	ST-1, ST-2, ST-3
+UC-1.2	T-2	Implement Control Protocol & resume: state machine, ControlCommand handling (continue/pause/revise/replan/stop/escalate), checkpoints at phase boundaries, AgentRunner.control + resume_run + get_latest_pause_context, interactive CLI controls	T-1	Pause/Stop/Continue cycle round-trips with ≤ 500 ms p95 control latency on local backends; resume from checkpoint never re-executes COMPLETED nodes; illegal transitions raise typed ControlError; idempotency test passes (same command → same state); integration test with simulated long-running node.	ST-4, ST-5
+UC-2.1	T-3	Implement Trace export & re-import: deterministic ordering, manifest with sha256, formats jsonl/json/zip, bundle re-import path, EXPORT_PERFORMED audit event, CLI flag	T-1	export_trace produces stable, ordered, manifest-checked bundle; 10k-event export ≤ 10 s p95 on local SSD; re-import into empty store recreates identical query results; corrupted artifact reference aborts with typed error.	ST-6, ST-7, ST-8
+UC-2.2	T-4	Implement strict Replay: offline executor mode, NetworkAttemptInReplayError guard, replay_report with TRANSIENT/PERSISTENT/CRITICAL classification, parent_trace_id linkage, dedicated replay_index isolation	T-1, T-3	`AgentRunner.replay(trace_id)` reproduces ≥ 99% of regression-suite runs byte-identically; any divergence is surfaced in replay_report; replay never writes to production index; live network calls in replay are blocked with typed error.	ST-9, ST-10
+UC-3.1	T-5	Productionize backends & workers: Postgres+pgvector IndexStore, Redis+RQ queue, `neuronium-agent worker` entry, Docker sandbox for CodeNode, MCP tool integration, recovery policies, pluggable critics, trace_event_listener fan-out	T-1, T-2	Cluster of N=8 workers achieves ≥ 0.85 linear-scaling efficiency on benchmark DAG; no duplicate node execution under failover; CodeNode runs only inside Docker sandbox without host network; secrets never appear in trace/artifacts; chaos test (worker kill mid-run) recovers without data loss.	ST-11, ST-12
+
+5. Detailed Task Breakdown
+Task 1
+Field	Fill In
+Task ID	T-1
+Related Use Case	UC-1.1 (Start a deterministic agent run)
+Task Description	Build the foundational Plan→Execute pipeline end-to-end so a user can call `neuronium-agent run -o "<objective>"` (or `AgentRunner.start`) and obtain a COMPLETED run with persisted artifacts, trace and HTML render. Includes: HTN planner → DAG, deterministic executor with topological order and seed/temperature controls, ModelNode (OpenAI provider) + minimal CodeNode + McpToolNode stub, BlobStore=fs_cas with sha256-based canonical artifact_id, IndexStore=sqlite with migrations for runs/artifacts/trace_events/nodes/edges, base trace events (RUN_STARTED, NODE_STARTED, NODE_COMPLETED, RUN_COMPLETED), public Pydantic DTOs (RunRequest, RunHandle, RunStatus), AgentRunner.start / get_status, AgentRunner factory create_runner(), neuronium.toml loading + env override, CLI command `neuronium-agent run` with timeline / -v / --summary modes.
+Dependencies	None (this is the foundation; assumes OpenAI API key access for live LLM tests).
+DoD	(a) `neuronium-agent run -o "demo objective"` ends in COMPLETED on a clean install with default config; (b) two consecutive runs with identical config and seed produce byte-identical artifact_id values for all nodes ≥ 99% of the time on the regression suite; (c) trace contains an event for every state transition and every node start/finish; (d) HTML artifact path is returned by get_latest_rendered_artifact_path; (e) unit + integration tests green; coverage ≥ 80% on touched modules; (f) docs CONFIG_SPEC.md + PUBLIC_API_SPEC.md updated.
+
+Subtasks
+Subtask ID	Description	Dependencies	Acceptance Criteria
+ST-1	Implement HTN planner that converts (objective, constraints) into a typed DAG of ModelNode/CodeNode/McpToolNode with declared input/output contracts; validate acyclicity and input-completeness before returning the plan.	none	Given a fixture objective, the planner returns a DAG whose `topological_sort` succeeds, all node inputs are produced by some upstream node or are run-level inputs, no cycles, and the produced plan is identical across runs with the same seed.
+ST-2	Implement deterministic executor: topological execution, llm_temperature=0.0, default_random_seed propagation, FS CAS write of every output, canonical artifact_id (sha256 over canonical JSON), SQLite migrations & inserts for runs/artifacts/trace_events/nodes/edges, structured logging.	ST-1	On the regression suite, two runs with identical inputs/seed produce byte-identical artifact_ids in ≥ 99% of nodes; SQLite schema migrates from empty DB to current version idempotently; crash test (SIGKILL during write) leaves no torn artifact (verified by sha256 check on next start).
+ST-3	Implement public surface: AgentRunner.start / get_status / get_latest_rendered_artifact_path / get_trace_events / read_artifact_json, factory create_runner(), CLI `neuronium-agent run` with default + -v + --summary outputs and graceful Ctrl+C handling.	ST-1, ST-2	`pytest tests/api` covers happy path + error path; `neuronium-agent run -o "..."` prints the timeline and a final summary line containing trace_id, execution_id, state=COMPLETED; -v prints stdout/stderr per node; --summary prints aggregate durations/counts.
+
+Task 2
+Field	Fill In
+Task ID	T-2
+Related Use Case	UC-1.2 (Pause / Stop / Resume / Revise running agent)
+Task Description	Add the declarative Control Protocol on top of T-1: explicit run state machine (PENDING/RUNNING/PAUSED/COMPLETED/FAILED/CANCELLED), checkpoints at phase boundaries, ControlCommand handling (continue/pause/revise/replan/stop/escalate), InterruptRequest support, AgentRunner.control / resume_run / get_latest_pause_context, idempotent Orchestrator.apply_control, interactive CLI mode (keystroke control), CONTROL_APPLIED trace events, typed ControlError on illegal transitions.
+Dependencies	T-1 (planner + executor + state persistence + trace must exist).
+DoD	(a) Pause→Resume round-trip on a long-running test node restarts from latest phase-boundary checkpoint with no duplicate side-effects; (b) p95 latency from control() call to RunStatus reflecting new state ≤ 500 ms on local backends; (c) Replaying the same ControlCommand on the same checkpoint is a no-op (idempotency test); (d) Illegal transitions raise typed ControlError without mutating state; (e) Interactive CLI keystroke handlers ship with help text and integration test; (f) Graceful pause/stop flushes all in-flight checkpoints before transitioning.
+
+Subtasks
+Subtask ID	Description	Dependencies	Acceptance Criteria
+ST-4	Implement run + node state machines, phase-boundary checkpoint writer, idempotent Orchestrator.apply_control, ControlCommand/InterruptRequest contracts, CONTROL_APPLIED trace events, typed ControlError.	T-1	Unit tests cover every legal and illegal transition matrix; checkpoint table has exactly one row per phase boundary; replaying the same command on the same checkpoint produces zero new state changes and zero new trace events.
+ST-5	Implement AgentRunner.control / resume_run / get_latest_pause_context and interactive CLI mode (`--interactive`) with key bindings p/s/r and structured prompts.	ST-4	Integration test: launch a 10-node mock DAG, send pause at node 5 → state=PAUSED in ≤500ms p95 → resume_run → run completes without re-executing nodes 1–5; CLI integration test with simulated keystrokes covers pause + resume + stop.
+
+Task 3
+Field	Fill In
+Task ID	T-3
+Related Use Case	UC-2.1 (Export trace bundle for audit)
+Task Description	Implement deterministic Trace export & re-import: AgentRunner.export_trace(format ∈ {jsonl, json, zip}, path), CLI flag `--export-trace`, bundle manifest with neuronium-v1 canonical-json schema id and per-artifact sha256 digests, EXPORT_PERFORMED audit event, re-import path that recreates a queryable run in an empty store.
+Dependencies	T-1 (trace + artifacts + index must exist).
+DoD	(a) Exported bundle is byte-identical for identical input traces (ordering by (trace_id, sequence_no), no gaps); (b) jsonl/json/zip formats all round-trip through re-import to byte-identical query results; (c) zip bundle includes referenced artifacts and a manifest with sha256 digests verifiable offline; (d) 10k-event export ≤ 10 s p95 on local SSD; (e) Corrupted artifact reference aborts the export with a typed StorageError; (f) EXPORT_PERFORMED event recorded with the export digest.
+
+Subtasks
+Subtask ID	Description	Dependencies	Acceptance Criteria
+ST-6	Implement chronological trace serializer with stable ordering by (trace_id, sequence_no), pluggable format writers (jsonl, json, zip), manifest builder with neuronium-v1 schema id + per-artifact sha256.	T-1	Round-trip test: random 1k-event trace → export → re-import → exported again → byte-identical second export; manifest validates against schema; sha256 of every referenced artifact matches CAS.
+ST-7	Implement re-import path that ingests an exported bundle (jsonl/json/zip) into an empty IndexStore and (for zip) restores artifact bytes into BlobStore.	ST-6	After re-import on an empty store, get_trace_events(trace_id) returns identical event list to the source store, read_artifact_json(artifact_id) returns identical bytes, and a follow-up export of the re-imported run is byte-identical to the original bundle.
+ST-8	Wire CLI flag `--export-trace path --format jsonl|json|zip`, emit EXPORT_PERFORMED audit event, add throughput benchmark for 10k-event trace and StorageError on bad sha256.	ST-6, ST-7	`neuronium-agent run --trace-id T --export-trace out.zip` writes the bundle and emits the audit event in the trace store; benchmark test verifies ≤10 s p95 on standard fixture; bad-sha256 fixture aborts with StorageError.
+
+Task 4
+Field	Fill In
+Task ID	T-4
+Related Use Case	UC-2.2 (Strict offline replay of recorded run)
+Task Description	Implement strict Replay engine: AgentRunner.replay(trace_id), executor offline mode that serves recorded artifacts to ModelNode/McpToolNode, NetworkAttemptInReplayError guard for any outbound call without a recorded artifact, replay_report with classification TRANSIENT/PERSISTENT/CRITICAL, parent_trace_id linkage on emitted replay events, dedicated replay_index so replay cannot mutate production data.
+Dependencies	T-1 (executor + trace + artifacts), T-3 (export/import for portable bundles).
+DoD	(a) Regression suite ≥ 99% of recorded runs replay byte-identical given identical config and CAS contents; (b) Strict mode raises NetworkAttemptInReplayError if any node attempts a live call without a recorded artifact; (c) Divergences are classified and surfaced in replay_report{matched, diverged, missing}; (d) Replay run is tagged origin="replay" with parent_trace_id; (e) Replay only writes to replay_index, never to production index; (f) Documented replay procedure in PUBLIC_API_SPEC.md.
+
+Subtasks
+Subtask ID	Description	Dependencies	Acceptance Criteria
+ST-9	Implement offline executor mode: replace live ModelNode/McpToolNode side-effects with recorded-artifact lookups; raise NetworkAttemptInReplayError on any uncovered network attempt; tag emitted events with origin="replay" + parent_trace_id.	T-1, T-3	On the recorded fixture suite, replay runs to COMPLETED without any outbound network call (verified by network-mock); a fixture that intentionally lacks a recorded artifact raises NetworkAttemptInReplayError with typed payload; emitted events carry origin="replay".
+ST-10	Implement replay_report (matched / diverged / missing) with TRANSIENT/PERSISTENT/CRITICAL classification, dedicated replay_index isolation, and AgentRunner.replay(trace_id) public method.	ST-9	After replay, `replay_report.matched + len(diverged) + len(missing) == nodes_total`; CRITICAL classification is set when DAG topology diverges; production IndexStore row count is unchanged after replay (only replay_index is mutated).
+
+Task 5
+Field	Fill In
+Task ID	T-5
+Related Use Case	UC-3.1 (Production deployment with Postgres + Redis + workers)
+Task Description	Productionize the framework: Postgres IndexStore (with optional pgvector), Redis + RQ queue, `neuronium-agent worker` entry point with lease-based job ownership, Docker sandbox for CodeNode, MCP tool registry + integration, recovery policies (TRANSIENT/PERSISTENT/SYSTEMIC/CRITICAL), pluggable critics (demo/generic/business + user plugins), trace_event_listener fan-out for observability, Hatchling extras `[postgres]/[redis]/[pgvector]/[docker]/[embeddings]/[all]`.
+Dependencies	T-1 (foundational pipeline), T-2 (control + checkpoints needed for safe failover).
+DoD	(a) Switching IndexStore from sqlite to postgres in neuronium.toml requires zero code change and passes the same integration suite; (b) `neuronium-agent worker` consumes RQ jobs, leases by execution_id, releases on terminal state; orphaned leases expire and are re-claimable; (c) Cluster of 8 workers reaches ≥ 0.85 linear-scaling efficiency on benchmark DAG; (d) CodeNode executes only inside Docker sandbox with no host network and read-only input mounts; (e) Secrets never appear in trace or artifacts (regex scan in CI); (f) Chaos test (kill worker mid-run) recovers via lease expiry without duplicate node execution; (g) Recovery policies and pluggable critics are documented and exercised by tests.
+
+Subtasks
+Subtask ID	Description	Dependencies	Acceptance Criteria
+ST-11	Implement Postgres IndexStore (with optional pgvector), migrations, BlobStore/IndexStore selection from neuronium.toml, Redis + RQ queue + `neuronium-agent worker` entry with lease-based ownership and orphan-lease expiry.	T-1, T-2	Same integration suite that passes on sqlite passes on postgres without code changes; 8-worker benchmark hits ≥ 0.85 scaling efficiency; killing a worker mid-run results in lease expiry and re-claim by another worker without duplicate node execution (verified by trace).
+ST-12	Implement Docker sandbox for CodeNode (no host network, read-only mounts), MCP tool registry + invocation, recovery policies for TRANSIENT/PERSISTENT/SYSTEMIC/CRITICAL with backoff/escalate, pluggable critics, trace_event_listener fan-out, secret-leak CI scan.	ST-11	CodeNode unit test asserts no host-network access and read-only mount; MCP fixture tool round-trips through McpToolNode; injecting TRANSIENT failure triggers backoff retry and CRITICAL failure halts the run with typed error; trace_event_listener receives every event in order; CI secret-scan on artifacts and trace exits clean.
