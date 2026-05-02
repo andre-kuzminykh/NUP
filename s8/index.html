@@ -276,7 +276,7 @@
                 </div>
 
                 <div class="relative z-10 w-full md:w-2/5 flex items-center justify-center">
-                    <div class="relative w-[280px] h-[280px] md:w-[340px] md:h-[340px]">
+                    <div class="relative w-full max-w-[280px] md:max-w-[340px] aspect-square mx-auto">
                         <div class="orbit-ring"></div>
                         <div class="orbit-ring reverse" style="inset: 28px;"></div>
                         <div class="absolute inset-[60px] rounded-full border border-cyber-purple/20 ring-pulse"></div>
@@ -321,7 +321,7 @@
                 <p class="text-sm text-muted mb-6 text-center">A startup begins when assumptions become evidence.</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center max-w-5xl mx-auto">
-                    <div class="relative w-full max-w-[360px] h-[360px] mx-auto">
+                    <div class="relative w-full max-w-[360px] aspect-square mx-auto">
                         <div class="orbit-ring"></div>
                         <div class="orbit-ring reverse" style="inset: 30px;"></div>
                         <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
@@ -882,33 +882,40 @@
                 </div>
 
                 <p class="text-center text-xs uppercase font-mono text-cyber-purple mb-3 tracking-widest">Feedback loop</p>
-                <div class="relative w-full max-w-[420px] mx-auto h-[300px] mb-4">
-                    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 400 300">
+                <div class="relative w-full max-w-[340px] aspect-square mx-auto mb-4">
+                    <div class="orbit-ring"></div>
+                    <div class="orbit-ring reverse" style="inset: 28px;"></div>
+                    <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
                         <defs>
-                            <marker id="arrowLoop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                            <marker id="arrowFlow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
                                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7"/>
                             </marker>
                         </defs>
-                        <ellipse cx="200" cy="150" rx="160" ry="110" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="4 4" class="opacity-50" marker-end="url(#arrowLoop)" transform="rotate(-15 200 150)"/>
+                        <path d="M 50 14 A 36 36 0 0 1 86 50" fill="none" stroke="#a855f7" stroke-width="0.8" stroke-dasharray="2 2" class="opacity-60" marker-end="url(#arrowFlow)"/>
+                        <path d="M 86 50 A 36 36 0 0 1 50 86" fill="none" stroke="#a855f7" stroke-width="0.8" stroke-dasharray="2 2" class="opacity-60" marker-end="url(#arrowFlow)"/>
+                        <path d="M 50 86 A 36 36 0 0 1 14 50" fill="none" stroke="#a855f7" stroke-width="0.8" stroke-dasharray="2 2" class="opacity-60" marker-end="url(#arrowFlow)"/>
+                        <path d="M 14 50 A 36 36 0 0 1 50 14" fill="none" stroke="#a855f7" stroke-width="0.8" stroke-dasharray="2 2" class="opacity-60" marker-end="url(#arrowFlow)"/>
                     </svg>
-                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-tg bg-cyber-tg/10 text-center shadow-[0_0_20px_rgba(34,158,217,0.2)] z-10" style="top: 8%; left: 8%;">
-                        <i class="ph-duotone ph-flow-arrow text-2xl text-cyber-tg"></i>
-                        <p class="text-[10px] font-bold uppercase mt-0.5">Customer workflow</p>
+
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-[var(--card-bg)] border-2 border-cyber-purple/40 flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.3)] z-10">
+                        <i class="ph-fill ph-arrows-clockwise text-2xl text-cyber-purple animate-spin-slow"></i>
                     </div>
-                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-orange bg-cyber-orange/10 text-center shadow-[0_0_20px_rgba(249,115,22,0.2)] z-10" style="top: 8%; right: 8%;">
-                        <i class="ph-duotone ph-pencil-line text-2xl text-cyber-orange"></i>
-                        <p class="text-[10px] font-bold uppercase mt-0.5">Expert correction</p>
+
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-4 border-cyber-tg bg-cyber-tg/10 text-center shadow-md z-20" style="top: 0; left: 50%; transform: translate(-50%, -50%);">
+                        <i class="ph-duotone ph-flow-arrow text-lg text-cyber-tg"></i>
+                        <p class="text-[9px] font-bold uppercase">Customer workflow</p>
                     </div>
-                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-purple bg-cyber-purple/10 text-center shadow-[0_0_20px_rgba(168,85,247,0.25)] z-10" style="bottom: 8%; right: 8%;">
-                        <i class="ph-duotone ph-cpu text-2xl text-cyber-purple"></i>
-                        <p class="text-[10px] font-bold uppercase mt-0.5">Model improvement</p>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-4 border-cyber-orange bg-cyber-orange/10 text-center shadow-md z-20" style="top: 50%; right: 0; transform: translate(50%, -50%);">
+                        <i class="ph-duotone ph-pencil-line text-lg text-cyber-orange"></i>
+                        <p class="text-[9px] font-bold uppercase">Expert correction</p>
                     </div>
-                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-green bg-cyber-green/10 text-center shadow-[0_0_20px_rgba(34,197,94,0.25)] z-10" style="bottom: 8%; left: 8%;">
-                        <i class="ph-duotone ph-trend-up text-2xl text-cyber-green"></i>
-                        <p class="text-[10px] font-bold uppercase mt-0.5">Better product</p>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-4 border-cyber-purple bg-cyber-purple/10 text-center shadow-md z-20" style="bottom: 0; left: 50%; transform: translate(-50%, 50%);">
+                        <i class="ph-duotone ph-cpu text-lg text-cyber-purple"></i>
+                        <p class="text-[9px] font-bold uppercase">Model improvement</p>
                     </div>
-                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-[var(--card-bg)] border-2 border-cyber-purple/40 flex flex-col items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.3)] animate-spin-slow">
-                        <i class="ph-fill ph-arrows-clockwise text-2xl text-cyber-purple"></i>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-4 border-cyber-green bg-cyber-green/10 text-center shadow-md z-20" style="top: 50%; left: 0; transform: translate(-50%, -50%);">
+                        <i class="ph-duotone ph-trend-up text-lg text-cyber-green"></i>
+                        <p class="text-[9px] font-bold uppercase">Better product</p>
                     </div>
                 </div>
 
@@ -977,7 +984,7 @@
                 <p class="text-sm text-muted mb-8 text-center">TAM is the dream. Bottom-up is the plan.</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center max-w-5xl mx-auto mb-6">
-                    <div class="relative w-full max-w-[340px] h-[340px] mx-auto">
+                    <div class="relative w-full max-w-[340px] aspect-square mx-auto">
                         <div class="absolute inset-0 rounded-full border-2 border-cyber-purple/30 bg-cyber-purple/5 ring-pulse"></div>
                         <div class="absolute rounded-full border-2 border-cyber-orange/40 bg-cyber-orange/10" style="inset: 22%;"></div>
                         <div class="absolute rounded-full border-2 border-cyber-green/60 bg-cyber-green/15 shadow-[0_0_30px_rgba(34,197,94,0.3)] flex items-center justify-center" style="inset: 42%;">
@@ -1907,25 +1914,22 @@
                 <h2 class="text-3xl md:text-4xl font-black uppercase mb-2 text-center">Marketplace Sells <span class="text-gradient">Liquidity</span></h2>
                 <p class="text-sm text-muted mb-8 text-center">Not a catalog — a fast and reliable match.</p>
 
-                <div class="relative w-full max-w-[420px] mx-auto h-[320px] mb-6">
+                <div class="relative w-full max-w-[340px] aspect-square mx-auto mb-6">
                     <div class="orbit-ring"></div>
-                    <div class="orbit-ring reverse" style="inset: 26px;"></div>
-                    <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(34,158,217,0.25)" stroke-width="0.4" stroke-dasharray="2 2"/>
-                    </svg>
+                    <div class="orbit-ring reverse" style="inset: 28px;"></div>
                     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-[var(--card-bg)] border-2 border-cyber-tg flex flex-col items-center justify-center shadow-[0_0_40px_rgba(34,158,217,0.4)] z-20">
                         <i class="ph-fill ph-arrows-left-right text-2xl text-cyber-tg"></i>
                         <span class="font-black text-[10px] uppercase text-cyber-tg mt-0.5">Match</span>
                     </div>
-                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-purple bg-cyber-purple/10 shadow-[0_0_20px_rgba(168,85,247,0.25)] z-10 flex items-center gap-2" style="top: 8%; left: 50%; transform: translateX(-50%);">
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-purple bg-cyber-purple/10 shadow-[0_0_20px_rgba(168,85,247,0.25)] z-10 flex items-center gap-2" style="top: 0; left: 50%; transform: translate(-50%, -50%);">
                         <i class="ph-duotone ph-users text-xl text-cyber-purple"></i>
                         <p class="text-xs font-black uppercase text-cyber-purple">Demand</p>
                     </div>
-                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-orange bg-cyber-orange/10 shadow-[0_0_20px_rgba(249,115,22,0.25)] z-10 flex items-center gap-2" style="bottom: 8%; left: 12%;">
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-orange bg-cyber-orange/10 shadow-[0_0_20px_rgba(249,115,22,0.25)] z-10 flex items-center gap-2" style="bottom: 7%; left: 7%;">
                         <i class="ph-duotone ph-truck text-xl text-cyber-orange"></i>
                         <p class="text-xs font-black uppercase text-cyber-orange">Supply</p>
                     </div>
-                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-green bg-cyber-green/10 shadow-[0_0_20px_rgba(34,197,94,0.25)] z-10 flex items-center gap-2" style="bottom: 8%; right: 12%;">
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-green bg-cyber-green/10 shadow-[0_0_20px_rgba(34,197,94,0.25)] z-10 flex items-center gap-2" style="bottom: 7%; right: 7%;">
                         <i class="ph-duotone ph-shield-check text-xl text-cyber-green"></i>
                         <p class="text-xs font-black uppercase text-cyber-green">Trust</p>
                     </div>
@@ -2139,7 +2143,7 @@
                 <h2 class="text-3xl md:text-4xl font-black uppercase mb-2 text-center">AI Startups Are <span class="text-gradient">Not One Category</span></h2>
                 <p class="text-sm text-muted mb-8 text-center">Nine model types · different economics.</p>
 
-                <div class="relative w-full max-w-[460px] mx-auto h-[420px] mb-6">
+                <div class="relative w-full max-w-[420px] aspect-square mx-auto mb-6">
                     <div class="orbit-ring"></div>
                     <div class="orbit-ring reverse" style="inset: 32px;"></div>
                     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full gradient-bg flex flex-col items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.5)] animate-glow-pulse z-20">
@@ -2147,15 +2151,15 @@
                         <span class="font-black text-[10px] uppercase text-white tracking-widest mt-0.5">AI</span>
                     </div>
 
-                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-tg bg-cyber-tg/10 text-cyber-tg shadow-md z-10 flex items-center gap-1.5" style="top: 0%; left: 50%; transform: translate(-50%, -50%);"><i class="ph-fill ph-headset"></i> <span class="text-[10px] font-bold uppercase">Service</span></div>
-                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-tg bg-cyber-tg/10 text-cyber-tg shadow-md z-10 flex items-center gap-1.5" style="top: 17%; left: 90%; transform: translate(-50%, -50%);"><i class="ph-fill ph-package"></i> <span class="text-[10px] font-bold uppercase">Productized</span></div>
-                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-purple bg-cyber-purple/10 text-cyber-purple shadow-md z-10 flex items-center gap-1.5" style="top: 50%; left: 100%; transform: translate(-50%, -50%);"><i class="ph-fill ph-credit-card"></i> <span class="text-[10px] font-bold uppercase">SaaS</span></div>
-                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-purple bg-cyber-purple/10 text-cyber-purple shadow-[0_0_20px_rgba(168,85,247,0.3)] z-10 flex items-center gap-1.5" style="top: 83%; left: 90%; transform: translate(-50%, -50%);"><i class="ph-fill ph-robot"></i> <span class="text-[10px] font-bold uppercase">Agent</span></div>
-                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-orange bg-cyber-orange/10 text-cyber-orange shadow-md z-10 flex items-center gap-1.5" style="top: 100%; left: 65%; transform: translate(-50%, -50%);"><i class="ph-fill ph-network"></i> <span class="text-[10px] font-bold uppercase">Infra</span></div>
-                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-orange bg-cyber-orange/10 text-cyber-orange shadow-md z-10 flex items-center gap-1.5" style="top: 100%; left: 35%; transform: translate(-50%, -50%);"><i class="ph-fill ph-cube"></i> <span class="text-[10px] font-bold uppercase">Foundation</span></div>
-                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-green bg-cyber-green/10 text-cyber-green shadow-md z-10 flex items-center gap-1.5" style="top: 83%; left: 10%; transform: translate(-50%, -50%);"><i class="ph-fill ph-target"></i> <span class="text-[10px] font-bold uppercase">Vertical</span></div>
-                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-green bg-cyber-green/10 text-cyber-green shadow-md z-10 flex items-center gap-1.5" style="top: 50%; left: 0%; transform: translate(-50%, -50%);"><i class="ph-fill ph-database"></i> <span class="text-[10px] font-bold uppercase">Data</span></div>
-                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-red bg-cyber-red/10 text-cyber-red shadow-md z-10 flex items-center gap-1.5" style="top: 17%; left: 10%; transform: translate(-50%, -50%);"><i class="ph-fill ph-storefront"></i> <span class="text-[10px] font-bold uppercase">Marketplace</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-tg bg-cyber-tg/10 text-cyber-tg shadow-md z-10 flex items-center gap-1.5" style="top: 3%; left: 50%; transform: translate(-50%, -50%);"><i class="ph-fill ph-headset"></i> <span class="text-[10px] font-bold uppercase">Service</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-tg bg-cyber-tg/10 text-cyber-tg shadow-md z-10 flex items-center gap-1.5" style="top: 14%; left: 80%; transform: translate(-50%, -50%);"><i class="ph-fill ph-package"></i> <span class="text-[10px] font-bold uppercase">Productized</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-purple bg-cyber-purple/10 text-cyber-purple shadow-md z-10 flex items-center gap-1.5" style="top: 42%; left: 96%; transform: translate(-50%, -50%);"><i class="ph-fill ph-credit-card"></i> <span class="text-[10px] font-bold uppercase">SaaS</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-purple bg-cyber-purple/10 text-cyber-purple shadow-[0_0_20px_rgba(168,85,247,0.3)] z-10 flex items-center gap-1.5" style="top: 73%; left: 91%; transform: translate(-50%, -50%);"><i class="ph-fill ph-robot"></i> <span class="text-[10px] font-bold uppercase">Agent</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-orange bg-cyber-orange/10 text-cyber-orange shadow-md z-10 flex items-center gap-1.5" style="top: 94%; left: 66%; transform: translate(-50%, -50%);"><i class="ph-fill ph-network"></i> <span class="text-[10px] font-bold uppercase">Infra</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-orange bg-cyber-orange/10 text-cyber-orange shadow-md z-10 flex items-center gap-1.5" style="top: 94%; left: 34%; transform: translate(-50%, -50%);"><i class="ph-fill ph-cube"></i> <span class="text-[10px] font-bold uppercase">Foundation</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-green bg-cyber-green/10 text-cyber-green shadow-md z-10 flex items-center gap-1.5" style="top: 73%; left: 9%; transform: translate(-50%, -50%);"><i class="ph-fill ph-target"></i> <span class="text-[10px] font-bold uppercase">Vertical</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-green bg-cyber-green/10 text-cyber-green shadow-md z-10 flex items-center gap-1.5" style="top: 42%; left: 4%; transform: translate(-50%, -50%);"><i class="ph-fill ph-database"></i> <span class="text-[10px] font-bold uppercase">Data</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-red bg-cyber-red/10 text-cyber-red shadow-md z-10 flex items-center gap-1.5" style="top: 14%; left: 20%; transform: translate(-50%, -50%);"><i class="ph-fill ph-storefront"></i> <span class="text-[10px] font-bold uppercase">Marketplace</span></div>
                 </div>
 
                 <div class="tech-card p-4 border-2 border-cyber-purple/30 bg-cyber-purple/5 max-w-4xl mx-auto mb-4">
@@ -2565,7 +2569,7 @@
                 <p class="text-center text-xs uppercase font-mono text-cyber-tg mb-3 tracking-widest">Bessemer benchmark · attractive efficiency</p>
 
                 <div class="relative w-full max-w-[420px] mx-auto h-[200px] mb-4">
-                    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 200 110">
+                    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet">
                         <defs>
                             <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                                 <stop offset="0%" stop-color="#22c55e"/>
@@ -2575,16 +2579,15 @@
                             </linearGradient>
                         </defs>
                         <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round"/>
-                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round"/>
-                        <text x="22" y="96" font-family="'Space Mono', monospace" font-size="8" font-weight="700" fill="#22c55e">1×</text>
-                        <text x="68" y="34" font-family="'Space Mono', monospace" font-size="8" font-weight="700" fill="#229ED9">1.5×</text>
-                        <text x="118" y="34" font-family="'Space Mono', monospace" font-size="8" font-weight="700" fill="#f97316">2×</text>
-                        <text x="166" y="96" font-family="'Space Mono', monospace" font-size="8" font-weight="700" fill="#ef4444">3×+</text>
+                        <text x="14" y="116" font-family="'Space Mono', monospace" font-size="9" font-weight="700" fill="#22c55e">1×</text>
+                        <text x="46" y="40" font-family="'Space Mono', monospace" font-size="9" font-weight="700" fill="#229ED9">1.5×</text>
+                        <text x="138" y="40" font-family="'Space Mono', monospace" font-size="9" font-weight="700" fill="#f97316">2×</text>
+                        <text x="170" y="116" font-family="'Space Mono', monospace" font-size="9" font-weight="700" fill="#ef4444">3×+</text>
+                        <g class="gauge-needle" style="transform-origin: 100px 100px;">
+                            <line x1="100" y1="100" x2="100" y2="32" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" filter="drop-shadow(0 0 4px rgba(168,85,247,0.6))"/>
+                        </g>
                         <circle cx="100" cy="100" r="6" fill="#a855f7" stroke="#fff" stroke-width="1.5"/>
                     </svg>
-                    <div class="absolute" style="top: 16px; left: 50%; transform-origin: bottom center; transform: translateX(-50%);">
-                        <div class="w-1 h-[80px] bg-gradient-to-t from-cyber-purple to-cyber-orange rounded-full origin-bottom shadow-[0_0_15px_rgba(168,85,247,0.6)] gauge-needle"></div>
-                    </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 max-w-3xl mx-auto mb-4">
