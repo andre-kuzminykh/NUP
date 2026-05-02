@@ -35,13 +35,31 @@
                     animation: {
                         'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'float': 'float 3s ease-in-out infinite',
+                        'float-slow': 'float 5s ease-in-out infinite',
                         'spin-slow': 'spin 20s linear infinite',
                         'spin-slow-reverse': 'spin 30s linear infinite reverse',
+                        'spin-medium': 'spin 12s linear infinite',
+                        'glow-pulse': 'glowPulse 3s ease-in-out infinite',
+                        'shimmer': 'shimmer 4s linear infinite',
+                        'orbit': 'orbit 18s linear infinite',
+                        'orbit-reverse': 'orbit 24s linear infinite reverse',
                     },
                     keyframes: {
                         float: {
                             '0%, 100%': { transform: 'translateY(0)' },
                             '50%': { transform: 'translateY(-10px)' },
+                        },
+                        glowPulse: {
+                            '0%, 100%': { boxShadow: '0 0 20px rgba(168,85,247,0.3), 0 0 40px rgba(168,85,247,0.1)' },
+                            '50%': { boxShadow: '0 0 40px rgba(168,85,247,0.6), 0 0 80px rgba(168,85,247,0.3)' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' },
+                        },
+                        orbit: {
+                            '0%': { transform: 'rotate(0deg) translateX(var(--orbit-r, 140px)) rotate(0deg)' },
+                            '100%': { transform: 'rotate(360deg) translateX(var(--orbit-r, 140px)) rotate(-360deg)' },
                         }
                     }
                 }
@@ -139,6 +157,53 @@
         }
         .gradient-bg { background-image: linear-gradient(135deg, #a855f7, #f97316); }
 
+        .shimmer-border {
+            position: relative;
+            background-clip: padding-box;
+        }
+        .shimmer-border::before {
+            content: ''; position: absolute; inset: 0; padding: 1.5px; border-radius: inherit;
+            background: linear-gradient(110deg, #a855f7, #f97316, #229ED9, #22c55e, #a855f7);
+            background-size: 200% 100%;
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+            animation: shimmer 6s linear infinite; pointer-events: none;
+        }
+
+        .orbit-ring {
+            position: absolute; inset: 0; border-radius: 50%;
+            border: 1.5px dashed rgba(168, 85, 247, 0.35);
+            animation: spin 30s linear infinite;
+        }
+        .orbit-ring.reverse { animation-direction: reverse; animation-duration: 40s; border-color: rgba(249, 115, 22, 0.3); }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(-50%); }
+            50% { transform: translateY(-8px) translateX(-50%); }
+        }
+
+        @keyframes ringPulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.05); opacity: 1; }
+        }
+        .ring-pulse { animation: ringPulse 4s ease-in-out infinite; }
+
+        .gauge-needle {
+            transform-origin: bottom center;
+            animation: gaugeSweep 4s cubic-bezier(.4,0,.2,1) infinite alternate;
+        }
+        @keyframes gaugeSweep {
+            0% { transform: rotate(-70deg); }
+            100% { transform: rotate(70deg); }
+        }
+
+        @keyframes draw {
+            from { stroke-dashoffset: 1000; }
+            to { stroke-dashoffset: 0; }
+        }
+        .stroke-animate { stroke-dasharray: 1000; animation: draw 6s ease-out forwards; }
+
         h1, h2, h3 { font-family: 'Montserrat', sans-serif; }
         .tech-text { color: var(--text-main); }
         .text-muted { color: var(--text-muted); }
@@ -182,22 +247,62 @@
     <!-- Slide 0: Title -->
     <div class="slide-container px-4 md:px-12 opacity-100 translate-y-0" id="slide-0">
         <div class="content-z max-w-6xl">
-            <div class="glass-panel text-left relative min-h-[50vh] flex flex-col justify-center border-l-4 border-l-cyber-purple">
+            <div class="glass-panel relative min-h-[58vh] flex flex-col md:flex-row items-center gap-6 border-l-4 border-l-cyber-purple overflow-hidden">
                 <div class="slide-topline"></div>
-                <h1 class="text-4xl md:text-5xl lg:text-[60px] font-black mb-4 leading-[1.1] tracking-tight uppercase max-w-4xl">
-                    From Idea to <span class="text-gradient drop-shadow-sm">Pitch Deck</span>
-                </h1>
-                <p class="text-lg md:text-2xl font-bold mb-3 max-w-none text-cyber-tg">
-                    Lean Canvas · Stages · Business Model · Economics · Financing
-                </p>
-                <p class="text-sm md:text-base text-muted max-w-3xl mb-10">
-                    A startup is not an idea, a product or a deck. A startup is a <span class="text-cyber-purple font-bold">system of proof</span>.
-                </p>
-                <div class="absolute bottom-6 left-8 md:left-12 text-sm md:text-lg tech-text font-bold font-montserrat tracking-tight opacity-80 flex items-center gap-2">
-                    <i class="ph-duotone ph-user text-cyber-purple"></i> Andre Kuzminykh
+                <div class="absolute -top-32 -right-32 w-[400px] h-[400px] rounded-full bg-cyber-purple/10 blur-[80px] animate-pulse-slow pointer-events-none"></div>
+                <div class="absolute -bottom-32 -left-32 w-[400px] h-[400px] rounded-full bg-cyber-orange/10 blur-[80px] animate-pulse-slow pointer-events-none" style="animation-delay: 2s;"></div>
+
+                <div class="relative z-10 w-full md:w-3/5 text-left">
+                    <div class="kbd mb-4 text-cyber-purple border-cyber-purple/40"><i class="ph-bold ph-flag-checkered"></i> Lecture deck · 60 slides</div>
+                    <h1 class="text-4xl md:text-5xl lg:text-[60px] font-black mb-4 leading-[1.05] tracking-tight uppercase">
+                        From Idea to<br><span class="text-gradient drop-shadow-sm">Pitch Deck</span>
+                    </h1>
+                    <p class="text-base md:text-xl font-bold mb-3 text-cyber-tg">
+                        Lean Canvas · Stages · Business Model · Economics · Financing
+                    </p>
+                    <p class="text-sm md:text-base text-muted max-w-2xl mb-6">
+                        A startup is not an idea, a product or a deck. A startup is a <span class="text-cyber-purple font-bold">system of proof</span>.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <span class="kbd text-cyber-purple border-cyber-purple/40"><i class="ph-bold ph-grid-four"></i> Lean Canvas</span>
+                        <span class="kbd text-cyber-tg border-cyber-tg/40"><i class="ph-bold ph-stairs"></i> Stages</span>
+                        <span class="kbd text-cyber-orange border-cyber-orange/40"><i class="ph-bold ph-coins"></i> Model</span>
+                        <span class="kbd text-cyber-green border-cyber-green/40"><i class="ph-bold ph-calculator"></i> Economics</span>
+                        <span class="kbd text-cyber-red border-cyber-red/40"><i class="ph-bold ph-bank"></i> Capital</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-sm md:text-base font-bold font-montserrat opacity-80">
+                        <i class="ph-duotone ph-user text-cyber-purple"></i> Andre Kuzminykh
+                    </div>
                 </div>
-                <div class="absolute bottom-6 right-8 md:right-12 hidden md:flex items-center gap-2 text-xs font-mono text-muted uppercase tracking-widest">
-                    <i class="ph-bold ph-arrow-right text-cyber-orange"></i> 59 slides · 5 blocks
+
+                <div class="relative z-10 w-full md:w-2/5 flex items-center justify-center">
+                    <div class="relative w-[280px] h-[280px] md:w-[340px] md:h-[340px]">
+                        <div class="orbit-ring"></div>
+                        <div class="orbit-ring reverse" style="inset: 28px;"></div>
+                        <div class="absolute inset-[60px] rounded-full border border-cyber-purple/20 ring-pulse"></div>
+
+                        <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+                            <defs>
+                                <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#a855f7"/>
+                                    <stop offset="100%" stop-color="#f97316"/>
+                                </linearGradient>
+                            </defs>
+                            <circle cx="50" cy="50" r="38" fill="none" stroke="url(#titleGrad)" stroke-width="0.5" stroke-dasharray="2 3" class="opacity-50"/>
+                        </svg>
+
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 rounded-full gradient-bg flex flex-col items-center justify-center shadow-[0_0_60px_rgba(168,85,247,0.6)] animate-glow-pulse">
+                            <i class="ph-fill ph-rocket-launch text-3xl text-white mb-1"></i>
+                            <span class="font-black text-[10px] uppercase text-white tracking-widest">Proof</span>
+                        </div>
+
+                        <div class="absolute tech-card px-2.5 py-1 text-[9px] font-bold uppercase border-cyber-purple/60 text-cyber-purple shadow-md whitespace-nowrap z-20" style="top: 4%; left: 50%; transform: translate(-50%, -50%);"><i class="ph-fill ph-lightbulb"></i> Idea</div>
+                        <div class="absolute tech-card px-2.5 py-1 text-[9px] font-bold uppercase border-cyber-tg/60 text-cyber-tg shadow-md whitespace-nowrap z-20" style="top: 23%; left: 92%; transform: translate(-50%, -50%);"><i class="ph-fill ph-cube"></i> MVP</div>
+                        <div class="absolute tech-card px-2.5 py-1 text-[9px] font-bold uppercase border-cyber-orange/60 text-cyber-orange shadow-md whitespace-nowrap z-20" style="top: 77%; left: 92%; transform: translate(-50%, -50%);"><i class="ph-fill ph-magnet"></i> PMF</div>
+                        <div class="absolute tech-card px-2.5 py-1 text-[9px] font-bold uppercase border-cyber-green/60 text-cyber-green shadow-md whitespace-nowrap z-20" style="top: 96%; left: 50%; transform: translate(-50%, -50%);"><i class="ph-fill ph-trend-up"></i> Scale</div>
+                        <div class="absolute tech-card px-2.5 py-1 text-[9px] font-bold uppercase border-cyber-red/60 text-cyber-red shadow-md whitespace-nowrap z-20" style="top: 77%; left: 8%; transform: translate(-50%, -50%);"><i class="ph-fill ph-bank"></i> Capital</div>
+                        <div class="absolute tech-card px-2.5 py-1 text-[9px] font-bold uppercase border-cyber-purple/60 text-cyber-purple shadow-md whitespace-nowrap z-20" style="top: 23%; left: 8%; transform: translate(-50%, -50%);"><i class="ph-fill ph-presentation-chart"></i> Pitch</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -212,62 +317,52 @@
                     <div class="kbd"><i class="ph-bold ph-stack"></i> Block 1 · Slide 1</div>
                     <div class="kbd text-cyber-purple border-cyber-purple/40"><i class="ph-bold ph-test-tube"></i> Lean Canvas</div>
                 </div>
-                <h2 class="text-3xl md:text-4xl font-black uppercase mb-2">Startup as a <span class="text-gradient">System of Proof</span></h2>
-                <p class="text-sm text-muted mb-8">A startup begins when assumptions become evidence.</p>
+                <h2 class="text-3xl md:text-4xl font-black uppercase mb-2 text-center">Startup as a <span class="text-gradient">System of Proof</span></h2>
+                <p class="text-sm text-muted mb-6 text-center">A startup begins when assumptions become evidence.</p>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto mb-6">
-                    <div class="tech-card p-4 border-l-4 border-cyber-red bg-cyber-red/5">
-                        <h3 class="font-black uppercase text-sm text-cyber-red mb-3 flex items-center gap-2"><i class="ph-bold ph-x-circle"></i> Proves nothing</h3>
-                        <div class="space-y-2 text-xs">
-                            <div class="flex items-center gap-2"><i class="ph-bold ph-x text-cyber-red"></i> Idea alone</div>
-                            <div class="flex items-center gap-2"><i class="ph-bold ph-x text-cyber-red"></i> Product is not a business</div>
-                            <div class="flex items-center gap-2"><i class="ph-bold ph-x text-cyber-red"></i> Pitch deck is packaging</div>
-                            <div class="flex items-center gap-2"><i class="ph-bold ph-x text-cyber-red"></i> Investment is fuel, not success</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center max-w-5xl mx-auto">
+                    <div class="relative w-full max-w-[360px] h-[360px] mx-auto">
+                        <div class="orbit-ring"></div>
+                        <div class="orbit-ring reverse" style="inset: 30px;"></div>
+                        <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(168,85,247,0.15)" stroke-width="0.4" stroke-dasharray="1 2"/>
+                        </svg>
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full gradient-bg flex flex-col items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.5)] animate-glow-pulse">
+                            <i class="ph-fill ph-test-tube text-3xl text-white"></i>
+                            <span class="font-black text-[9px] uppercase text-white tracking-widest mt-0.5">Proof</span>
                         </div>
+                        <div class="absolute tech-card px-2 py-1 text-[9px] font-bold uppercase border-cyber-purple/60 text-cyber-purple shadow-md whitespace-nowrap z-20 flex items-center gap-1" style="top: 3%; left: 50%; transform: translate(-50%, -50%);"><i class="ph-fill ph-user"></i> Customer</div>
+                        <div class="absolute tech-card px-2 py-1 text-[9px] font-bold uppercase border-cyber-red/60 text-cyber-red shadow-md whitespace-nowrap z-20 flex items-center gap-1" style="top: 23%; left: 91%; transform: translate(-50%, -50%);"><i class="ph-fill ph-flame"></i> Pain</div>
+                        <div class="absolute tech-card px-2 py-1 text-[9px] font-bold uppercase border-cyber-orange/60 text-cyber-orange shadow-md whitespace-nowrap z-20 flex items-center gap-1" style="top: 60%; left: 96%; transform: translate(-50%, -50%);"><i class="ph-fill ph-currency-dollar"></i> Pay</div>
+                        <div class="absolute tech-card px-2 py-1 text-[9px] font-bold uppercase border-cyber-tg/60 text-cyber-tg shadow-md whitespace-nowrap z-20 flex items-center gap-1" style="top: 92%; left: 73%; transform: translate(-50%, -50%);"><i class="ph-fill ph-flow-arrow"></i> Channel</div>
+                        <div class="absolute tech-card px-2 py-1 text-[9px] font-bold uppercase border-cyber-green/60 text-cyber-green shadow-md whitespace-nowrap z-20 flex items-center gap-1" style="top: 92%; left: 27%; transform: translate(-50%, -50%);"><i class="ph-fill ph-chart-line"></i> Economics</div>
+                        <div class="absolute tech-card px-2 py-1 text-[9px] font-bold uppercase border-cyber-orange/60 text-cyber-orange shadow-md whitespace-nowrap z-20 flex items-center gap-1" style="top: 60%; left: 4%; transform: translate(-50%, -50%);"><i class="ph-fill ph-puzzle-piece"></i> Solution</div>
+                        <div class="absolute tech-card px-2 py-1 text-[9px] font-bold uppercase border-cyber-green/60 text-cyber-green shadow-md whitespace-nowrap z-20 flex items-center gap-1" style="top: 23%; left: 9%; transform: translate(-50%, -50%);"><i class="ph-fill ph-trend-up"></i> Scale</div>
                     </div>
-                    <div class="tech-card p-4 border-l-4 border-cyber-green bg-cyber-green/5 shadow-[0_0_20px_rgba(34,197,94,0.15)]">
-                        <h3 class="font-black uppercase text-sm text-cyber-green mb-3 flex items-center gap-2"><i class="ph-bold ph-check-circle"></i> Proves a startup</h3>
-                        <div class="space-y-2 text-xs">
-                            <div class="flex items-center gap-2"><i class="ph-bold ph-check text-cyber-green"></i> Customer interviews</div>
-                            <div class="flex items-center gap-2"><i class="ph-bold ph-check text-cyber-green"></i> Behavior &amp; signups</div>
-                            <div class="flex items-center gap-2"><i class="ph-bold ph-check text-cyber-green"></i> Payments &amp; pilots</div>
-                            <div class="flex items-center gap-2"><i class="ph-bold ph-check text-cyber-green"></i> Repeat use &amp; retention</div>
+
+                    <div class="space-y-3">
+                        <div class="tech-card p-4 border-l-4 border-cyber-red bg-cyber-red/5">
+                            <h3 class="font-black uppercase text-xs text-cyber-red mb-2 flex items-center gap-2"><i class="ph-bold ph-x-circle"></i> Proves nothing</h3>
+                            <div class="grid grid-cols-2 gap-1 text-[11px]">
+                                <div class="flex items-center gap-1"><i class="ph-bold ph-x text-cyber-red"></i> Idea alone</div>
+                                <div class="flex items-center gap-1"><i class="ph-bold ph-x text-cyber-red"></i> Product</div>
+                                <div class="flex items-center gap-1"><i class="ph-bold ph-x text-cyber-red"></i> Pitch deck</div>
+                                <div class="flex items-center gap-1"><i class="ph-bold ph-x text-cyber-red"></i> Investment</div>
+                            </div>
+                        </div>
+                        <div class="tech-card p-4 border-l-4 border-cyber-green bg-cyber-green/5 shadow-[0_0_20px_rgba(34,197,94,0.15)]">
+                            <h3 class="font-black uppercase text-xs text-cyber-green mb-2 flex items-center gap-2"><i class="ph-bold ph-check-circle"></i> Proves a startup</h3>
+                            <div class="grid grid-cols-2 gap-1 text-[11px]">
+                                <div class="flex items-center gap-1"><i class="ph-bold ph-check text-cyber-green"></i> Interviews</div>
+                                <div class="flex items-center gap-1"><i class="ph-bold ph-check text-cyber-green"></i> Behavior</div>
+                                <div class="flex items-center gap-1"><i class="ph-bold ph-check text-cyber-green"></i> Payments</div>
+                                <div class="flex items-center gap-1"><i class="ph-bold ph-check text-cyber-green"></i> Retention</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-7 gap-2 max-w-5xl mx-auto mb-4">
-                    <div class="tech-card p-2 border-t-4 border-cyber-purple bg-cyber-purple/5 text-center">
-                        <i class="ph-duotone ph-user text-xl text-cyber-purple"></i>
-                        <p class="text-[10px] font-bold uppercase mt-1">Customer</p>
-                    </div>
-                    <div class="tech-card p-2 border-t-4 border-cyber-purple bg-cyber-purple/5 text-center">
-                        <i class="ph-duotone ph-flame text-xl text-cyber-purple"></i>
-                        <p class="text-[10px] font-bold uppercase mt-1">Pain</p>
-                    </div>
-                    <div class="tech-card p-2 border-t-4 border-cyber-orange bg-cyber-orange/5 text-center">
-                        <i class="ph-duotone ph-currency-dollar text-xl text-cyber-orange"></i>
-                        <p class="text-[10px] font-bold uppercase mt-1">Pay</p>
-                    </div>
-                    <div class="tech-card p-2 border-t-4 border-cyber-orange bg-cyber-orange/5 text-center">
-                        <i class="ph-duotone ph-puzzle-piece text-xl text-cyber-orange"></i>
-                        <p class="text-[10px] font-bold uppercase mt-1">Solution</p>
-                    </div>
-                    <div class="tech-card p-2 border-t-4 border-cyber-tg bg-cyber-tg/5 text-center">
-                        <i class="ph-duotone ph-flow-arrow text-xl text-cyber-tg"></i>
-                        <p class="text-[10px] font-bold uppercase mt-1">Channel</p>
-                    </div>
-                    <div class="tech-card p-2 border-t-4 border-cyber-green bg-cyber-green/5 text-center">
-                        <i class="ph-duotone ph-chart-line text-xl text-cyber-green"></i>
-                        <p class="text-[10px] font-bold uppercase mt-1">Economics</p>
-                    </div>
-                    <div class="tech-card p-2 border-t-4 border-cyber-green bg-cyber-green/5 text-center">
-                        <i class="ph-duotone ph-arrow-up-right text-xl text-cyber-green"></i>
-                        <p class="text-[10px] font-bold uppercase mt-1">Scale</p>
-                    </div>
-                </div>
-
-                <div class="tech-card bg-[var(--card-bg)] p-3 max-w-2xl mx-auto border-cyber-purple shadow-md text-center">
+                <div class="tech-card bg-[var(--card-bg)] p-3 max-w-2xl mx-auto border-cyber-purple shadow-md text-center mt-6">
                     <span class="font-black uppercase tracking-wide text-xs md:text-sm">
                         Evidence converts an idea into a <span class="text-gradient">verified business</span>
                     </span>
@@ -787,22 +882,33 @@
                 </div>
 
                 <p class="text-center text-xs uppercase font-mono text-cyber-purple mb-3 tracking-widest">Feedback loop</p>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 max-w-5xl mx-auto mb-4 items-center">
-                    <div class="tech-card p-3 border-t-4 border-cyber-tg bg-cyber-tg/5 text-center">
-                        <i class="ph-duotone ph-flow-arrow text-2xl text-cyber-tg mb-1"></i>
-                        <p class="text-[10px] font-bold uppercase">Customer workflow</p>
+                <div class="relative w-full max-w-[420px] mx-auto h-[300px] mb-4">
+                    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 400 300">
+                        <defs>
+                            <marker id="arrowLoop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#a855f7"/>
+                            </marker>
+                        </defs>
+                        <ellipse cx="200" cy="150" rx="160" ry="110" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="4 4" class="opacity-50" marker-end="url(#arrowLoop)" transform="rotate(-15 200 150)"/>
+                    </svg>
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-tg bg-cyber-tg/10 text-center shadow-[0_0_20px_rgba(34,158,217,0.2)] z-10" style="top: 8%; left: 8%;">
+                        <i class="ph-duotone ph-flow-arrow text-2xl text-cyber-tg"></i>
+                        <p class="text-[10px] font-bold uppercase mt-0.5">Customer workflow</p>
                     </div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-orange bg-cyber-orange/5 text-center">
-                        <i class="ph-duotone ph-pencil-line text-2xl text-cyber-orange mb-1"></i>
-                        <p class="text-[10px] font-bold uppercase">Expert correction</p>
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-orange bg-cyber-orange/10 text-center shadow-[0_0_20px_rgba(249,115,22,0.2)] z-10" style="top: 8%; right: 8%;">
+                        <i class="ph-duotone ph-pencil-line text-2xl text-cyber-orange"></i>
+                        <p class="text-[10px] font-bold uppercase mt-0.5">Expert correction</p>
                     </div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-purple bg-cyber-purple/5 text-center">
-                        <i class="ph-duotone ph-cpu text-2xl text-cyber-purple mb-1"></i>
-                        <p class="text-[10px] font-bold uppercase">Model improvement</p>
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-purple bg-cyber-purple/10 text-center shadow-[0_0_20px_rgba(168,85,247,0.25)] z-10" style="bottom: 8%; right: 8%;">
+                        <i class="ph-duotone ph-cpu text-2xl text-cyber-purple"></i>
+                        <p class="text-[10px] font-bold uppercase mt-0.5">Model improvement</p>
                     </div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-green bg-cyber-green/5 text-center">
-                        <i class="ph-duotone ph-trend-up text-2xl text-cyber-green mb-1"></i>
-                        <p class="text-[10px] font-bold uppercase">Better product</p>
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-green bg-cyber-green/10 text-center shadow-[0_0_20px_rgba(34,197,94,0.25)] z-10" style="bottom: 8%; left: 8%;">
+                        <i class="ph-duotone ph-trend-up text-2xl text-cyber-green"></i>
+                        <p class="text-[10px] font-bold uppercase mt-0.5">Better product</p>
+                    </div>
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-[var(--card-bg)] border-2 border-cyber-purple/40 flex flex-col items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.3)] animate-spin-slow">
+                        <i class="ph-fill ph-arrows-clockwise text-2xl text-cyber-purple"></i>
                     </div>
                 </div>
 
@@ -870,21 +976,47 @@
                 <h2 class="text-3xl md:text-4xl font-black uppercase mb-2 text-center">Top-Down + <span class="text-gradient">Bottom-Up</span></h2>
                 <p class="text-sm text-muted mb-8 text-center">TAM is the dream. Bottom-up is the plan.</p>
 
-                <div class="grid grid-cols-3 gap-3 max-w-3xl mx-auto mb-6">
-                    <div class="tech-card p-4 border-t-4 border-cyber-purple bg-cyber-purple/5 text-center">
-                        <p class="font-mono text-[10px] uppercase text-muted">Total</p>
-                        <h3 class="text-2xl font-black text-cyber-purple">TAM</h3>
-                        <p class="text-[10px] text-muted mt-1">Full market</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center max-w-5xl mx-auto mb-6">
+                    <div class="relative w-full max-w-[340px] h-[340px] mx-auto">
+                        <div class="absolute inset-0 rounded-full border-2 border-cyber-purple/30 bg-cyber-purple/5 ring-pulse"></div>
+                        <div class="absolute rounded-full border-2 border-cyber-orange/40 bg-cyber-orange/10" style="inset: 22%;"></div>
+                        <div class="absolute rounded-full border-2 border-cyber-green/60 bg-cyber-green/15 shadow-[0_0_30px_rgba(34,197,94,0.3)] flex items-center justify-center" style="inset: 42%;">
+                            <span class="font-black text-cyber-green text-sm">SOM</span>
+                        </div>
+                        <div class="absolute top-3 left-1/2 -translate-x-1/2 text-center">
+                            <p class="font-mono text-[10px] uppercase text-cyber-purple tracking-widest">Total</p>
+                            <p class="font-black text-cyber-purple text-base">TAM</p>
+                        </div>
+                        <div class="absolute text-center" style="top: 26%; left: 50%; transform: translateX(-50%);">
+                            <p class="font-mono text-[10px] uppercase text-cyber-orange tracking-widest">Serviceable</p>
+                            <p class="font-black text-cyber-orange text-base">SAM</p>
+                        </div>
+                        <div class="absolute -top-1 -right-2 tech-card px-2 py-1 text-[9px] font-bold uppercase border-cyber-purple/40 text-cyber-purple shadow-md">Full market</div>
+                        <div class="absolute -bottom-1 -left-2 tech-card px-2 py-1 text-[9px] font-bold uppercase border-cyber-green/40 text-cyber-green shadow-md">Realistic share</div>
                     </div>
-                    <div class="tech-card p-4 border-t-4 border-cyber-orange bg-cyber-orange/5 text-center">
-                        <p class="font-mono text-[10px] uppercase text-muted">Serviceable</p>
-                        <h3 class="text-2xl font-black text-cyber-orange">SAM</h3>
-                        <p class="text-[10px] text-muted mt-1">Reachable segment</p>
-                    </div>
-                    <div class="tech-card p-4 border-t-4 border-cyber-green bg-cyber-green/5 text-center">
-                        <p class="font-mono text-[10px] uppercase text-muted">Obtainable</p>
-                        <h3 class="text-2xl font-black text-cyber-green">SOM</h3>
-                        <p class="text-[10px] text-muted mt-1">Realistic share</p>
+
+                    <div class="space-y-2">
+                        <div class="tech-card p-3 border-l-4 border-cyber-purple bg-cyber-purple/5 flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full border-2 border-cyber-purple flex items-center justify-center"><span class="font-black text-cyber-purple text-xs">TAM</span></div>
+                            <div>
+                                <p class="font-bold text-xs">Total addressable</p>
+                                <p class="text-[10px] text-muted">Full possible market</p>
+                            </div>
+                        </div>
+                        <div class="tech-card p-3 border-l-4 border-cyber-orange bg-cyber-orange/5 flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full border-2 border-cyber-orange flex items-center justify-center"><span class="font-black text-cyber-orange text-xs">SAM</span></div>
+                            <div>
+                                <p class="font-bold text-xs">Serviceable</p>
+                                <p class="text-[10px] text-muted">Reachable segment</p>
+                            </div>
+                        </div>
+                        <div class="tech-card p-3 border-l-4 border-cyber-green bg-cyber-green/5 flex items-center gap-3 shadow-[0_0_20px_rgba(34,197,94,0.15)]">
+                            <div class="w-10 h-10 rounded-full bg-cyber-green/20 border-2 border-cyber-green flex items-center justify-center"><span class="font-black text-cyber-green text-xs">SOM</span></div>
+                            <div>
+                                <p class="font-bold text-xs">Obtainable</p>
+                                <p class="text-[10px] text-muted">Realistic share to capture</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1217,13 +1349,32 @@
                 <p class="text-sm text-muted mb-8 text-center">Before PMF you push. After PMF the market helps.</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto mb-6">
-                    <div class="tech-card p-5 border-l-4 border-gray-400 bg-gray-500/5">
+                    <div class="tech-card p-5 border-l-4 border-gray-400 bg-gray-500/5 relative overflow-hidden">
                         <h3 class="font-black uppercase text-sm text-gray-400 mb-3 flex items-center gap-2"><i class="ph-bold ph-arrow-line-right"></i> Before PMF</h3>
-                        <p class="text-xs">Team pushes product into market — every deal is hand-carried, every conversation explains the value debate.</p>
+                        <div class="flex items-center justify-between mb-3">
+                            <i class="ph-fill ph-user text-3xl text-gray-400"></i>
+                            <div class="flex-1 mx-2 h-0.5 border-t-2 border-dashed border-gray-400 relative">
+                                <i class="ph-fill ph-arrow-right text-gray-400 absolute -top-2 right-0"></i>
+                            </div>
+                            <i class="ph-fill ph-cube text-3xl text-gray-400"></i>
+                        </div>
+                        <p class="text-[11px] text-muted">Team <span class="font-bold">pushes</span> product into market — every deal hand-carried.</p>
                     </div>
-                    <div class="tech-card p-5 border-l-4 border-cyber-green bg-cyber-green/5 shadow-[0_0_20px_rgba(34,197,94,0.15)]">
+                    <div class="tech-card p-5 border-l-4 border-cyber-green bg-cyber-green/5 shadow-[0_0_20px_rgba(34,197,94,0.15)] relative overflow-hidden">
                         <h3 class="font-black uppercase text-sm text-cyber-green mb-3 flex items-center gap-2"><i class="ph-bold ph-magnet"></i> After PMF</h3>
-                        <p class="text-xs">Market helps distribution — faster understanding, referrals, expansion, lower value debate.</p>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="relative">
+                                <i class="ph-fill ph-user text-3xl text-cyber-green"></i>
+                                <i class="ph-fill ph-user text-2xl text-cyber-green/70 absolute -top-1 -right-3 animate-float"></i>
+                                <i class="ph-fill ph-user text-2xl text-cyber-green/50 absolute top-3 -right-5 animate-float-slow"></i>
+                            </div>
+                            <div class="flex-1 mx-2 h-0.5 relative">
+                                <i class="ph-fill ph-arrow-left text-cyber-green absolute -top-2 left-0"></i>
+                                <div class="h-0.5 border-t-2 border-cyber-green/60"></div>
+                            </div>
+                            <i class="ph-fill ph-magnet text-3xl text-cyber-green animate-glow-pulse"></i>
+                        </div>
+                        <p class="text-[11px] text-muted">Market <span class="font-bold text-cyber-green">pulls</span> — referrals · expansion · lower friction.</p>
                     </div>
                 </div>
 
@@ -1756,18 +1907,27 @@
                 <h2 class="text-3xl md:text-4xl font-black uppercase mb-2 text-center">Marketplace Sells <span class="text-gradient">Liquidity</span></h2>
                 <p class="text-sm text-muted mb-8 text-center">Not a catalog — a fast and reliable match.</p>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-5xl mx-auto mb-6">
-                    <div class="tech-card p-5 border-l-4 border-cyber-purple bg-cyber-purple/5 text-center">
-                        <i class="ph-duotone ph-users text-3xl text-cyber-purple mb-2"></i>
-                        <h3 class="font-black uppercase text-sm text-cyber-purple">Demand</h3>
+                <div class="relative w-full max-w-[420px] mx-auto h-[320px] mb-6">
+                    <div class="orbit-ring"></div>
+                    <div class="orbit-ring reverse" style="inset: 26px;"></div>
+                    <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(34,158,217,0.25)" stroke-width="0.4" stroke-dasharray="2 2"/>
+                    </svg>
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-[var(--card-bg)] border-2 border-cyber-tg flex flex-col items-center justify-center shadow-[0_0_40px_rgba(34,158,217,0.4)] z-20">
+                        <i class="ph-fill ph-arrows-left-right text-2xl text-cyber-tg"></i>
+                        <span class="font-black text-[10px] uppercase text-cyber-tg mt-0.5">Match</span>
                     </div>
-                    <div class="tech-card p-5 border-l-4 border-cyber-tg bg-cyber-tg/5 text-center shadow-[0_0_20px_rgba(34,158,217,0.2)]">
-                        <i class="ph-duotone ph-arrows-left-right text-3xl text-cyber-tg mb-2"></i>
-                        <h3 class="font-black uppercase text-sm text-cyber-tg">Match</h3>
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-purple bg-cyber-purple/10 shadow-[0_0_20px_rgba(168,85,247,0.25)] z-10 flex items-center gap-2" style="top: 8%; left: 50%; transform: translateX(-50%);">
+                        <i class="ph-duotone ph-users text-xl text-cyber-purple"></i>
+                        <p class="text-xs font-black uppercase text-cyber-purple">Demand</p>
                     </div>
-                    <div class="tech-card p-5 border-l-4 border-cyber-orange bg-cyber-orange/5 text-center">
-                        <i class="ph-duotone ph-truck text-3xl text-cyber-orange mb-2"></i>
-                        <h3 class="font-black uppercase text-sm text-cyber-orange">Supply</h3>
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-orange bg-cyber-orange/10 shadow-[0_0_20px_rgba(249,115,22,0.25)] z-10 flex items-center gap-2" style="bottom: 8%; left: 12%;">
+                        <i class="ph-duotone ph-truck text-xl text-cyber-orange"></i>
+                        <p class="text-xs font-black uppercase text-cyber-orange">Supply</p>
+                    </div>
+                    <div class="absolute tech-card px-3 py-2 border-l-4 border-cyber-green bg-cyber-green/10 shadow-[0_0_20px_rgba(34,197,94,0.25)] z-10 flex items-center gap-2" style="bottom: 8%; right: 12%;">
+                        <i class="ph-duotone ph-shield-check text-xl text-cyber-green"></i>
+                        <p class="text-xs font-black uppercase text-cyber-green">Trust</p>
                     </div>
                 </div>
 
@@ -1979,16 +2139,23 @@
                 <h2 class="text-3xl md:text-4xl font-black uppercase mb-2 text-center">AI Startups Are <span class="text-gradient">Not One Category</span></h2>
                 <p class="text-sm text-muted mb-8 text-center">Nine model types · different economics.</p>
 
-                <div class="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-2 max-w-5xl mx-auto mb-6">
-                    <div class="tech-card p-3 border-t-4 border-cyber-tg bg-cyber-tg/5 text-center"><i class="ph-duotone ph-headset text-xl text-cyber-tg mb-1"></i><p class="text-[10px] font-bold uppercase">AI service</p></div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-tg bg-cyber-tg/5 text-center"><i class="ph-duotone ph-package text-xl text-cyber-tg mb-1"></i><p class="text-[10px] font-bold uppercase">Productized service</p></div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-purple bg-cyber-purple/5 text-center"><i class="ph-duotone ph-credit-card text-xl text-cyber-purple mb-1"></i><p class="text-[10px] font-bold uppercase">AI-native SaaS</p></div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-purple bg-cyber-purple/5 text-center shadow-[0_0_20px_rgba(168,85,247,0.15)]"><i class="ph-duotone ph-robot text-xl text-cyber-purple mb-1"></i><p class="text-[10px] font-bold uppercase">AI agent</p></div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-orange bg-cyber-orange/5 text-center"><i class="ph-duotone ph-network text-xl text-cyber-orange mb-1"></i><p class="text-[10px] font-bold uppercase">Infra</p></div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-orange bg-cyber-orange/5 text-center"><i class="ph-duotone ph-cube text-xl text-cyber-orange mb-1"></i><p class="text-[10px] font-bold uppercase">Foundation model</p></div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-green bg-cyber-green/5 text-center"><i class="ph-duotone ph-target text-xl text-cyber-green mb-1"></i><p class="text-[10px] font-bold uppercase">Vertical AI</p></div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-green bg-cyber-green/5 text-center"><i class="ph-duotone ph-database text-xl text-cyber-green mb-1"></i><p class="text-[10px] font-bold uppercase">Data / evals</p></div>
-                    <div class="tech-card p-3 border-t-4 border-cyber-red bg-cyber-red/5 text-center"><i class="ph-duotone ph-storefront text-xl text-cyber-red mb-1"></i><p class="text-[10px] font-bold uppercase">AI marketplace</p></div>
+                <div class="relative w-full max-w-[460px] mx-auto h-[420px] mb-6">
+                    <div class="orbit-ring"></div>
+                    <div class="orbit-ring reverse" style="inset: 32px;"></div>
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full gradient-bg flex flex-col items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.5)] animate-glow-pulse z-20">
+                        <i class="ph-fill ph-cpu text-3xl text-white"></i>
+                        <span class="font-black text-[10px] uppercase text-white tracking-widest mt-0.5">AI</span>
+                    </div>
+
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-tg bg-cyber-tg/10 text-cyber-tg shadow-md z-10 flex items-center gap-1.5" style="top: 0%; left: 50%; transform: translate(-50%, -50%);"><i class="ph-fill ph-headset"></i> <span class="text-[10px] font-bold uppercase">Service</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-tg bg-cyber-tg/10 text-cyber-tg shadow-md z-10 flex items-center gap-1.5" style="top: 17%; left: 90%; transform: translate(-50%, -50%);"><i class="ph-fill ph-package"></i> <span class="text-[10px] font-bold uppercase">Productized</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-purple bg-cyber-purple/10 text-cyber-purple shadow-md z-10 flex items-center gap-1.5" style="top: 50%; left: 100%; transform: translate(-50%, -50%);"><i class="ph-fill ph-credit-card"></i> <span class="text-[10px] font-bold uppercase">SaaS</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-purple bg-cyber-purple/10 text-cyber-purple shadow-[0_0_20px_rgba(168,85,247,0.3)] z-10 flex items-center gap-1.5" style="top: 83%; left: 90%; transform: translate(-50%, -50%);"><i class="ph-fill ph-robot"></i> <span class="text-[10px] font-bold uppercase">Agent</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-orange bg-cyber-orange/10 text-cyber-orange shadow-md z-10 flex items-center gap-1.5" style="top: 100%; left: 65%; transform: translate(-50%, -50%);"><i class="ph-fill ph-network"></i> <span class="text-[10px] font-bold uppercase">Infra</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-orange bg-cyber-orange/10 text-cyber-orange shadow-md z-10 flex items-center gap-1.5" style="top: 100%; left: 35%; transform: translate(-50%, -50%);"><i class="ph-fill ph-cube"></i> <span class="text-[10px] font-bold uppercase">Foundation</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-green bg-cyber-green/10 text-cyber-green shadow-md z-10 flex items-center gap-1.5" style="top: 83%; left: 10%; transform: translate(-50%, -50%);"><i class="ph-fill ph-target"></i> <span class="text-[10px] font-bold uppercase">Vertical</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-green bg-cyber-green/10 text-cyber-green shadow-md z-10 flex items-center gap-1.5" style="top: 50%; left: 0%; transform: translate(-50%, -50%);"><i class="ph-fill ph-database"></i> <span class="text-[10px] font-bold uppercase">Data</span></div>
+                    <div class="absolute tech-card px-2.5 py-1.5 border-l-2 border-cyber-red bg-cyber-red/10 text-cyber-red shadow-md z-10 flex items-center gap-1.5" style="top: 17%; left: 10%; transform: translate(-50%, -50%);"><i class="ph-fill ph-storefront"></i> <span class="text-[10px] font-bold uppercase">Marketplace</span></div>
                 </div>
 
                 <div class="tech-card p-4 border-2 border-cyber-purple/30 bg-cyber-purple/5 max-w-4xl mx-auto mb-4">
@@ -2396,6 +2563,30 @@
                 </div>
 
                 <p class="text-center text-xs uppercase font-mono text-cyber-tg mb-3 tracking-widest">Bessemer benchmark · attractive efficiency</p>
+
+                <div class="relative w-full max-w-[420px] mx-auto h-[200px] mb-4">
+                    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 200 110">
+                        <defs>
+                            <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#22c55e"/>
+                                <stop offset="40%" stop-color="#229ED9"/>
+                                <stop offset="70%" stop-color="#f97316"/>
+                                <stop offset="100%" stop-color="#ef4444"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round"/>
+                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round"/>
+                        <text x="22" y="96" font-family="'Space Mono', monospace" font-size="8" font-weight="700" fill="#22c55e">1×</text>
+                        <text x="68" y="34" font-family="'Space Mono', monospace" font-size="8" font-weight="700" fill="#229ED9">1.5×</text>
+                        <text x="118" y="34" font-family="'Space Mono', monospace" font-size="8" font-weight="700" fill="#f97316">2×</text>
+                        <text x="166" y="96" font-family="'Space Mono', monospace" font-size="8" font-weight="700" fill="#ef4444">3×+</text>
+                        <circle cx="100" cy="100" r="6" fill="#a855f7" stroke="#fff" stroke-width="1.5"/>
+                    </svg>
+                    <div class="absolute" style="top: 16px; left: 50%; transform-origin: bottom center; transform: translateX(-50%);">
+                        <div class="w-1 h-[80px] bg-gradient-to-t from-cyber-purple to-cyber-orange rounded-full origin-bottom shadow-[0_0_15px_rgba(168,85,247,0.6)] gauge-needle"></div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-3 gap-2 max-w-3xl mx-auto mb-4">
                     <div class="tech-card p-3 border-t-4 border-cyber-green bg-cyber-green/5 text-center">
                         <p class="text-2xl font-black text-cyber-green">1×</p>
