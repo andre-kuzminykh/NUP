@@ -7,7 +7,7 @@ Description (Goal / Scope)	Build an open-source Python framework that converts a
 Client	Dataism Lab (open-source community); target adopters — AI engineering teams in mid/large enterprises, R&D labs, regulated industries (fintech, medtech, govtech) and AI agent platform builders that need auditable and reproducible agent execution
 Problem	Modern LLM-agent frameworks (LangChain, AutoGen, CrewAI) are non-deterministic, hard to audit, opaque under failure, lack reproducible replay, mix planning with execution, and have no first-class commitment/control protocol. This blocks enterprise adoption where SLA, compliance, root-cause analysis and reproducibility are mandatory.
 Solution	A layered framework that (a) separates Plan → Execute → Verify → Adapt, (b) compiles plans into typed DAGs with canonical JSON for byte-identical replay, (c) records every transition into an append-only trace with content-addressed artifacts, (d) exposes a declarative control protocol (continue/pause/revise/replan/stop/escalate) over a state machine, (e) provides critic-based verification before commit, (f) allows scaling local single-process runs to distributed Redis+RQ workers without code change.
-Metrics	1) Replay determinism rate ≥ 99% on identical seed/config (byte-equality of artifact_id). 2) Mean time to resume from PAUSED checkpoint ≤ 2s (local) / 10s (distributed). 3) Trace coverage = 100% of state transitions and node executions persisted. 4) Critic precision/recall ≥ 0.9 on benchmark verification suite. 5) Time-to-onboard new node type by 3rd-party developer ≤ 1 day. 6) p95 end-to-end latency for ≤10-node DAG ≤ 30s with gpt-4.1-mini. 7) Zero data loss on graceful pause/stop (all checkpoints flushed).
+Metrics	1) Replay determinism rate ≥ 99% on identical seed/config (byte-equality of artifact_id). 2) Mean time to resume from PAUSED checkpoint ≤ 2s (local) / 10s (distributed). 3) Trace coverage = 100% of state transitions and node executions persisted. 4) Critic precision/recall ≥ 0.9 on benchmark verification suite. 5) Time-to-onboard new node type by 3rd-party developer ≤ 1 day. 6) p95 end-to-end latency for ≤10-node DAG ≤ 30s with gpt-4.1-mini. 7) Zero data loss on graceful pause/stop (all checkpoints flushed). 8) Memory recall@k ≥ 0.85 on retrieval benchmark with k=10. 9) Custom critic plug-in registration time ≤ 30 min (from skeleton to integration test green). 10) MCP tool round-trip overhead ≤ 100 ms p95 excluding network. 11) Worker failover (lease expiry → re-claim) ≤ 30 s with no duplicate node execution. 12) Observability fan-out latency from event emit to listener ≤ 50 ms p95.
 
 2. User Stories and Use Cases
 
@@ -122,7 +122,146 @@ Req ID	Requirement
 NFR-10	Scalability: linear throughput up to 32 concurrent workers on the standard benchmark DAG (≥ 0.85 scaling efficiency); no global locks on the hot path.
 NFR-11	Security: CodeNode SHALL execute in a Docker sandbox with no host network and read-only mounts of approved inputs; secrets (API keys) are read from env/secret store and never persisted into trace or artifacts.
 
-3. Architecture / Solution
+Use Case (+ Edges) BDD 2
+Field	Fill In
+Use Case ID	UC-3.2
+Given	The platform is deployed (Postgres + Redis + ≥1 worker), trace_event_listener subscribers (Prometheus exporter / Loki shipper / OpenTelemetry adapter) are registered through create_runner(trace_event_listener=...), the SRE has access to dashboards.
+When	Runs execute under load and emit trace events; the SRE queries dashboards for throughput, p95 latency, error rate, queue depth, lease age, critic FAIL rate, replay divergence rate; alerts fire on threshold breach (e.g., queue_depth > N, lease_age > 30s, critic_fail_rate > 5%).
+Then	Every emitted trace event SHALL reach all registered listeners in order with ≤ 50 ms p95 fan-out latency; metrics SHALL include per-run, per-node-type and per-worker labels; structured logs SHALL include trace_id, execution_id, node_ref correlation IDs; alert payload SHALL contain the offending trace_id so the operator can pivot to the run timeline in one click.
+Input	Listener callable Callable[[dict[str,Any]], None] passed to create_runner; alerting thresholds configured externally (Prometheus rules / Grafana / OpsGenie).
+Output	Stream of trace event dicts to listeners; metrics scraped from /metrics endpoint (or pushed); alerts; correlated structured logs.
+State	Listener registration is in-memory per process; no central state mutated; alerting state lives in the external monitoring system.
+Functional Requirements
+Req ID	Requirement
+FR-13	The system SHALL allow registration of one or more trace_event_listener callables via create_runner; events MUST be delivered in the same order they are persisted to the trace store, with at-least-once semantics per listener.
+FR-14	Structured logs SHALL include correlation fields trace_id, execution_id, node_ref, control_command_id (when applicable) on every line; default formatter SHALL be JSON-line.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-12	Observability fan-out: time from event persisted to all listeners invoked SHALL be ≤ 50 ms p95 with up to 8 listeners.
+NFR-13	A slow or failing listener MUST NOT block executor progress; failures SHALL be logged and isolated, and a circuit-breaker SHALL drop the listener after N consecutive failures with an alert.
+
+User Story 4
+Role	Knowledge / ML Engineer
+User Story ID	US-4
+User Story	As a Knowledge Engineer, I want to ingest documents and prior-run artifacts into the GraphRAG-lite memory and let the agent retrieve them during DAG execution, so that agents can reuse organizational knowledge without re-running expensive computations.
+UX / User Flow	1) Engineer prepares a corpus (markdown / PDFs / JSON / prior trace bundles). 2) Calls memory.ingest(source) which chunks → embeds → writes MemoryNode + MemoryEdge + vector(pgvector) rows. 3) Verifies via memory.search(query, k) returns relevant chunks with scores. 4) Configures a node in the DAG to call agentic retrieval (memory.retrieve(query, k, hops)). 5) During execution the agent fetches relevant context, includes it in the LLM prompt, and emits a MEMORY_HIT trace event with retrieved IDs.
+
+Use Case (+ Edges) BDD 1
+
+Use Case ID	UC-4.1
+Given	A configured embeddings provider (sentence-transformers or OpenAI), an IndexStore that supports pgvector (or sqlite-vec fallback), write access, and a source corpus.
+When	Engineer calls memory.ingest(source, kind, metadata) which chunks the source, computes embeddings, writes MemoryNode rows with content_artifact_id (CAS) + embedding vectors and MemoryEdge rows for explicit relations.
+Then	Each chunk SHALL be addressable by canonical MemoryNode.id, the embedding vector dimension SHALL match the configured model, vector index SHALL be updated transactionally, and a MEMORY_INGESTED trace event SHALL be emitted with counts and source digest; duplicate ingest of the same source SHALL be idempotent (no duplicate MemoryNode rows by content sha256).
+Input	source (path / URL / bytes / trace_id), kind (Literal["doc","artifact","trace"]), metadata dict, optional chunking config (size, overlap), optional explicit edges list.
+Output	IngestReport{ nodes_created, edges_created, embeddings_written, source_digest, duration_ms }; MEMORY_INGESTED trace event.
+State	IndexStore: MemoryNode + MemoryEdge + embedding rows added (or skipped if duplicate); BlobStore: chunk content stored in CAS by content sha256.
+Functional Requirements
+Req ID	Requirement
+FR-15	memory.ingest SHALL chunk, embed and persist with deduplication by content sha256, and SHALL emit a MEMORY_INGESTED trace event including source_digest and counts.
+FR-16	Embedding writes SHALL be transactional with MemoryNode/MemoryEdge inserts; partial failures MUST roll back to prevent dangling vectors.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-14	Throughput: ingest of 1k chunks (~1 MB total) SHALL complete in ≤ 30 s p95 with default embeddings model on a 4-vCPU host.
+
+Use Case (+ Edges) BDD 2
+Field	Fill In
+Use Case ID	UC-4.2
+Given	Memory store has been ingested (UC-4.1 ran successfully), embeddings are available, and a node in the DAG declares a retrieval step with parameters (query, k, hops, filter).
+When	The executor invokes memory.retrieve(query, k, hops, filter) during node execution; the system performs vector kNN search over MemoryNode embeddings, then expands by graph walk over MemoryEdge up to `hops`, deduplicates and ranks by score.
+Then	The retrieval SHALL return up to k+graph-expansion results as RetrievalResult objects with score, source, and content_artifact_id; a MEMORY_HIT trace event SHALL be emitted with the retrieved IDs and scores so replay can reproduce identical context; if no results pass the score threshold the node SHALL be served an empty context and a MEMORY_MISS event SHALL be emitted.
+Input	query (str), k (int, default 10), hops (int, default 1), filter (dict, e.g., kind="doc"), score_threshold (float, optional).
+Output	list[RetrievalResult{ id, score, content_artifact_id, source, hops }]; MEMORY_HIT or MEMORY_MISS trace event.
+State	IndexStore: read-only vector + graph query; trace store: append MEMORY_HIT/MISS event with retrieved IDs (so replay can reproduce identical context deterministically).
+Functional Requirements
+Req ID	Requirement
+FR-17	memory.retrieve SHALL combine vector kNN search with graph expansion over MemoryEdge up to `hops`, returning results deduplicated and ranked by combined score.
+FR-18	Every retrieval call SHALL emit a MEMORY_HIT (or MEMORY_MISS) trace event recording the resolved MemoryNode IDs so that replay re-executes the node with identical context regardless of changes to the live memory store.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-15	Latency: retrieval p95 ≤ 200 ms for k=10, hops=1 over a 100k-node memory store on Postgres+pgvector with appropriate indexes.
+NFR-16	Quality: recall@10 ≥ 0.85 on the standard retrieval benchmark dataset.
+
+User Story 5
+Role	Domain Expert / QA Engineer
+User Story ID	US-5
+User Story	As a Domain Expert, I want to define and register custom critic verifiers and have the agent reject and revise failing node outputs automatically, so that domain-specific business rules are enforced before any side-effect is committed.
+UX / User Flow	1) Expert writes a Python class implementing CriticProtocol.verify(node_ref, output, context) → Verdict. 2) Registers it via critics.register("billing-policy", BillingCritic) or via entry-points in setup.cfg. 3) Configures neuronium.toml [verification] critics = ["demo","generic","billing-policy"]. 4) Runs an agent: each node output is gated by all matching critics; on PASS the artifact is committed; on FAIL the node is rejected, evidence stored, and the orchestrator triggers revise/replan automatically (or escalates depending on policy). 5) Expert inspects CriticVerdict rows + evidence artifact for tuning.
+
+Use Case (+ Edges) BDD 1
+
+Use Case ID	UC-5.1
+Given	A Python module providing a class that implements CriticProtocol (verify(node_ref, output, context) → Verdict{result: PASS|FAIL|WARN, evidence_artifact_id, message}); the module is importable in the worker environment.
+When	The expert registers it via critics.register(name, cls) at process start, OR declares it under [verification.critics] in neuronium.toml, OR exposes it through Python entry-point group "neuronium_agent.critics".
+Then	The orchestrator SHALL discover the critic at startup, validate that it implements CriticProtocol, include it in the gate chain for matching node types, and call verify() on every output of those nodes; verdicts SHALL be persisted to the CriticVerdict table with evidence_artifact_id, and a CRITIC_VERDICT trace event SHALL be emitted with name, result and evidence pointer.
+Input	critic class implementing CriticProtocol; registration name (str); optional match config (node_type, tag, run.metadata filter); optional priority (int, default 100).
+Output	registration receipt; subsequent CRITIC_VERDICT trace events; CriticVerdict rows with evidence; aggregated critic_pass_rate metric.
+State	In-memory critic registry per process; verdict rows in IndexStore; evidence blob in CAS.
+Functional Requirements
+Req ID	Requirement
+FR-19	The system SHALL discover critics from three sources at startup (programmatic register, neuronium.toml, entry-points) and SHALL fail fast on any class that does not implement CriticProtocol or has a duplicate name.
+FR-20	Every node output SHALL be passed through all matching critics in priority order before the artifact is marked committed; on the first FAIL the node SHALL be marked rejected and downstream execution SHALL be blocked.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-17	Critic gate overhead SHALL be ≤ 20 ms p95 per critic per node (excluding the critic's own logic), and the gate chain SHALL run in-process to avoid extra hops.
+
+Use Case (+ Edges) BDD 2
+Field	Fill In
+Use Case ID	UC-5.2
+Given	A run is RUNNING; a node has just produced an output; one or more registered critics return Verdict.result = FAIL with evidence; recovery policy declares revise_on_critic_fail = true with a max_revise_attempts limit.
+When	The orchestrator receives the FAIL verdict and applies the policy, automatically issuing an internal ControlCommand(type="revise", payload={node_ref, evidence_artifact_id, attempt}); the planner regenerates the affected sub-DAG with the evidence as additional context; the executor re-runs the revised sub-DAG.
+Then	The original failed artifact SHALL be retained for audit (not deleted), a CRITIC_REJECTED + CONTROL_APPLIED + REVISE_TRIGGERED event chain SHALL be appended; the new attempt counter SHALL increment; if max_revise_attempts is exceeded the run SHALL transition to ESCALATED (or FAILED if no escalation handler) with a REVISE_GIVE_UP event; on a subsequent PASS the run continues with the revised artifact committed.
+Input	FAIL Verdict from critic, recovery policy config (revise_on_critic_fail, max_revise_attempts, escalation_target); current node + DAG state.
+Output	REVISE_TRIGGERED / CRITIC_REJECTED / REVISE_GIVE_UP / ESCALATED trace events; new attempt nodes in the DAG; updated RunStatus; final committed artifact (post-revise) or terminal ESCALATED/FAILED state.
+State	Run state stays RUNNING during revise; node attempts are tracked as separate node_ref attempts with an attempt index; counter resets on escalate/restart.
+Functional Requirements
+Req ID	Requirement
+FR-21	On critic FAIL, the orchestrator SHALL automatically apply the configured recovery policy (retry / revise / escalate) without requiring an external operator if revise_on_critic_fail is enabled.
+FR-22	Failed artifacts and their evidence SHALL be retained, queryable by node_ref and attempt index, and exportable so QA can analyze the failure trail offline.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-18	Convergence: on the QA benchmark suite, ≥ 80% of revisable failures SHALL converge to PASS within max_revise_attempts ≤ 3.
+
+User Story 6
+Role	Tool / Plugin Developer
+User Story ID	US-6
+User Story	As a Tool/Plugin Developer, I want to register external MCP tools and ship custom node types, critics and recovery policies as installable plugins, so that I can extend Neuronium's capabilities without forking the core repository.
+UX / User Flow	1) Developer writes an MCP server (or reuses an existing one) exposing tools with JSON Schema. 2) Adds the endpoint + auth to neuronium.toml [[tools.mcp]]. 3) The first run discovers tools via the MCP handshake, registers them in McpToolRegistry, and makes them callable from any McpToolNode in the DAG. 4) For deeper customization, the developer ships a Python package with entry-points (group "neuronium_agent.nodes" / ".critics" / ".recovery_policies"); pip install in worker image automatically registers them. 5) The plan can then reference the new node type or policy by name; tracing/replay/critics work transparently.
+
+Use Case (+ Edges) BDD 1
+
+Use Case ID	UC-6.1
+Given	A reachable MCP server endpoint with valid auth credentials, JSON Schema descriptions for each exposed tool, and an entry under [[tools.mcp]] in neuronium.toml.
+When	The agent process starts (or a new tool is hot-registered) and performs the MCP handshake; an McpToolNode in the DAG invokes a registered tool by name with typed input matching its JSON Schema.
+Then	Tool descriptors SHALL be validated against JSON Schema, persisted in McpToolRegistry with their schema_artifact_id, and exposed to the planner; on invocation the system SHALL marshal input → MCP call → unmarshal output, write the response into CAS, emit MCP_TOOL_CALLED + MCP_TOOL_RESULT trace events with input/output artifact IDs, and apply timeout + retry per node config; schema-violating responses SHALL be rejected with a typed McpProtocolError.
+Input	tool_name (str), payload (dict matching tool input schema), node-level timeout, retry config; MCP server endpoint + auth from config.
+Output	tool_response (dict), output_artifact_id; MCP_TOOL_CALLED + MCP_TOOL_RESULT trace events; updated NodeStatus.
+State	McpToolRegistry persisted in IndexStore; per-call leases or sessions managed by the MCP client; CAS holds input + output blobs.
+Functional Requirements
+Req ID	Requirement
+FR-23	The MCP integration SHALL validate every tool input and output against the registered JSON Schema and SHALL reject mismatches with a typed McpProtocolError.
+FR-24	Tool calls SHALL be replayable: the recorded MCP_TOOL_RESULT artifact MUST be served verbatim during replay, and any live MCP call attempt in strict replay SHALL raise NetworkAttemptInReplayError.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-19	MCP overhead: marshalling/unmarshalling + registry lookup SHALL add ≤ 100 ms p95 per call (excluding the tool's own work and network).
+
+Use Case (+ Edges) BDD 2
+Field	Fill In
+Use Case ID	UC-6.2
+Given	A Python package implementing a custom node type (NodeProtocol with type identifier "my-node") and/or a recovery policy (RecoveryPolicyProtocol), declared via entry-points in pyproject.toml: [project.entry-points."neuronium_agent.nodes"] my-node = "mypkg:MyNode"; package is pip-installed in the worker environment.
+When	The agent process starts; the plugin loader scans entry-points and imports declared classes; the planner SHALL be allowed to emit DAG nodes of type "my-node" and recovery policies of registered names; on execution the executor instantiates the plugin class with the standard contract.
+Then	The plugin class SHALL be validated against the protocol (TypeError on mismatch), registered in the type registry, and become available to the planner; tracing, critics, replay, sandboxing and observability SHALL work transparently for the new type with no core code changes; a PLUGIN_LOADED trace event SHALL list each loaded plugin name + version + module digest at startup.
+Input	pyproject.toml entry-points block; installed Python package implementing the protocol; optional config block under [plugins.my-node] in neuronium.toml.
+Output	Type registry entries; PLUGIN_LOADED trace event; new node executions traced uniformly with built-in nodes.
+State	In-memory plugin registry per process; persistent type-name → module digest mapping recorded for replay reproducibility.
+Functional Requirements
+Req ID	Requirement
+FR-25	The plugin loader SHALL discover plugins via three entry-point groups (neuronium_agent.nodes / .critics / .recovery_policies) at startup and SHALL fail fast on any class that does not implement the declared protocol.
+FR-26	Replay SHALL verify that loaded plugin module digests match those recorded in the original run; a mismatch SHALL emit a PLUGIN_DIGEST_DRIFT warning and (in strict mode) raise PluginDriftError.
+FR-27	Custom nodes SHALL be subject to the same sandboxing rules as built-in nodes: code-executing custom nodes MUST run in the Docker sandbox with no host network unless explicitly whitelisted in config.
+Non-Functional Requirements
+Req ID	Requirement
+NFR-20	Time-to-onboard a custom node from skeleton to integration test green SHALL be ≤ 1 day for a Python developer familiar with the project.
+NFR-21	Plugin loading SHALL add ≤ 500 ms to process startup for up to 20 registered plugins.
 
 3.1 Client Side
 Area	Fill In
@@ -130,10 +269,11 @@ Client Type	(a) CLI `neuronium-agent` (Click-based) for human operators; (b) Pyt
 User Entry Points	CLI commands: `neuronium-agent run`, `neuronium-agent run --interactive`, `neuronium-agent run --trace-id <id>` (resume), `neuronium-agent run --replay <id>`, `neuronium-agent worker`, `neuronium-agent run -v` / `--summary`. Python API entry: `from neuronium_agent.api import create_runner`. Config entry: `neuronium.toml` + env var `NEURONIUM_OPENAI_API_KEY`.
 Main Screens / Commands	Timeline view (default): plan → node-by-node progress → critic verdicts → final summary. Verbose view (-v): stdout/stderr per node + critic evidence. Summary view (--summary): execution_id, trace_id, totals, durations, terminal state. Interactive view: keystroke control (p=pause, s=stop, r=revise). Worker view: job-pull log, lease info.
 Input / Output Format	Input: RunRequest JSON-compatible dict { objective: str, constraints: list[str], mode: "batch"|"supervised"|"interactive", metadata: dict }; ControlCommand { type, payload }; CLI flags. Output: RunHandle + RunStatus DTOs; trace files in jsonl|json|zip; artifacts addressed by canonical artifact_id (sha256-based); rendered HTML; structured logs.
+Plugin & Extension Surface	Three entry-point groups for pip-installable plugins: `neuronium_agent.nodes`, `neuronium_agent.critics`, `neuronium_agent.recovery_policies`. MCP tools registered under `[[tools.mcp]]` in neuronium.toml. trace_event_listener callback passed via create_runner() for in-process observers. Custom embeddings provider via `[memory.embeddings]`. All extension points are versioned and module-digested for replay.
 
 3.2 Backend Services
 Area	Fill In
-Service Name	(1) Orchestrator/Control Plane (in-process AgentRunner facade); (2) Planner Service (HTN → DAG); (3) Execution Engine (deterministic DAG executor); (4) Node Runtime (ModelNode, CodeNode in Docker sandbox, McpToolNode); (5) Trace Service (recording + export + replay); (6) Verification Service (critics: demo, generic, business); (7) Memory Service (GraphRAG-lite + agentic retrieval); (8) Storage Service (BlobStore + IndexStore); (9) Queue Service (Redis + RQ workers); (10) Recovery Service (policies for TRANSIENT/PERSISTENT/SYSTEMIC/CRITICAL).
+Service Name	(1) Orchestrator/Control Plane (in-process AgentRunner facade); (2) Planner Service (HTN → DAG); (3) Execution Engine (deterministic DAG executor); (4) Node Runtime (ModelNode, CodeNode in Docker sandbox, McpToolNode + custom plugin nodes); (5) Trace Service (recording + export + replay); (6) Verification Service (critics: demo, generic, business + custom plugin critics); (7) Memory Service (GraphRAG-lite ingest + vector kNN + graph expansion + retrieval); (8) Storage Service (BlobStore + IndexStore, multi-backend); (9) Queue Service (Redis + RQ workers, lease-based ownership); (10) Recovery Service (policies for TRANSIENT/PERSISTENT/SYSTEMIC/CRITICAL); (11) Plugin Loader (entry-point discovery for nodes/critics/recovery policies, module-digest pinning); (12) Observability Bus (trace_event_listener fan-out, structured-log correlation, /metrics endpoint hook); (13) MCP Client + Registry (tool discovery, JSON Schema validation, replay-safe invocation); (14) Sandbox Service (Docker isolation for CodeNode and unsafe custom nodes); (15) Config Service (TOML + env layered loader with priority and override).
 Responsibility	Orchestrator: state machine, control protocol, checkpoints. Planner: produce typed DAG from objective+constraints. Executor: topological execution, retries, timeouts, determinism. Node Runtime: actual side-effect (LLM, code, MCP). Trace: append-only event log + replay. Verification: pre-commit critic gates with evidence. Memory: store/retrieve graph + vector context. Storage: persist blobs (CAS) and structured rows (runs/artifacts/events). Queue: distribute jobs across workers. Recovery: classify failures and decide retry/escalate.
 Business Logic	Plan→Execute→Verify→Adapt loop: 1) AgentRunner.start writes a RUN row, calls Planner, persists DAG. 2) Executor walks the DAG, for each node it gathers inputs from CAS, calls Node Runtime, validates output via Critic, computes canonical artifact_id, writes blob + index rows, appends trace events. 3) Control commands hit the Orchestrator state machine; pause/stop write a checkpoint and gate further execution. 4) On failure, Recovery classifies and either retries or escalates; on critic FAIL, the node is rejected and revise/replan is suggested. 5) replay_run feeds recorded artifacts to nodes instead of live calls.
 API / Contract	Public Python facade `AgentRunner` (Pydantic v2 DTOs): start(RunRequest, *, on_handle_ready=None) → RunHandle; get_status(handle) → RunStatus; control(handle, ControlCommand) → RunStatus; resume_run(trace_id) → RunHandle; export_trace(handle, format, path); replay(trace_id) → RunHandle; get_latest_pause_context(trace_id); read_artifact_json(artifact_id); get_trace_events(trace_id); get_latest_rendered_artifact_path(trace_id). Factory: create_runner(config=None, *, trace_event_listener=None). Internal contracts: BlobStore (put/get/exists by artifact_id), IndexStore (insert/query runs/artifacts/trace_events), NodeProtocol (run(inputs)->outputs), CriticProtocol (verify(outputs)->Verdict).
@@ -143,10 +283,10 @@ Error Handling	Typed hierarchy in `neuronium_agent.errors`: ConfigError (bad/mis
 
 3.3 Data Architecture and Flows
 Area	Fill In
-Main Entities (ER)	Run(execution_id PK, trace_id, state, created_at, updated_at, mode, objective, metadata_json), Plan(plan_id PK, run_id FK, root_dag_id), Node(node_ref PK, run_id FK, type ∈ {model,code,mcp}, status, inputs_artifact_ids[], output_artifact_id), Artifact(artifact_id PK = canonical sha256, mime, size, blob_ref, created_at), TraceEvent(seq PK, run_id FK, ts, kind, payload_json, parent_trace_id NULL), Checkpoint(checkpoint_id PK, run_id FK, phase_boundary, resume_context_json), CriticVerdict(verdict_id PK, node_ref FK, critic_name, result ∈ {PASS,FAIL,WARN}, evidence_artifact_id), MemoryNode(id PK, kind, content_artifact_id, embedding vector(pgvector)), MemoryEdge(src FK, dst FK, relation), McpToolRegistry(tool_id PK, endpoint, schema_artifact_id), JobLease(execution_id PK, worker_id, expires_at).
-Relationships (ER)	Run 1—1 Plan; Plan 1—N Node (DAG topology in Plan/Node tables, edges in NodeEdge(src_node_ref, dst_node_ref, run_id)); Run 1—N TraceEvent; Run 1—N Checkpoint; Node 1—N CriticVerdict; Node N—1..M Artifact (inputs and one output); Artifact 1—N MemoryNode (optional); MemoryNode N—N MemoryNode via MemoryEdge; Run 0..1—1 JobLease (only one worker leases at a time).
-Data Flow (DFD)	Level 0: User → CLI/API → AgentRunner → {Planner → Executor → Nodes → Critics} → Storage{BlobStore, IndexStore} → Trace; trace_event_listener fan-out to subscribers. Level 1 (per node): Executor pulls input artifact_ids from IndexStore, fetches blobs from CAS, invokes Node (LLM/Code/MCP), receives output bytes, computes canonical artifact_id (sha256 over canonical JSON), writes blob to CAS, inserts Artifact row + Node update + TraceEvent rows transactionally per phase boundary, runs Critic, on PASS commits, on FAIL applies recovery. Replay: same flow but Node Runtime reads recorded output blob from CAS instead of calling external service.
-Input Sources	1) User objective + constraints (CLI/API). 2) neuronium.toml config. 3) Environment variables / .env (NEURONIUM_OPENAI_API_KEY, DB/REDIS URLs). 4) MCP tool servers (external). 5) Web fetch tool (HTTP). 6) Recorded trace bundles (for replay). 7) Memory store (prior runs' artifacts + embeddings). 8) Custom user-supplied node, critic, recovery-policy plugins.
+Main Entities (ER)	Run(execution_id PK, trace_id, state, created_at, updated_at, mode, objective, metadata_json, parent_trace_id NULL), Plan(plan_id PK, run_id FK, root_dag_id, planner_version, plan_digest), Node(node_ref PK, run_id FK, type ∈ {model,code,mcp,custom:*}, status, attempt_idx, inputs_artifact_ids[], output_artifact_id, started_at, ended_at), NodeEdge(src_node_ref, dst_node_ref, run_id), Artifact(artifact_id PK = canonical sha256, mime, size, blob_ref, created_at, producer_node_ref), TraceEvent(seq PK, run_id FK, ts, kind, payload_json, parent_trace_id NULL, listener_fanout_status), Checkpoint(checkpoint_id PK, run_id FK, phase_boundary, resume_context_json, fsynced_at), CriticVerdict(verdict_id PK, node_ref FK, critic_name, result ∈ {PASS,FAIL,WARN}, evidence_artifact_id, priority, latency_ms), MemoryNode(id PK, kind ∈ {doc,artifact,trace,fact}, content_artifact_id, embedding vector(pgvector), source_digest, created_at), MemoryEdge(src FK, dst FK, relation, weight), MemoryRetrievalLog(id PK, run_id FK, node_ref, query_digest, retrieved_ids[], scores[], hops, ts), McpToolRegistry(tool_id PK, endpoint, schema_artifact_id, version, auth_ref), McpToolCall(id PK, node_ref FK, tool_id, input_artifact_id, output_artifact_id, latency_ms, status), PluginRegistry(name PK, kind ∈ {node,critic,recovery_policy}, module, class, version, module_digest), JobLease(execution_id PK, worker_id, leased_at, expires_at, heartbeat_at), RecoveryAttempt(id PK, node_ref FK, classification ∈ {TRANSIENT,PERSISTENT,SYSTEMIC,CRITICAL}, action ∈ {retry,revise,escalate,halt}, attempt_idx, ts), ConfigSnapshot(run_id PK, toml_digest, env_keys[], plugin_digests_json) — recorded per run for replay reproducibility.
+Relationships (ER)	Run 1—1 Plan; Run 1—1 ConfigSnapshot; Plan 1—N Node; Node 1—N NodeEdge (DAG edges); Run 1—N TraceEvent; Run 1—N Checkpoint; Run 1—N RecoveryAttempt; Run 1—N MemoryRetrievalLog; Node 1—N CriticVerdict; Node 1—N McpToolCall; Node 1—N RecoveryAttempt; Node N—1..M Artifact (inputs and one current output per attempt); Artifact 1—N MemoryNode (optional); MemoryNode N—N MemoryNode via MemoryEdge; McpToolRegistry 1—N McpToolCall; PluginRegistry referenced by Node.type and CriticVerdict.critic_name; Run 0..1—1 JobLease (only one worker leases at a time); Run (replay) 1—1 Run (parent_trace_id, original).
+Data Flow (DFD)	Level 0: User/CLI/API → AgentRunner → ConfigSnapshot persisted → Planner → DAG → Executor → {Node Runtime + Memory.retrieve + MCP Client + Critic chain + Recovery} → Storage{BlobStore CAS, IndexStore} → Trace → Observability Bus → Listeners. Level 1 per node: (a) Executor reads input artifact_ids from IndexStore, fetches blobs from CAS; (b) optional memory.retrieve(query) → MemoryRetrievalLog event; (c) Node Runtime invoked (LLM / Code in Docker sandbox / MCP tool / custom plugin); (d) raw output bytes captured, canonical_artifact_id = sha256 over canonical JSON computed; (e) blob written to CAS, Artifact row inserted, Node updated, TraceEvent appended — all transactional per phase boundary with fsync; (f) Critic chain (in priority order) verifies output, writes CriticVerdict + evidence; (g) on FAIL Recovery Service applies policy → retry / revise / escalate; (h) Observability Bus fan-outs every persisted event to listeners with at-least-once + circuit-breaker. Level 1 replay: identical pipeline but Node Runtime reads recorded output blob from CAS by recorded artifact_id; live network calls blocked; replay_index isolated. Level 1 ingest: Memory Service chunks source → embeds → writes MemoryNode + MemoryEdge + vector index transactionally → MEMORY_INGESTED event. Level 1 worker: RQ pulls job → claim JobLease(execution_id) → Orchestrator runs DAG → heartbeat extends lease → on terminal state release lease → on crash lease expires → another worker re-claims (idempotent because state lives in Postgres + CAS).
+Input Sources	1) User objective + constraints (CLI / Python API / RunRequest). 2) neuronium.toml config (project, determinism, storage, llm, queue, verification, memory, sandbox, plugins, tools.mcp). 3) Environment variables / .env (NEURONIUM_OPENAI_API_KEY, DB URL, REDIS URL, NEURONIUM_LOG_LEVEL, etc.). 4) MCP tool servers (external HTTP/stdio endpoints with JSON Schema). 5) Web fetch tool (HTTP, sandboxed). 6) Recorded trace bundles (jsonl/json/zip — for replay or import). 7) Memory store (prior runs' artifacts + ingested docs + embeddings + graph). 8) Custom user-supplied plugins discovered via entry-points (nodes / critics / recovery_policies). 9) Embeddings provider (sentence-transformers locally or OpenAI / pluggable). 10) Secret store (env / Vault / cloud secret manager) for API keys never persisted to trace. 11) Pre-existing artifacts in CAS (e.g., reference data sets) referenced by node inputs.
 
 
 
@@ -169,7 +309,14 @@ UC-1.1	T-1	Implement deterministic Plan→Execute pipeline: HTN planner, DAG exe
 UC-1.2	T-2	Implement Control Protocol & resume: state machine, ControlCommand handling (continue/pause/revise/replan/stop/escalate), checkpoints at phase boundaries, AgentRunner.control + resume_run + get_latest_pause_context, interactive CLI controls	T-1	Pause/Stop/Continue cycle round-trips with ≤ 500 ms p95 control latency on local backends; resume from checkpoint never re-executes COMPLETED nodes; illegal transitions raise typed ControlError; idempotency test passes (same command → same state); integration test with simulated long-running node.	ST-4, ST-5
 UC-2.1	T-3	Implement Trace export & re-import: deterministic ordering, manifest with sha256, formats jsonl/json/zip, bundle re-import path, EXPORT_PERFORMED audit event, CLI flag	T-1	export_trace produces stable, ordered, manifest-checked bundle; 10k-event export ≤ 10 s p95 on local SSD; re-import into empty store recreates identical query results; corrupted artifact reference aborts with typed error.	ST-6, ST-7, ST-8
 UC-2.2	T-4	Implement strict Replay: offline executor mode, NetworkAttemptInReplayError guard, replay_report with TRANSIENT/PERSISTENT/CRITICAL classification, parent_trace_id linkage, dedicated replay_index isolation	T-1, T-3	`AgentRunner.replay(trace_id)` reproduces ≥ 99% of regression-suite runs byte-identically; any divergence is surfaced in replay_report; replay never writes to production index; live network calls in replay are blocked with typed error.	ST-9, ST-10
-UC-3.1	T-5	Productionize backends & workers: Postgres+pgvector IndexStore, Redis+RQ queue, `neuronium-agent worker` entry, Docker sandbox for CodeNode, MCP tool integration, recovery policies, pluggable critics, trace_event_listener fan-out	T-1, T-2	Cluster of N=8 workers achieves ≥ 0.85 linear-scaling efficiency on benchmark DAG; no duplicate node execution under failover; CodeNode runs only inside Docker sandbox without host network; secrets never appear in trace/artifacts; chaos test (worker kill mid-run) recovers without data loss.	ST-11, ST-12
+UC-3.1	T-5	Productionize backends & workers: Postgres+pgvector IndexStore, Redis+RQ queue, `neuronium-agent worker` entry, Docker sandbox for CodeNode, recovery policies foundation	T-1, T-2	Cluster of N=8 workers achieves ≥ 0.85 linear-scaling efficiency on benchmark DAG; no duplicate node execution under failover; CodeNode runs only inside Docker sandbox without host network; secrets never appear in trace/artifacts; chaos test (worker kill mid-run) recovers without data loss.	ST-11, ST-12
+UC-3.2	T-6	Observability Bus: trace_event_listener fan-out with circuit-breaker, structured-log correlation IDs, /metrics endpoint hook, alert payload with trace_id pivot	T-1, T-5	Fan-out latency ≤ 50 ms p95 with 8 listeners; failing listener never blocks executor; every log line carries trace_id/execution_id/node_ref; Prometheus scrape returns counts per node-type and per-worker; alert payload contains trace_id and pivot URL.	ST-13, ST-14
+UC-4.1	T-7	GraphRAG-lite Memory: ingest pipeline (chunking + embeddings + dedup), MemoryNode/MemoryEdge schema + pgvector indexes, transactional writes, MEMORY_INGESTED events	T-1, T-5	Ingest of 1k chunks ≤ 30 s p95; idempotent on duplicate source; vector dim matches model; embedding writes are transactional with row inserts; MEMORY_INGESTED event recorded with source_digest.	ST-15, ST-16
+UC-4.2	T-7	Memory retrieval: vector kNN + graph expansion + ranking, MEMORY_HIT/MISS events, replay-deterministic context	(part of T-7)	Retrieval p95 ≤ 200 ms for k=10/hops=1 over 100k nodes; recall@10 ≥ 0.85 on benchmark; MEMORY_HIT records resolved IDs so replay reproduces identical context.	ST-17
+UC-5.1	T-8	Critic plugin protocol: discovery from programmatic + TOML + entry-points; CriticVerdict persistence; CRITIC_VERDICT events; in-process gate chain	T-1	Three-source discovery works; bad class fails fast with typed error; critic gate overhead ≤ 20 ms p95 per critic per node; verdicts persisted with evidence and queryable.	ST-18, ST-19
+UC-5.2	T-8	Auto revise loop: recovery policy revise_on_critic_fail with max_revise_attempts; failed-artifact retention; ESCALATED state	T-2, T-8	≥ 80% of revisable failures converge to PASS within 3 attempts; failed artifacts retained and queryable by attempt index; ESCALATED state reached cleanly when limit exceeded.	ST-20
+UC-6.1	T-9	MCP tool integration: handshake + JSON Schema validation + McpToolRegistry + replay-safe invocation + McpProtocolError	T-1, T-5	Tool descriptors validated and persisted; live + replay paths both work; schema-violating responses raise McpProtocolError; MCP overhead ≤ 100 ms p95.	ST-21, ST-22
+UC-6.2	T-9	Plugin SDK: entry-point loader for nodes/critics/recovery_policies + module-digest pinning + PluginDriftError on replay drift + sandbox enforcement for custom code nodes	T-2, T-5, T-8	Three entry-point groups discovered at startup; bad protocol implementation fails fast; replay detects digest drift and raises PluginDriftError in strict mode; custom code nodes obey sandbox rules; plugin-load adds ≤ 500 ms startup for 20 plugins.	ST-23, ST-24, ST-25
 
 5. Detailed Task Breakdown
 Task 1
@@ -237,4 +384,61 @@ DoD	(a) Switching IndexStore from sqlite to postgres in neuronium.toml requires 
 Subtasks
 Subtask ID	Description	Dependencies	Acceptance Criteria
 ST-11	Implement Postgres IndexStore (with optional pgvector), migrations, BlobStore/IndexStore selection from neuronium.toml, Redis + RQ queue + `neuronium-agent worker` entry with lease-based ownership and orphan-lease expiry.	T-1, T-2	Same integration suite that passes on sqlite passes on postgres without code changes; 8-worker benchmark hits ≥ 0.85 scaling efficiency; killing a worker mid-run results in lease expiry and re-claim by another worker without duplicate node execution (verified by trace).
-ST-12	Implement Docker sandbox for CodeNode (no host network, read-only mounts), MCP tool registry + invocation, recovery policies for TRANSIENT/PERSISTENT/SYSTEMIC/CRITICAL with backoff/escalate, pluggable critics, trace_event_listener fan-out, secret-leak CI scan.	ST-11	CodeNode unit test asserts no host-network access and read-only mount; MCP fixture tool round-trips through McpToolNode; injecting TRANSIENT failure triggers backoff retry and CRITICAL failure halts the run with typed error; trace_event_listener receives every event in order; CI secret-scan on artifacts and trace exits clean.
+ST-12	Implement Docker sandbox for CodeNode (no host network, read-only mounts) and recovery policies foundation for TRANSIENT/PERSISTENT/SYSTEMIC/CRITICAL with backoff/escalate; secret-leak CI scan over artifacts and trace.	ST-11	CodeNode unit test asserts no host-network access and read-only mount; injecting TRANSIENT failure triggers backoff retry and CRITICAL failure halts the run with typed error; CI secret-scan on artifacts and trace exits clean.
+
+Task 6
+Field	Fill In
+Task ID	T-6
+Related Use Case	UC-3.2 (Observability fan-out)
+Task Description	Implement the Observability Bus: trace_event_listener registration via create_runner, in-order at-least-once delivery, circuit-breaker isolation of slow/failing listeners, structured-log correlation IDs (trace_id / execution_id / node_ref / control_command_id) on every line, /metrics endpoint hook with per-run / per-node-type / per-worker labels, alert payload that contains trace_id and a pivot URL.
+Dependencies	T-1 (trace events must exist), T-5 (multi-worker context for cluster-level metrics).
+DoD	(a) Fan-out latency from event persisted to all listeners invoked ≤ 50 ms p95 with up to 8 listeners; (b) Failing listener never blocks executor (verified by chaos test injecting exception in listener); (c) Circuit-breaker drops listener after N consecutive failures with an alert; (d) Every log line includes correlation IDs in JSON-line format; (e) Prometheus scrape on /metrics returns counts and durations labelled by node_type and worker_id; (f) Sample alert payload contains trace_id and works as a one-click pivot in Grafana fixture.
+
+Subtasks
+Subtask ID	Description	Dependencies	Acceptance Criteria
+ST-13	Implement trace_event_listener fan-out with in-order at-least-once delivery, per-listener circuit-breaker, and isolation so a slow/failing listener does not block executor progress.	T-1	Unit test: 8 listeners, one of them sleeps 5s — executor continues unaffected and slow listener is dropped after configured threshold; ordering test verifies sequence_no monotonicity at every listener.
+ST-14	Implement structured JSON-line logger with correlation IDs (trace_id/execution_id/node_ref/control_command_id) and /metrics endpoint hook with per-run/per-node-type/per-worker labels; ship sample Grafana dashboard + alert rule with trace_id pivot.	ST-13	Log capture in test confirms correlation fields present on every line; Prometheus scrape returns expected metric names; sample alert payload contains trace_id and renders pivot URL in Grafana fixture.
+
+Task 7
+Field	Fill In
+Task ID	T-7
+Related Use Case	UC-4.1 (Memory ingest) + UC-4.2 (Memory retrieve)
+Task Description	Implement GraphRAG-lite Memory subsystem end-to-end: schema (MemoryNode, MemoryEdge, MemoryRetrievalLog with pgvector indexes), ingest pipeline (chunking, embeddings provider abstraction supporting sentence-transformers and OpenAI, content-sha256 dedup, transactional writes), retrieval pipeline (vector kNN + graph expansion up to N hops + ranking + score threshold), MEMORY_INGESTED / MEMORY_HIT / MEMORY_MISS trace events, replay-deterministic retrieval (record resolved IDs so replay reproduces identical context), public memory.ingest / memory.search / memory.retrieve API surface, optional sqlite-vec fallback when pgvector is unavailable.
+Dependencies	T-1 (CAS + IndexStore + trace), T-5 (Postgres + pgvector for production scale).
+DoD	(a) Ingest of 1k chunks (~1 MB) ≤ 30 s p95 on a 4-vCPU host; (b) Idempotent on duplicate source (no duplicate MemoryNode by content sha256); (c) Embedding writes are transactional with row inserts (no dangling vectors on partial failure); (d) Retrieval p95 ≤ 200 ms for k=10 / hops=1 over 100k MemoryNode rows; (e) recall@10 ≥ 0.85 on benchmark dataset; (f) MEMORY_HIT records resolved IDs and scores so replay reproduces identical context regardless of live store changes; (g) Documented in docs and integration-tested with both sentence-transformers and OpenAI embeddings.
+
+Subtasks
+Subtask ID	Description	Dependencies	Acceptance Criteria
+ST-15	Implement Memory schema (MemoryNode, MemoryEdge, MemoryRetrievalLog) with pgvector indexes on Postgres and sqlite-vec fallback on SQLite; migrations idempotent.	T-1, T-5	Migrations apply cleanly to empty DB and to existing schema; vector index created with correct dim; sample insert + kNN query returns expected order on fixture data.
+ST-16	Implement ingest pipeline: source chunking (configurable size + overlap), embeddings provider abstraction (sentence-transformers + OpenAI), content-sha256 dedup, transactional writes, MEMORY_INGESTED trace event with source_digest + counts.	ST-15	1k-chunk ingest ≤ 30 s p95; re-ingest of same source produces zero new rows and emits MEMORY_INGESTED with status="duplicate"; partial-failure test rolls back cleanly (no dangling vectors).
+ST-17	Implement retrieval pipeline: vector kNN search + graph expansion over MemoryEdge up to `hops`, dedup + rank by combined score, optional score_threshold, MEMORY_HIT/MISS trace event with resolved IDs; expose memory.retrieve as public API; integrate with executor so DAG nodes can declare a retrieval step.	ST-15, ST-16	Retrieval p95 ≤ 200 ms (k=10, hops=1, 100k nodes) on Postgres+pgvector; recall@10 ≥ 0.85 on benchmark; replay test confirms identical context resolved from recorded MEMORY_HIT IDs even after live store mutated.
+
+Task 8
+Field	Fill In
+Task ID	T-8
+Related Use Case	UC-5.1 (Custom critic registration) + UC-5.2 (Auto revise loop on FAIL)
+Task Description	Implement the full Verification subsystem: CriticProtocol contract, three-source critic discovery (programmatic critics.register, [verification.critics] in TOML, entry-points group "neuronium_agent.critics"), in-process gate chain by priority, CriticVerdict persistence with evidence_artifact_id, CRITIC_VERDICT trace events, recovery policy revise_on_critic_fail with max_revise_attempts, CRITIC_REJECTED / REVISE_TRIGGERED / REVISE_GIVE_UP / ESCALATED event chain, failed-artifact retention indexed by node_ref + attempt index, ship built-in critics (demo, generic, business-rule template).
+Dependencies	T-1 (executor + trace + artifacts), T-2 (control protocol — revise/escalate piggybacks on it).
+DoD	(a) Critics discovered from all three sources; bad protocol implementation fails fast at startup with typed error; (b) Gate chain runs in priority order; first FAIL blocks downstream execution; (c) Critic gate overhead ≤ 20 ms p95 per critic per node (excluding the critic's own logic); (d) On FAIL with revise_on_critic_fail, planner regenerates affected sub-DAG using evidence as context; ≥ 80% of revisable failures converge to PASS within 3 attempts on QA benchmark; (e) Failed artifacts retained with attempt index, queryable and exportable; (f) ESCALATED state reached cleanly when max_revise_attempts exceeded; (g) Built-in critics shipped and documented.
+
+Subtasks
+Subtask ID	Description	Dependencies	Acceptance Criteria
+ST-18	Define CriticProtocol (verify(node_ref, output, context) → Verdict{result, evidence_artifact_id, message}); implement three-source discovery (programmatic / TOML / entry-points) with strict protocol validation and duplicate-name detection; implement in-process priority gate chain.	T-1	Discovery test loads from all three sources; bad class raises typed CriticProtocolError at startup; gate chain executes in priority order on fixture nodes; gate overhead measured ≤ 20 ms p95 per critic.
+ST-19	Persist CriticVerdict rows with evidence_artifact_id (evidence stored in CAS), emit CRITIC_VERDICT trace event with name/result/evidence pointer, ship built-in critics (demo, generic, business-rule template) and documentation.	ST-18	Verdicts queryable by node_ref; evidence retrievable via read_artifact_json; built-in critics covered by integration tests; docs include "write your own critic" tutorial.
+ST-20	Implement auto revise loop: on critic FAIL, recovery policy emits internal ControlCommand(type="revise"), planner regenerates sub-DAG using evidence as context, executor reruns; track attempt_idx; on max_revise_attempts exceeded transition to ESCALATED with REVISE_GIVE_UP event; retain failed artifacts indexed by attempt.	ST-18, ST-19, T-2	On the QA benchmark suite ≥ 80% revisable failures converge within 3 attempts; failed artifacts queryable by node_ref + attempt; max-attempts exceeded reaches ESCALATED cleanly with REVISE_GIVE_UP event; trace event chain CRITIC_REJECTED → CONTROL_APPLIED → REVISE_TRIGGERED is in correct order on every revise.
+
+Task 9
+Field	Fill In
+Task ID	T-9
+Related Use Case	UC-6.1 (MCP tool integration) + UC-6.2 (Custom node + plugin SDK)
+Task Description	Implement the full extension surface: (a) MCP client + handshake + JSON Schema validation + McpToolRegistry persistence + replay-safe invocation + McpProtocolError + NetworkAttemptInReplayError integration; (b) Plugin Loader for three entry-point groups (neuronium_agent.nodes / .critics / .recovery_policies) with strict protocol validation, module-digest pinning recorded in ConfigSnapshot, PluginDriftError raised on replay digest mismatch (strict mode); (c) Sandbox enforcement for custom code-executing nodes (same Docker isolation rules as built-in CodeNode unless explicitly whitelisted); (d) PLUGIN_LOADED + MCP_TOOL_CALLED + MCP_TOOL_RESULT trace events; (e) Documentation + skeletons + cookiecutter templates for plugin authors.
+Dependencies	T-2 (control protocol — plugins must integrate with state machine), T-5 (Docker sandbox + production worker context), T-8 (critic plugin discovery shares the loader infrastructure).
+DoD	(a) MCP tool descriptors validated against JSON Schema and persisted; live + replay paths both pass integration tests; (b) Schema-violating MCP responses raise McpProtocolError; live MCP call attempt in strict replay raises NetworkAttemptInReplayError; (c) MCP overhead (marshalling + registry lookup) ≤ 100 ms p95 excluding network; (d) Three entry-point groups discovered at startup; bad protocol class fails fast; plugin-load adds ≤ 500 ms to startup for 20 plugins; (e) ConfigSnapshot records module_digest for every loaded plugin; replay detects drift and raises PluginDriftError in strict mode; (f) Custom code-executing node runs only inside Docker sandbox; non-sandboxed mode requires explicit whitelist; (g) Plugin author "hello world" cookiecutter goes from skeleton → integration test green ≤ 1 day for an experienced Python dev.
+
+Subtasks
+Subtask ID	Description	Dependencies	Acceptance Criteria
+ST-21	Implement MCP client + handshake + JSON Schema validation; persist McpToolRegistry; integrate into McpToolNode with timeout + retry per node config; emit MCP_TOOL_CALLED + MCP_TOOL_RESULT trace events with input/output artifact IDs.	T-1, T-5	Round-trip integration test against fixture MCP server passes; schema-violating response raises typed McpProtocolError; tool descriptor persisted with version + schema_artifact_id; MCP overhead measured ≤ 100 ms p95 excluding network.
+ST-22	Integrate MCP with strict replay: serve recorded MCP_TOOL_RESULT artifact verbatim during replay; raise NetworkAttemptInReplayError on any uncovered live MCP call; replay test covers both happy path and missing-artifact path.	ST-21, T-4	Replay of recorded MCP call returns identical bytes; missing recorded artifact raises NetworkAttemptInReplayError; no live MCP traffic observed during strict replay (verified by network mock).
+ST-23	Implement Plugin Loader for three entry-point groups (neuronium_agent.nodes / .critics / .recovery_policies); strict protocol validation (TypeError on mismatch, fail fast at startup); compute module digest (sha256 of module bytes) and record in PLUGIN_LOADED trace event + ConfigSnapshot.	T-1	Discovery test loads valid plugins from all three groups; invalid class raises PluginProtocolError at startup; PLUGIN_LOADED trace event records name + version + module_digest; plugin-load adds ≤ 500 ms to startup for 20 plugins.
+ST-24	Implement replay-time digest drift detection: compare loaded plugin digests to those in ConfigSnapshot; emit PLUGIN_DIGEST_DRIFT warning (default) or raise PluginDriftError (strict mode).	ST-23, T-4	Drift test: modify plugin module after recording, replay → strict mode raises PluginDriftError, default mode logs warning + appends PLUGIN_DIGEST_DRIFT event but continues; no drift case is silent.
+ST-25	Enforce sandbox for custom code-executing nodes: by default any custom node declared as code-executing runs inside the Docker sandbox with no host network and read-only mounts; non-sandboxed execution requires explicit whitelist in config; ship cookiecutter "hello world" plugin template + docs.	T-5, ST-23	Whitelist-off path: custom code node attempting host network in test fails by Docker policy; whitelist-on path: explicit config allows it and emits SECURITY_WHITELIST_USED warning event; cookiecutter scaffolds a working plugin that registers, runs and is replay-safe end-to-end.
