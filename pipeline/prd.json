@@ -1,0 +1,180 @@
+{
+  "product_name": "NUP Pipeline Backend",
+  "product_overview": "Self-hosted backend that ingests news from RSS / HTML / YouTube / LinkedIn / X / Telegram via a rotating proxy pool, summarises, publishes to Telegram, and assembles short-form Reels using local FFmpeg. Replaces the previous n8n + Google Sheets + Shotstack stack.",
+  "features": [
+    {
+      "feature_id": "F001",
+      "general_info": {
+        "name": "Source Ingestion",
+        "overview": "Periodic fetch of articles from registered sources of various kinds; HTTP through proxy pool; deduplication by canonical link."
+      },
+      "goal_and_context": {
+        "business_goal": "Continuously gather AI/robotics/XR news without bot-blocks.",
+        "user_problem": "Editor needs a unified pipeline regardless of source format."
+      },
+      "actors_and_roles": {
+        "primary_user": "Editor",
+        "secondary_user": "Operator",
+        "system_service": "Celery beat scheduler"
+      },
+      "business_rules": [
+        {"rule_id": "BR001", "description": "All outbound HTTP to sources must go through ProxyPool when PROXY_POOL is configured."},
+        {"rule_id": "BR002", "description": "Articles are deduplicated by canonical link (lower-case host, no UTM, no fragment)."},
+        {"rule_id": "BR003", "description": "A proxy with 3 consecutive failures is cooled down for 10 minutes."}
+      ],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "As an editor, I register a source by URL+kind so that pipeline starts pulling it.", "bdd": {"given": "An empty source registry", "and_preconditions": [], "when": "I POST /v1/sources with {kind, url}", "then": "The source row is created with is_active=true", "and_postconditions": []}},
+        {"scenario_id": "SC002", "user_story": "Outbound source fetches go through proxy.", "bdd": {"given": "PROXY_POOL has 2 proxies", "and_preconditions": [], "when": "Ingest task fetches a source URL", "then": "Outbound request uses one of the configured proxies", "and_postconditions": []}},
+        {"scenario_id": "SC003", "user_story": "Duplicate articles are dropped.", "bdd": {"given": "Article with link L was ingested", "and_preconditions": [], "when": "Same source returns L?utm_source=foo", "then": "No new row is inserted", "and_postconditions": []}},
+        {"scenario_id": "SC004", "user_story": "Each source kind returns a normalized Article.", "bdd": {"given": "Adapter for kind K with fixture payload", "and_preconditions": ["K in {rss, html, youtube_channel, linkedin_profile, x_profile, telegram_channel}"], "when": "Adapter parses payload", "then": "Result has link, title, source_id, raw_content", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [
+        {"nfr_id": "NFR001", "type": "security", "description": "User-Agent rotates from a pool of ≥5 strings."},
+        {"nfr_id": "NFR002", "type": "reliability", "description": "Each external HTTP call has explicit timeout (default 30s)."}
+      ],
+      "test_cases": [
+        {"test_id": "T001", "scenario_id": "SC002", "setup": "PROXY_POOL with 2 proxies, monkeypatched httpx", "action": "ingest_one(source)", "assertion": "captured request kwargs contain proxies=...", "examples": []},
+        {"test_id": "T002", "scenario_id": "SC003", "setup": "DB has Article(link=https://example.com/a)", "action": "save Article(link='https://EXAMPLE.com/a?utm_source=x#frag')", "assertion": "row count unchanged", "examples": []}
+      ]
+    },
+    {
+      "feature_id": "F002",
+      "general_info": {"name": "Article Summarization", "overview": "LLM produces title_ru and content_ru per article."},
+      "goal_and_context": {"business_goal": "Russian-language summary suitable for Telegram channel.", "user_problem": "Editor doesn't want to translate manually."},
+      "actors_and_roles": {"primary_user": "Editor", "secondary_user": null, "system_service": "OpenAI"},
+      "business_rules": [{"rule_id": "BR001", "description": "Output starts with bold headline (*…*) followed by an empty line."}],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "Summary keeps tech terms (LLM, multiagent systems).", "bdd": {"given": "Article mentioning 'LLM'", "and_preconditions": [], "when": "Summarizer runs", "then": "Output contains 'LLM' or 'большая языковая модель'", "and_postconditions": []}},
+        {"scenario_id": "SC002", "user_story": "Format violation triggers one retry.", "bdd": {"given": "First LLM call returns plain text without bold headline", "and_preconditions": [], "when": "Summarizer runs", "then": "A second call is made with strict-format instruction", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [],
+      "test_cases": []
+    },
+    {
+      "feature_id": "F003",
+      "general_info": {"name": "Telegram Text Publication", "overview": "Posts summary to channel with throttling and retry."},
+      "goal_and_context": {"business_goal": "Reliable text feed in channel.", "user_problem": "Avoid rate limits and lost posts."},
+      "actors_and_roles": {"primary_user": "Editor", "secondary_user": null, "system_service": "Telegram Bot API"},
+      "business_rules": [
+        {"rule_id": "BR001", "description": "≥60 sec between two posts to same chat."},
+        {"rule_id": "BR002", "description": "Up to 3 retries on 5xx with backoff 1s/4s/16s."}
+      ],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "Two consecutive posts are spaced.", "bdd": {"given": "Two summaries ready for channel C", "and_preconditions": [], "when": "Publisher sends them", "then": "Second send happens ≥60 sec after the first", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [],
+      "test_cases": []
+    },
+    {
+      "feature_id": "F004",
+      "general_info": {"name": "Voiceover Script", "overview": "LLM produces a 80–180 word RU narration script per article."},
+      "goal_and_context": {"business_goal": "Tight Shorts-friendly script.", "user_problem": "Manual scripting too slow."},
+      "actors_and_roles": {"primary_user": "Editor", "secondary_user": null, "system_service": "OpenAI"},
+      "business_rules": [{"rule_id": "BR001", "description": "Word count must be in [80, 180]."}],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "Out-of-range output is retried once.", "bdd": {"given": "First call returns 50 words", "and_preconditions": [], "when": "Voiceover service runs", "then": "A second call is made with a 'tighten/expand' instruction", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [],
+      "test_cases": []
+    },
+    {
+      "feature_id": "F005",
+      "general_info": {"name": "Segment Decomposition", "overview": "LLM cuts script into JSON segments with English keywords."},
+      "goal_and_context": {"business_goal": "Stock search has good queries.", "user_problem": "Manual segmentation."},
+      "actors_and_roles": {"primary_user": "Editor", "secondary_user": null, "system_service": "OpenAI"},
+      "business_rules": [{"rule_id": "BR001", "description": "Output must validate against segments-schema (id, text, keywords[1..5], estimated_duration_sec)."}],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "Invalid JSON triggers one retry.", "bdd": {"given": "First LLM call returns malformed JSON", "and_preconditions": [], "when": "Segmenter runs", "then": "A second call with 'ONLY JSON' instruction succeeds", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [],
+      "test_cases": []
+    },
+    {
+      "feature_id": "F006",
+      "general_info": {"name": "TTS Synthesis", "overview": "ElevenLabs MP3 per segment uploaded to MinIO."},
+      "goal_and_context": {"business_goal": "Consistent voice for Reels.", "user_problem": "External TTS quotas + retries."},
+      "actors_and_roles": {"primary_user": "Editor", "secondary_user": null, "system_service": "ElevenLabs"},
+      "business_rules": [{"rule_id": "BR001", "description": "Same voice_id across all segments of one Reels."}],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "TTS uploads MP3 and saves duration.", "bdd": {"given": "Segment S of reels R", "and_preconditions": [], "when": "TTS completes", "then": "S3 has tts/{R}/{S}.mp3 and segment.audio_duration_sec > 0", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [{"nfr_id": "NFR001", "type": "performance", "description": "TTS of one segment ≤8s p95."}],
+      "test_cases": []
+    },
+    {
+      "feature_id": "F007",
+      "general_info": {"name": "Stock Search & Vision Selection", "overview": "Pexels search + GPT-4o vision describe + LLM picker."},
+      "goal_and_context": {"business_goal": "Visually relevant b-roll without manual editing.", "user_problem": "Manual selection too slow."},
+      "actors_and_roles": {"primary_user": "Editor", "secondary_user": null, "system_service": "Pexels + OpenAI"},
+      "business_rules": [{"rule_id": "BR001", "description": "Picker must not repeat clip across one Reels."}],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "Per-segment selection returns one URL.", "bdd": {"given": "3 candidates with descriptions for segment S", "and_preconditions": [], "when": "Picker runs", "then": "Returns exactly one best_video_url not used by other segments of the same Reels", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [],
+      "test_cases": []
+    },
+    {
+      "feature_id": "F008",
+      "general_info": {"name": "Video Assembly (FFmpeg)", "overview": "Local FFmpeg renders 1080x1920 MP4 from per-segment audio+video, subtitles, optional background music. Replaces Shotstack."},
+      "goal_and_context": {"business_goal": "Eliminate paid render API; full control of pipeline.", "user_problem": "Need deterministic, idempotent renders."},
+      "actors_and_roles": {"primary_user": "Pipeline orchestrator", "secondary_user": "Operator", "system_service": "FFmpeg + MinIO"},
+      "business_rules": [
+        {"rule_id": "BR001", "description": "Each segment video is scaled+center-cropped to 1080x1920."},
+        {"rule_id": "BR002", "description": "Each segment audio replaces source video audio."},
+        {"rule_id": "BR003", "description": "Subtitles are split into 3-word chunks distributed equally over segment length."},
+        {"rule_id": "BR004", "description": "Music when provided is mixed at volume 0.01 across full timeline."},
+        {"rule_id": "BR005", "description": "Output S3 key is deterministic: renders/{job_id}.mp4."},
+        {"rule_id": "BR006", "description": "Re-submitting a succeeded job returns existing output_uri without re-rendering."}
+      ],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "Submit a render and observe the lifecycle.", "bdd": {"given": "API is up", "and_preconditions": ["MinIO bucket exists"], "when": "POST /v1/renders with N≥1 segments", "then": "Response 202 + UUID job_id; GET eventually returns succeeded with output_uri renders/{job_id}.mp4", "and_postconditions": []}},
+        {"scenario_id": "SC002", "user_story": "FFmpeg builder is pure.", "bdd": {"given": "Segments and music_uri", "and_preconditions": [], "when": "ffmpeg_builder.build is called", "then": "Returns argv list starting with 'ffmpeg' without touching disk or network", "and_postconditions": []}},
+        {"scenario_id": "SC003", "user_story": "Output is portrait 1080x1920 H.264.", "bdd": {"given": "A render with one horizontal source clip", "and_preconditions": [], "when": "Job runs", "then": "ffprobe reports width=1080, height=1920, codec=h264", "and_postconditions": []}},
+        {"scenario_id": "SC004", "user_story": "Voiceover replaces video audio.", "bdd": {"given": "Source video has loud audio + silent voiceover MP3", "and_preconditions": [], "when": "Job runs", "then": "Output audio equals voiceover", "and_postconditions": []}},
+        {"scenario_id": "SC005", "user_story": "Subtitle chunking by 3 words.", "bdd": {"given": "subtitle_text", "and_preconditions": [], "when": "chunk_subtitle(text)", "then": "Chunks match expected examples", "and_postconditions": []}, "examples": [{"input": {"text": ""}, "expected": [""]}, {"input": {"text": "a b c d e f g"}, "expected": ["a b c", "d e f", "g"]}]},
+        {"scenario_id": "SC006", "user_story": "Music is mixed at low volume when provided.", "bdd": {"given": "music_uri provided", "and_preconditions": [], "when": "Builder runs", "then": "argv contains -i music_uri and filter contains volume=0.01 + amix", "and_postconditions": []}},
+        {"scenario_id": "SC007", "user_story": "FFmpeg failure produces a failed job with message.", "bdd": {"given": "Runner raises FfmpegError('invalid input')", "and_preconditions": [], "when": "assemble runs", "then": "Job status=failed, error_message contains 'invalid input'", "and_postconditions": []}},
+        {"scenario_id": "SC008", "user_story": "Idempotent resubmit skips ffmpeg.", "bdd": {"given": "Job with status=succeeded", "and_preconditions": [], "when": "Resubmit same job_id", "then": "Returns same output_uri, no FFmpeg invocation", "and_postconditions": []}},
+        {"scenario_id": "SC009", "user_story": "Illegal state transitions are rejected.", "bdd": {"given": "Job in pending", "and_preconditions": [], "when": "transition(succeeded)", "then": "IllegalStateError is raised", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [
+        {"nfr_id": "NFR001", "type": "performance", "description": "1-min Reels render ≤60s on 4-core CPU."},
+        {"nfr_id": "NFR002", "type": "reliability", "description": "All external dependencies invoked with explicit timeout."}
+      ],
+      "test_cases": [
+        {"test_id": "T001", "scenario_id": "SC001", "setup": "TestClient with overridden assemble_service (in-mem repo+fakes)", "action": "POST /v1/renders then GET /v1/renders/{id}", "assertion": "POST=202 with UUID; GET=succeeded with output_uri renders/{id}.mp4", "examples": []},
+        {"test_id": "T002", "scenario_id": "SC002", "setup": "no IO", "action": "ffmpeg_builder.build(segs, None, '/tmp/o.mp4')", "assertion": "argv[0]=='ffmpeg', tmp dir untouched", "examples": []},
+        {"test_id": "T003", "scenario_id": "SC003", "setup": "synthesize 2s 1280x720 with smptebars", "action": "FfmpegRunner.run(argv)", "assertion": "ffprobe: 1080x1920 h264", "examples": []},
+        {"test_id": "T004", "scenario_id": "SC005", "setup": "—", "action": "chunk_subtitle(text)", "assertion": "matches expected", "examples": [{"input": {"text": ""}, "expected": [""]}, {"input": {"text": "a b c d e f g"}, "expected": ["a b c", "d e f", "g"]}]},
+        {"test_id": "T005", "scenario_id": "SC006", "setup": "music_uri", "action": "build(segs, music_uri)", "assertion": "'-i music_uri' present, 'volume=0.01' and 'amix' in filter", "examples": []},
+        {"test_id": "T006", "scenario_id": "SC007", "setup": "FakeRunner raising FfmpegError", "action": "assemble(job_id)", "assertion": "job.status=failed, error_message contains 'invalid input'", "examples": []},
+        {"test_id": "T007", "scenario_id": "SC008", "setup": "succeeded job", "action": "resubmit + assemble", "assertion": "runner.calls len unchanged, output_uri equal", "examples": []},
+        {"test_id": "T008", "scenario_id": "SC009", "setup": "RenderJob(pending)", "action": "transition(succeeded)", "assertion": "IllegalStateError raised", "examples": []}
+      ]
+    },
+    {
+      "feature_id": "F009",
+      "general_info": {"name": "Reels Publication", "overview": "Send video to Telegram channel + update DB row."},
+      "goal_and_context": {"business_goal": "Single source of truth per article in DB.", "user_problem": "Avoid manual posting."},
+      "actors_and_roles": {"primary_user": "Editor", "secondary_user": null, "system_service": "Telegram Bot API"},
+      "business_rules": [{"rule_id": "BR001", "description": "Title and caption come from two independent prompts."}],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "After publish DB row holds video_url, title, caption.", "bdd": {"given": "Render succeeded", "and_preconditions": [], "when": "Publisher finishes", "then": "DB row has non-empty video_url, title_video_ru, caption_video_ru", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [],
+      "test_cases": []
+    },
+    {
+      "feature_id": "F010",
+      "general_info": {"name": "Pipeline Orchestration", "overview": "Celery-driven DAG and event bus replacing n8n."},
+      "goal_and_context": {"business_goal": "Code-defined orchestration.", "user_problem": "n8n state hard to version-control."},
+      "actors_and_roles": {"primary_user": "Operator", "secondary_user": null, "system_service": "Celery + Redis Streams"},
+      "business_rules": [{"rule_id": "BR001", "description": "Events have at-least-once delivery."}],
+      "acceptance_criteria": [
+        {"scenario_id": "SC001", "user_story": "Crashed handler re-receives event.", "bdd": {"given": "Handler raises once on event E", "and_preconditions": [], "when": "EventBus dispatches E", "then": "Handler is retried and event eventually processed", "and_postconditions": []}}
+      ],
+      "non_functional_requirements": [],
+      "test_cases": []
+    }
+  ]
+}
