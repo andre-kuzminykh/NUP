@@ -21,21 +21,20 @@ cd "$ROOT"
 echo
 echo "=== Проверь, что обе .env заполнены: ==="
 echo "  pipeline/.env: TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, TELEGRAM_CHANNEL_USERNAME, OPERATOR_CHAT_ID"
-echo "  bot/.env:      BOT_TOKEN, BACKEND_URL=http://api:8000"
+echo "  bot/.env:      BOT_TOKEN, BACKEND_URL=http://api:8010"
 echo
 
 # 2. Сборка и старт.
 docker compose build
 docker compose up -d
 
-# 3. Прогон тестов внутри контейнера (sanity).
-docker compose run --rm api python -m pytest -q || true
-
-# 4. Покажем статус.
+# 3. Покажем статус.
 docker compose ps
 echo
-echo "API:        http://localhost:8001/docs"
-echo "MinIO UI:   http://localhost:9011  (creds: nup / nupnupnup)"
-echo "Postgres:   localhost:5433 (nup / nup)"
+echo "API:        http://localhost:8010/docs"
+echo "MinIO UI:   http://localhost:9021  (creds: nup / nupnupnup)"
+echo "Postgres:   localhost:5440 (nup / nup)"
 echo
-echo "Логи: docker compose logs -f news-worker bot api"
+echo "Логи:  docker compose logs -f news-worker bot api"
+echo "Один прогон новостей вручную (вместо ожидания 30 мин):"
+echo "  docker compose exec news-worker python -m nup_pipeline.cli.tick_once"
