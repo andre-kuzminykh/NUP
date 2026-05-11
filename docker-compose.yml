@@ -1,0 +1,72 @@
+# Top-level compose: backend (pipeline/) + operator bot + news worker.
+# На VM `human-1` у тебя уже крутится много контейнеров (dataist-bot,
+# dataist-service, pg-proxy-5433, hmnd-*, slack-task-*, *-maturity-bot и т.д.).
+# Хост-порты этого стека выбраны заведомо в стороне:
+#   api      → 8010
+#   postgres → 5440  (pg-proxy уже занял 5433)
+#   redis    → 6390
+#   minio    → 9020 (API) / 9021 (console)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nup
+      POSTGRES_PASSWORD: nup
+      POSTGRES_DB: nup
+    ports: ["5440:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "nup"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6390:6379"]
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: nup
+      MINIO_ROOT_PASSWORD: nupnupnup
+    ports: ["9020:9000", "9021:9001"]
+    volumes: [miniodata:/data]
+    restart: unless-stopped
+
+  api:
+    build: ./pipeline
+    env_file: ./pipeline/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://nup:nup@postgres:5432/nup
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+    ports: ["8010:8010"]
+    depends_on: [postgres, redis, minio]
+    restart: unless-stopped
+
+  news-worker:
+    build: ./pipeline
+    env_file: ./pipeline/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://nup:nup@postgres:5432/nup
+      REDIS_URL: redis://redis:6379/0
+    command: ["python", "-m", "nup_pipeline.cli.news_loop"]
+    depends_on: [postgres, redis]
+    restart: unless-stopped
+
+  bot:
+    build: ./bot
+    env_file: ./bot/.env
+    environment:
+      BACKEND_URL: http://api:8010
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:

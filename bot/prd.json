@@ -1,0 +1,220 @@
+{
+  "product_name": "NUP Telegram Operator Bot",
+  "product_overview": "Operator UI for the NUP pipeline. Pure UI layer — talks to the backend over HTTP, never touches the DB. Built on aiogram 3 with the Trigger → Code → Answer widget pattern.",
+  "features": [
+    {
+      "feature_id": "F001",
+      "general_info": {
+        "name": "Welcome and main menu",
+        "overview": "/start command shows a welcome screen with the list of available commands."
+      },
+      "goal_and_context": {
+        "business_goal": "Give a quick entrypoint so operator immediately knows what the bot can do.",
+        "user_problem": "Operator opened a chat with the bot and needs to discover commands."
+      },
+      "actors_and_roles": {
+        "primary_user": "Pipeline operator",
+        "secondary_user": null,
+        "system_service": null
+      },
+      "business_rules": [
+        {"rule_id": "BR001", "description": "/start always clears the FSM state of the user."}
+      ],
+      "acceptance_criteria": [
+        {
+          "scenario_id": "SC001",
+          "user_story": "As an operator, I want a welcome message when I send /start so that I know which commands exist.",
+          "bdd": {
+            "given": "User has just opened the chat with the bot",
+            "and_preconditions": [],
+            "when": "User sends /start",
+            "then": "Bot replies once with a welcome text containing 'NUP Pipeline Bot' and the /render_status command",
+            "and_postconditions": ["FSM state of the user is cleared"]
+          }
+        }
+      ],
+      "non_functional_requirements": [
+        {"nfr_id": "NFR001", "type": "usability", "description": "Welcome reply arrives within 1 second of /start (no backend calls)."}
+      ],
+      "test_cases": [
+        {
+          "test_id": "T001",
+          "scenario_id": "SC001",
+          "setup": "mock_message with text '/start', mock_state",
+          "action": "handle_start(message, state)",
+          "assertion": "message.answer awaited once with text containing 'NUP Pipeline Bot'; state.clear awaited once",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "feature_id": "F002",
+      "general_info": {
+        "name": "Render job status",
+        "overview": "/render_status <uuid> queries the backend and shows the render job state and output URI."
+      },
+      "goal_and_context": {
+        "business_goal": "Operator can monitor video renders without opening DB or curl.",
+        "user_problem": "After triggering a render, operator wants to know if it succeeded."
+      },
+      "actors_and_roles": {
+        "primary_user": "Pipeline operator",
+        "secondary_user": null,
+        "system_service": "Backend GET /v1/renders/{job_id}"
+      },
+      "business_rules": [
+        {"rule_id": "BR001", "description": "Argument must be a valid UUID; otherwise the bot rejects without calling backend."},
+        {"rule_id": "BR002", "description": "Backend 404 is mapped to a clear 'не найден' answer (not a Python traceback)."}
+      ],
+      "acceptance_criteria": [
+        {
+          "scenario_id": "SC001",
+          "user_story": "As an operator, I want to see the status and output URI of a known render so that I can share the link.",
+          "bdd": {
+            "given": "Backend has render X with status=succeeded and output_uri=Y",
+            "and_preconditions": [],
+            "when": "User sends /render_status X",
+            "then": "Bot replies with a message containing 'succeeded' and Y",
+            "and_postconditions": []
+          }
+        },
+        {
+          "scenario_id": "SC002",
+          "user_story": "As an operator, I want a clear error when the render does not exist so that I can correct my id.",
+          "bdd": {
+            "given": "Backend returns 404 for the given id",
+            "and_preconditions": [],
+            "when": "User sends /render_status <unknown-uuid>",
+            "then": "Bot replies with a message containing 'не найден'",
+            "and_postconditions": []
+          }
+        },
+        {
+          "scenario_id": "SC003",
+          "user_story": "As an operator, I want a clear error when I type a non-UUID so that I correct my input without spamming the backend.",
+          "bdd": {
+            "given": "User opened chat",
+            "and_preconditions": [],
+            "when": "User sends /render_status not-a-uuid",
+            "then": "Bot replies with a message mentioning 'UUID' AND the backend is not called",
+            "and_postconditions": []
+          }
+        }
+      ],
+      "non_functional_requirements": [
+        {"nfr_id": "NFR001", "type": "performance", "description": "Backend HTTP timeout ≤ 5 seconds."}
+      ],
+      "test_cases": [
+        {
+          "test_id": "T001",
+          "scenario_id": "SC001",
+          "setup": "Patch RendersAPI inside render_status_code so .get returns a succeeded job dict",
+          "action": "await handle_render_status(message, state) with text '/render_status <uuid>'",
+          "assertion": "message.answer awaited once with text containing 'succeeded' and the output_uri",
+          "examples": [
+            {"input": {"job_id": "11111111-2222-3333-4444-555555555555"}, "expected": {"answer_contains": ["succeeded", "s3://nup-media/renders/x.mp4"]}}
+          ]
+        },
+        {
+          "test_id": "T002",
+          "scenario_id": "SC002",
+          "setup": "Patch RendersAPI so .get raises NotFoundError",
+          "action": "await handle_render_status(message, state)",
+          "assertion": "message.answer awaited once with text containing 'не найден'",
+          "examples": []
+        },
+        {
+          "test_id": "T003",
+          "scenario_id": "SC003",
+          "setup": "Patch RendersAPI .get is a Mock; argument is 'not-a-uuid'",
+          "action": "await handle_render_status(message, state)",
+          "assertion": "message.answer awaited once with text containing 'UUID'; .get NOT awaited",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "feature_id": "F003",
+      "general_info": {
+        "name": "Review callbacks (Approve / Decline / Edit)",
+        "overview": "Operator taps one of three inline buttons attached to the Reels preview that backend submitted (F011); bot calls the backend reviews API and replies with a bilingual confirmation, removing the keyboard."
+      },
+      "goal_and_context": {
+        "business_goal": "Human-in-the-loop quality gate before posting to @d_media_ai.",
+        "user_problem": "Operator must approve / decline / edit a generated Reels without leaving Telegram."
+      },
+      "actors_and_roles": {
+        "primary_user": "Pipeline operator",
+        "secondary_user": null,
+        "system_service": "Backend POST /v1/reviews/{id}/{approve|decline|start-edit}"
+      },
+      "business_rules": [
+        {"rule_id": "BR001", "description": "All replies are bilingual: RU first, blank line, EN second (via core.i18n.bi)."},
+        {"rule_id": "BR002", "description": "On approve/decline/edit the bot removes the inline keyboard from the original preview message so the operator cannot click twice."},
+        {"rule_id": "BR003", "description": "Bot answers the callback immediately (callback.answer()) so Telegram clears the spinner."},
+        {"rule_id": "BR004", "description": "Malformed callback_data (wrong prefix, missing id, unknown action) MUST NOT call the backend; bot shows bilingual 'Unknown action'."}
+      ],
+      "acceptance_criteria": [
+        {
+          "scenario_id": "SC001",
+          "user_story": "As an operator, when I tap Approve I want the bot to publish to the channel and confirm bilingually.",
+          "bdd": {
+            "given": "Operator sees preview with the Approve button",
+            "and_preconditions": ["callback_data is 'review:approve:<uuid>'"],
+            "when": "Operator taps Approve",
+            "then": "Backend approve is called once; keyboard removed; reply contains 'Опубликовано' and 'Published'",
+            "and_postconditions": []
+          }
+        },
+        {
+          "scenario_id": "SC002",
+          "user_story": "As an operator, when I tap Decline the Reels is marked declined without ever reaching the channel.",
+          "bdd": {
+            "given": "Operator sees preview with the Decline button",
+            "and_preconditions": ["callback_data is 'review:decline:<uuid>'"],
+            "when": "Operator taps Decline",
+            "then": "Backend decline is called once; approve is NOT called; reply contains 'Отклонено' and 'Declined'",
+            "and_postconditions": []
+          }
+        },
+        {
+          "scenario_id": "SC003",
+          "user_story": "As an operator, when I tap Edit I enter the edit flow; for now I get a bilingual acknowledgement of the skeleton.",
+          "bdd": {
+            "given": "Operator sees preview with the Edit button",
+            "and_preconditions": ["callback_data is 'review:edit:<uuid>'"],
+            "when": "Operator taps Edit",
+            "then": "Backend start_edit is called; reply mentions 'редактирования' and 'edit'",
+            "and_postconditions": []
+          }
+        },
+        {
+          "scenario_id": "SC004",
+          "user_story": "As a developer, malformed callback_data must short-circuit without backend calls.",
+          "bdd": {
+            "given": "An old or corrupted callback button is tapped",
+            "and_preconditions": ["callback_data is not in canonical review:<action>:<id> form"],
+            "when": "Bot receives the callback",
+            "then": "No backend call is made; bilingual 'Unknown action' is shown",
+            "and_postconditions": []
+          }
+        }
+      ],
+      "non_functional_requirements": [
+        {"nfr_id": "NFR001", "type": "usability", "description": "All operator-facing text must be bilingual (RU + EN)."},
+        {"nfr_id": "NFR002", "type": "performance", "description": "callback.answer() is called immediately so the Telegram spinner clears within 1 second."}
+      ],
+      "test_cases": [
+        {"test_id": "T001", "scenario_id": "SC001", "setup": "patch ReviewsAPI; callback_data 'review:approve:<uuid>'", "action": "handle_review_callback(cb, state)", "assertion": "approve called once; edit_reply_markup called with None; reply has 'Опубликовано' + 'Published'", "examples": []},
+        {"test_id": "T002", "scenario_id": "SC002", "setup": "patch ReviewsAPI; callback_data 'review:decline:<uuid>'", "action": "handle_review_callback(cb, state)", "assertion": "decline called; approve NOT called; reply has 'Отклонено' + 'Declined'", "examples": []},
+        {"test_id": "T003", "scenario_id": "SC003", "setup": "patch ReviewsAPI; callback_data 'review:edit:<uuid>'", "action": "handle_review_callback(cb, state)", "assertion": "start_edit called; reply mentions edit / редактирования", "examples": []},
+        {"test_id": "T004", "scenario_id": "SC004", "setup": "patch ReviewsAPI; multiple malformed callback_data", "action": "handle_review_callback(cb, state)", "assertion": "no backend call; reply contains 'Unknown' or 'Неизвестное'", "examples": [
+          {"input": {"data": "review:foo:bar"}, "expected": {"backend_calls": 0}},
+          {"input": {"data": "review:approve"}, "expected": {"backend_calls": 0}},
+          {"input": {"data": "garbage"}, "expected": {"backend_calls": 0}},
+          {"input": {"data": "review::"}, "expected": {"backend_calls": 0}}
+        ]}
+      ]
+    }
+  ]
+}

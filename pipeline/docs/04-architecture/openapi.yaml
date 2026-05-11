@@ -1,0 +1,118 @@
+openapi: 3.1.0
+info:
+  title: NUP Pipeline API
+  version: 0.1.0
+  description: |
+    HTTP API surface. F08 endpoints are implemented in this iteration; others are stubs.
+
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /health:
+    get:
+      summary: Liveness
+      responses:
+        '200': { description: ok }
+
+  /v1/renders:
+    post:
+      summary: Submit a video assembly job (F08)
+      tags: [renders]
+      operationId: submitRender
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenderRequest'
+      responses:
+        '202':
+          description: Job accepted (new)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RenderJobDTO' }
+        '200':
+          description: Job already succeeded (idempotent)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RenderJobDTO' }
+        '400':
+          description: Invalid input
+
+  /v1/renders/{job_id}:
+    get:
+      summary: Get render job status (F08)
+      tags: [renders]
+      operationId: getRender
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RenderJobDTO' }
+        '404': { description: not found }
+
+  /v1/sources:
+    post:
+      summary: Register a source (F01) — stub
+      tags: [sources]
+      responses: { '501': { description: not implemented yet } }
+
+  /v1/articles:
+    get:
+      summary: List ingested articles (F01) — stub
+      tags: [articles]
+      responses: { '501': { description: not implemented yet } }
+
+  /v1/reels:
+    post:
+      summary: Trigger Reels generation for an article (F04..F09) — stub
+      tags: [reels]
+      responses: { '501': { description: not implemented yet } }
+
+components:
+  schemas:
+    Segment:
+      type: object
+      required: [audio_uri, video_uri, audio_duration_sec, subtitle_text]
+      properties:
+        ord: { type: integer, minimum: 0 }
+        audio_uri: { type: string, description: "URL or S3 URI of MP3" }
+        video_uri: { type: string, description: "URL or S3 URI of source clip" }
+        audio_duration_sec: { type: number, format: float, minimum: 0.1 }
+        subtitle_text: { type: string }
+
+    RenderRequest:
+      type: object
+      required: [segments]
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Optional client-supplied UUID for idempotency
+        segments:
+          type: array
+          items: { $ref: '#/components/schemas/Segment' }
+          minItems: 1
+        music_uri:
+          type: string
+          nullable: true
+
+    RenderJobDTO:
+      type: object
+      required: [job_id, status]
+      properties:
+        job_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [pending, running, succeeded, failed]
+        output_uri: { type: string, nullable: true }
+        error_message: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
