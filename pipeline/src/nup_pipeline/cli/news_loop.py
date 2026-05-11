@@ -65,7 +65,7 @@ class OpenAIJsonLlm:
         # Default per operator request. Override via OPENAI_MODEL env if the
         # account doesn't have access (then OpenAI returns 404 model_not_found
         # and the log message is obvious).
-        self._model = model or os.environ.get("OPENAI_MODEL", "gpt-5.4-light")
+        self._model = model or os.environ.get("OPENAI_MODEL", "gpt-5.4")
 
     def complete_json(self, prompt: str) -> dict:
         resp = self._client.chat.completions.create(
