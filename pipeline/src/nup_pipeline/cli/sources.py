@@ -80,5 +80,12 @@ def default_sources() -> list[Source]:
         # `_yt_handle` принимает @handle URL; channel_id резолвится автоматом
         # на первом fetch (см. infra/sources/youtube.py). Для скорости можно
         # дать сразу feed URL через _yt("id", "UC...").
-        _yt_handle("nateherk-youtube", "https://www.youtube.com/@nateherk"),
+        _yt_handle("nateherk-youtube",      "https://www.youtube.com/@nateherk"),
+        _yt_handle("david-ondrej",          "https://www.youtube.com/@DavidOndrej"),
+        _yt_handle("andrej-karpathy",       "https://www.youtube.com/@AndrejKarpathy"),
+        _yt_handle("ai-jason-z",            "https://www.youtube.com/@AIJasonZ"),
+        _yt_handle("matthew-berman",        "https://www.youtube.com/@matthew_berman"),
+        _yt_handle("ai-engineer",           "https://www.youtube.com/@aiDotEngineer"),
+        _yt_handle("dave-shap",             "https://www.youtube.com/@DaveShap"),
+        _yt_handle("two-minute-papers",     "https://www.youtube.com/@TwoMinutePapers"),
     ]
