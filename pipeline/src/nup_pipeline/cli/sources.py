@@ -32,6 +32,12 @@ def _yt(source_id: str, channel_id: str) -> Source:
     )
 
 
+def _yt_handle(source_id: str, channel_url: str) -> Source:
+    """YouTube-канал по @handle / /c/ URL — channel_id резолвится автоматически
+    на первом fetch (см. infra/sources/youtube.py)."""
+    return Source(id=source_id, kind=SourceKind.YOUTUBE_CHANNEL, url=channel_url)
+
+
 def default_sources() -> list[Source]:
     return [
         # ─── AI / general tech press ───────────────────────────────────────
@@ -51,28 +57,28 @@ def default_sources() -> list[Source]:
         _rss("openai-blog",          "https://openai.com/blog/rss.xml"),
         _rss("googleblog-ai",        "https://blog.google/technology/ai/rss/"),
         _rss("deepmind-blog",        "https://deepmind.google/blog/rss.xml"),
-        _rss("metaai-blog",          "https://ai.meta.com/blog/rss/"),
         _rss("huggingface-blog",     "https://huggingface.co/blog/feed.xml"),
         _rss("nvidia-blog",          "https://blogs.nvidia.com/feed/"),
-
-        # ─── Research feeds (preprints) ────────────────────────────────────
-        _rss("arxiv-cs-ai",          "https://export.arxiv.org/rss/cs.AI"),
-        _rss("arxiv-cs-lg",          "https://export.arxiv.org/rss/cs.LG"),
-        _rss("arxiv-cs-ro",          "https://export.arxiv.org/rss/cs.RO"),
+        # NB: metaai-blog (ai.meta.com/blog/rss/) → 404 на 2026-05, дропнут.
+        # arxiv-cs-* / preprints — отключены: сотни новых препринтов в день
+        # затопят канал. Включу обратно отдельно, с фильтром по ключевым словам.
 
         # ─── Robotics ──────────────────────────────────────────────────────
         _rss("mit-robotics",         "https://news.mit.edu/topic/mitrobotics-rss.xml"),
         _rss("techcrunch-robotics",  "https://techcrunch.com/category/robotics/feed/"),
         _rss("roadtovr",             "https://www.roadtovr.com/feed/"),
         _rss("robotreport",          "https://www.therobotreport.com/feed/"),
-        _rss("xrtoday",              "https://www.xrtoday.com/feed/"),
         _rss("roboticsautomation",   "https://roboticsandautomationnews.com/feed/"),
         _rss("ieee-spectrum",        "https://spectrum.ieee.org/feeds/feed.rss"),
+        # NB: xrtoday (www.xrtoday.com/feed/) редиректит на маркетинг-страницу
+        # uctoday.com — фид сломан, дропнут.
 
         # ─── Metaverse / XR ───────────────────────────────────────────────
         _rss("techcrunch-metaverse", "https://techcrunch.com/tag/metaverse/feed/"),
 
-        # ─── YouTube-каналы. Чтобы добавить — пришли @handle, я найду
-        #      channel_id и подставлю сюда новую строку _yt(...).
-        # _yt("lex-fridman",      "UCSHZKyawb77ixDdsGog4iWA"),  # пример
+        # ─── YouTube-каналы ───────────────────────────────────────────────
+        # `_yt_handle` принимает @handle URL; channel_id резолвится автоматом
+        # на первом fetch (см. infra/sources/youtube.py). Для скорости можно
+        # дать сразу feed URL через _yt("id", "UC...").
+        _yt_handle("nateherk-youtube", "https://www.youtube.com/@nateherk"),
     ]
