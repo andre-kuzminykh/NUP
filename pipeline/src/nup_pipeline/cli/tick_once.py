@@ -70,7 +70,10 @@ def main() -> None:
         print(json.dumps({"seeded_new": total_new}, indent=2, ensure_ascii=False))
         return
 
-    orchestrator = _build_orchestrator(max_per_source=args.limit)
+    # tick_once — это manual op tool: оператор хочет, чтобы публикация
+    # произошла, даже если БД пуста для источника. Выключаем silent_first_seed
+    # явно, иначе TRUNCATE → tick_once приведёт к published=0.
+    orchestrator = _build_orchestrator(max_per_source=args.limit, silent_first_seed=False)
     if args.no_publish:
         # Подменяем publisher на no-op, чтобы пройти весь pipeline,
         # но НЕ слать сообщения в TG.

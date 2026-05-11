@@ -97,7 +97,11 @@ class OpenAIJsonLlm:
             return {}
 
 
-def _build_orchestrator(max_per_source: int | None = None) -> NewsToChannel:
+def _build_orchestrator(
+    max_per_source: int | None = None,
+    *,
+    silent_first_seed: bool | None = None,
+) -> NewsToChannel:
     token = os.environ["TELEGRAM_BOT_TOKEN"]
     channel = os.environ.get("TELEGRAM_CHANNEL_USERNAME", "@d_media_ai")
     proxies = [p.strip() for p in (os.environ.get("PROXY_POOL", "") or "").replace(",", "\n").splitlines() if p.strip()]
@@ -141,9 +145,14 @@ def _build_orchestrator(max_per_source: int | None = None) -> NewsToChannel:
         publisher=publisher,
         channel_id=channel,
         # Silent-seed первый ingest каждого источника, чтобы backlog не залил
-        # канал. Чтобы принудительно сразу публиковать — NEWS_LOOP_SILENT_FIRST_SEED=0.
+        # канал. Чтобы принудительно сразу публиковать — NEWS_LOOP_SILENT_FIRST_SEED=0
+        # на уровне env или передать silent_first_seed=False этой функции
+        # (как делает cli/tick_once.py — manual op-tool всегда публикует).
         article_repo=article_repo,
-        silent_first_seed=os.environ.get("NEWS_LOOP_SILENT_FIRST_SEED", "1") not in ("0", "false", "no"),
+        silent_first_seed=(
+            silent_first_seed if silent_first_seed is not None
+            else os.environ.get("NEWS_LOOP_SILENT_FIRST_SEED", "1") not in ("0", "false", "no")
+        ),
     )
 
 
