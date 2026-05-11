@@ -13,8 +13,6 @@ RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -e .
 
 COPY src/ ./src/
 COPY docs/ ./docs/
-COPY alembic.ini ./alembic.ini 2>/dev/null || true
-COPY alembic/ ./alembic/ 2>/dev/null || true
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
