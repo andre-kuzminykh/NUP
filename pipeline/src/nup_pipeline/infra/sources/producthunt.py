@@ -3,8 +3,9 @@
 `producthunt.com/feed` отдаёт перемешанный список свежих запусков + служебные
 блоки ('Launching Today / Day Rank'), не годится для «продукта дня».
 
-Этот адаптер ходит на /leaderboard/daily/yesterday и вытаскивает встроенный
-JSON-стейт, находит пост с `dailyRank == "1"` и возвращает один item:
+Этот адаптер строит URL ранкинга за вчера (Product Hunt:
+/leaderboard/daily/YYYY/M/D), вытаскивает встроенный JSON-стейт страницы,
+находит пост с `dailyRank == "1"` и возвращает один item:
 title (имя продукта), link (https://www.producthunt.com/posts/slug),
 description (tagline), pub_date пуст.
 
@@ -14,15 +15,25 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime, timedelta, timezone
 
 _BASE = "https://www.producthunt.com"
-_ITEMS_RX = re.compile(
-    r'"homefeed"\s*:\s*\{[^{]*?"items"\s*:\s*(\[.+?\])\s*[,}]',
-    re.DOTALL,
-)
-# Generic fallback: search for any items-array containing Post entries.
-_GENERIC_ITEMS_RX = re.compile(r'"items"\s*:\s*(\[\s*\{[^\[\]]*?"__typename"\s*:\s*"Post".+?\])',
-                               re.DOTALL)
+
+# Несколько возможных шаблонов, в которых PH встраивает SSR-стейт.
+# Пробуем по очереди.
+_PATTERNS = [
+    re.compile(r'"homefeed"\s*:\s*\{[^{]*?"items"\s*:\s*(\[.+?\])\s*[,}]', re.DOTALL),
+    re.compile(r'"leaderboardFeed"\s*:\s*\{[^{]*?"items"\s*:\s*(\[.+?\])\s*[,}]', re.DOTALL),
+    re.compile(r'"posts"\s*:\s*\{[^{]*?"edges"\s*:\s*(\[.+?\])\s*[,}]', re.DOTALL),
+    re.compile(r'"items"\s*:\s*(\[\s*\{[^\[\]]*?"__typename"\s*:\s*"Post".+?\])', re.DOTALL),
+]
+
+
+def yesterday_url(now: datetime | None = None) -> str:
+    """Сегодняшнее UTC-вчера в формате, который понимает PH leaderboard."""
+    today = now or datetime.now(tz=timezone.utc)
+    y = today - timedelta(days=1)
+    return f"{_BASE}/leaderboard/daily/{y.year}/{y.month}/{y.day}"
 
 
 def parse_producthunt_leaderboard(html_bytes: bytes) -> list[dict]:
@@ -35,7 +46,7 @@ def parse_producthunt_leaderboard(html_bytes: bytes) -> list[dict]:
     text = html_bytes.decode("utf-8", errors="ignore")
 
     items: list[dict] = []
-    for rx in (_ITEMS_RX, _GENERIC_ITEMS_RX):
+    for rx in _PATTERNS:
         m = rx.search(text)
         if not m:
             continue
@@ -50,7 +61,16 @@ def parse_producthunt_leaderboard(html_bytes: bytes) -> list[dict]:
     if not items:
         return []
 
-    posts = [x for x in items if isinstance(x, dict) and x.get("__typename") == "Post"]
+    # PH иногда хранит как [{"node":{...}}, ...] для edges-API, а иногда как
+    # прямые объекты. Нормализуем.
+    flat = []
+    for it in items:
+        if isinstance(it, dict) and isinstance(it.get("node"), dict):
+            flat.append(it["node"])
+        else:
+            flat.append(it)
+    posts = [x for x in flat if isinstance(x, dict) and x.get("__typename") in ("Post", None)
+             and (x.get("name") or x.get("slug"))]
     if not posts:
         return []
 

@@ -2,9 +2,26 @@
 
 Traces: REQ-F01-001, REQ-F01-007.
 """
+from datetime import datetime, timezone
+
 import pytest
 
-from nup_pipeline.infra.sources.producthunt import parse_producthunt_leaderboard
+from nup_pipeline.infra.sources.producthunt import (
+    parse_producthunt_leaderboard,
+    yesterday_url,
+)
+
+
+@pytest.mark.unit
+def test_yesterday_url_format() -> None:
+    fixed = datetime(2026, 5, 11, 0, 0, tzinfo=timezone.utc)
+    assert yesterday_url(now=fixed) == "https://www.producthunt.com/leaderboard/daily/2026/5/10"
+    # Кросс-месяц.
+    cross_month = datetime(2026, 6, 1, 0, 0, tzinfo=timezone.utc)
+    assert yesterday_url(now=cross_month) == "https://www.producthunt.com/leaderboard/daily/2026/5/31"
+    # Кросс-год.
+    cross_year = datetime(2027, 1, 1, 0, 0, tzinfo=timezone.utc)
+    assert yesterday_url(now=cross_year) == "https://www.producthunt.com/leaderboard/daily/2026/12/31"
 
 
 def _make_html(items_json: str) -> bytes:

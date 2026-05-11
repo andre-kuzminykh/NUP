@@ -9,7 +9,10 @@ from typing import Protocol
 
 from nup_pipeline.domain.article import Article
 from nup_pipeline.domain.source import Source, SourceKind
-from nup_pipeline.infra.sources.producthunt import parse_producthunt_leaderboard
+from nup_pipeline.infra.sources.producthunt import (
+    parse_producthunt_leaderboard,
+    yesterday_url as producthunt_yesterday_url,
+)
 from nup_pipeline.infra.sources.rss import parse_rss
 from nup_pipeline.infra.sources.youtube import already_feed_url, resolve_feed_url
 
@@ -46,8 +49,8 @@ class IngestService:
             return []
         proxy = self._proxy.acquire() if self._proxy else None
 
-        # YouTube channels: разрешаем подавать @handle / /c/ URLs прямо в Source.url
-        # — резолвер вытащит channel_id и подменит на полноценный feed.
+        # Эффективный URL, который мы реально качаем. Для некоторых kind'ов
+        # подменяется на дата-зависимый или резолвится @handle → feed.
         fetch_url = source.url
         if source.kind is SourceKind.YOUTUBE_CHANNEL and not already_feed_url(fetch_url):
             try:
@@ -58,6 +61,9 @@ class IngestService:
                     extra={"source_id": source.id, "url": source.url, "err": str(e)},
                 )
                 return []
+        elif source.kind is SourceKind.PRODUCT_HUNT:
+            # source.url игнорируется — берём дату-сегодня минус сутки.
+            fetch_url = producthunt_yesterday_url()
 
         try:
             payload = self._fetcher.get(fetch_url, proxy=proxy)
