@@ -9,6 +9,7 @@ from typing import Protocol
 
 from nup_pipeline.domain.article import Article
 from nup_pipeline.domain.source import Source, SourceKind
+from nup_pipeline.infra.sources.producthunt import parse_producthunt_leaderboard
 from nup_pipeline.infra.sources.rss import parse_rss
 from nup_pipeline.infra.sources.youtube import already_feed_url, resolve_feed_url
 
@@ -67,6 +68,8 @@ class IngestService:
         if source.kind in (SourceKind.RSS, SourceKind.YOUTUBE_CHANNEL):
             # Auto-detect RSS 2.0 / Atom inside parse_rss().
             items = parse_rss(payload)
+        elif source.kind is SourceKind.PRODUCT_HUNT:
+            items = parse_producthunt_leaderboard(payload)
         else:
             # HTML / LinkedIn / X / Telegram adapters arrive next iter.
             log.info("source kind not yet implemented", extra={"kind": source.kind.value})

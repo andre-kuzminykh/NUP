@@ -86,7 +86,15 @@ def default_sources() -> list[Source]:
         # NB: forbes-leadership / cnbc.com/leadership — без RSS, ждут HTML-адаптер.
 
         # ─── Product / Discovery ─────────────────────────────────────────
-        _rss("producthunt",          "https://www.producthunt.com/feed"),
+        # PRODUCT_HUNT-адаптер берёт пост с dailyRank=1 со страницы
+        # /leaderboard/daily/yesterday — это «вчерашний продукт дня».
+        # RSS на /feed отдаёт перемешанные «launching today» секции и
+        # не годится; см. infra/sources/producthunt.py.
+        Source(
+            id="producthunt-yesterday",
+            kind=SourceKind.PRODUCT_HUNT,
+            url="https://www.producthunt.com/leaderboard/daily/yesterday",
+        ),
 
         # NB: psychologytoday (US + intl) → 404, дропнуты. Их сайт сейчас отдаёт
         # RSS только через /feed?type=rss API, требует исследования.

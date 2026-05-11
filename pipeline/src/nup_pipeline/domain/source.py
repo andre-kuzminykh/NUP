@@ -16,6 +16,7 @@ class SourceKind(str, Enum):
     LINKEDIN_PROFILE = "linkedin_profile"
     X_PROFILE = "x_profile"
     TELEGRAM_CHANNEL = "telegram_channel"
+    PRODUCT_HUNT = "product_hunt"
 
 
 @dataclass
