@@ -52,8 +52,9 @@ def default_sources() -> list[Source]:
         _rss("theverge-ai",          "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"),
         _rss("bbc-technology",       "https://feeds.bbci.co.uk/news/technology/rss.xml"),
         _rss("futurism-ai",          "https://futurism.com/categories/ai-artificial-intelligence/feed"),
-        _rss("forbes-ai",            "https://www.forbes.com/ai/feed/"),
-        # NB: marktechpost — уже выше в списке как 'marktechpost'.
+        # NB: forbes-ai / forbes-leadership / cnbc.com/leadership / bbc.com/news/topics
+        # — RSS-эндпоинтов нет (404 или не существует). Для них нужен HTML-адаптер
+        # с CSS-селектором (см. план в docs/01-features/F01-source-ingestion.md).
 
         # ─── AI labs / vendor blogs ────────────────────────────────────────
         _rss("openai-blog",          "https://openai.com/blog/rss.xml"),
@@ -77,20 +78,18 @@ def default_sources() -> list[Source]:
 
         # ─── Metaverse / XR ───────────────────────────────────────────────
         _rss("techcrunch-metaverse", "https://techcrunch.com/tag/metaverse/feed/"),
-        _rss("xrtoday-atom",         "https://www.xrtoday.com/feed/atom/"),
+        # NB: xrtoday — публичный RSS не работает (200 OK, но 0 entries),
+        # нужен HTML-адаптер.
 
         # ─── Business / Leadership ───────────────────────────────────────
-        _rss("forbes-leadership",    "https://www.forbes.com/leadership/feed/"),
         _rss("hrdive-news",          "https://www.hrdive.com/feeds/news/"),
-        # NB: cnbc.com/leadership и bbc.com/news/topics/* RSS не отдают,
-        # для них нужен HTML-адаптер (следующая итерация).
+        # NB: forbes-leadership / cnbc.com/leadership — без RSS, ждут HTML-адаптер.
 
         # ─── Product / Discovery ─────────────────────────────────────────
         _rss("producthunt",          "https://www.producthunt.com/feed"),
 
-        # ─── Psychology / Neuroscience ───────────────────────────────────
-        _rss("psychologytoday",      "https://www.psychologytoday.com/us/rss.xml"),
-        _rss("psychologytoday-intl", "https://www.psychologytoday.com/intl/rss.xml"),
+        # NB: psychologytoday (US + intl) → 404, дропнуты. Их сайт сейчас отдаёт
+        # RSS только через /feed?type=rss API, требует исследования.
 
         # ─── YouTube-каналы ───────────────────────────────────────────────
         # `_yt_handle` принимает @handle URL; channel_id резолвится автоматом

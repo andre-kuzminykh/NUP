@@ -32,6 +32,9 @@ def main() -> None:
                    help="Прогнать суммаризацию, но НЕ публиковать в канал.")
     p.add_argument("--seed", action="store_true",
                    help="Только ingest (без LLM, без TG). Засеять БД канонами ссылок.")
+    p.add_argument("--limit", type=int, default=None,
+                   help="Максимум N свежих item'ов на источник за этот tick "
+                        "(переопределяет MAX_PER_SOURCE=10).")
     args = p.parse_args()
 
     sources = default_sources()
@@ -54,7 +57,11 @@ def main() -> None:
             repo = PostgresArticleRepo(database_url)
         else:
             repo = InMemoryArticleRepo()
-        ingest = IngestService(fetcher=HttpxFetcher(), article_repo=repo)
+        ingest = IngestService(
+            fetcher=HttpxFetcher(),
+            article_repo=repo,
+            max_per_source=args.limit if args.limit is not None else 10,
+        )
         total_new = 0
         for src in sources:
             new = ingest.ingest_source(src)
@@ -63,7 +70,7 @@ def main() -> None:
         print(json.dumps({"seeded_new": total_new}, indent=2, ensure_ascii=False))
         return
 
-    orchestrator = _build_orchestrator()
+    orchestrator = _build_orchestrator(max_per_source=args.limit)
     if args.no_publish:
         # Подменяем publisher на no-op, чтобы пройти весь pipeline,
         # но НЕ слать сообщения в TG.

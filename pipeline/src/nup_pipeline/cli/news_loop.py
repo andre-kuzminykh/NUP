@@ -81,7 +81,7 @@ class OpenAIJsonLlm:
             return {}
 
 
-def _build_orchestrator() -> NewsToChannel:
+def _build_orchestrator(max_per_source: int | None = None) -> NewsToChannel:
     token = os.environ["TELEGRAM_BOT_TOKEN"]
     channel = os.environ.get("TELEGRAM_CHANNEL_USERNAME", "@d_media_ai")
     proxies = [p.strip() for p in (os.environ.get("PROXY_POOL", "") or "").replace(",", "\n").splitlines() if p.strip()]
@@ -95,7 +95,15 @@ def _build_orchestrator() -> NewsToChannel:
         article_repo = PostgresArticleRepo(database_url)
     else:
         article_repo = InMemoryArticleRepo()
-    ingest = IngestService(fetcher=fetcher, article_repo=article_repo, proxy_pool=proxy_pool)
+    ingest = IngestService(
+        fetcher=fetcher,
+        article_repo=article_repo,
+        proxy_pool=proxy_pool,
+        max_per_source=(
+            max_per_source if max_per_source is not None
+            else int(os.environ.get("MAX_PER_SOURCE", "10"))
+        ),
+    )
 
     llm = OpenAIJsonLlm(api_key=os.environ["OPENAI_API_KEY"])
     summarizer = BilingualSummarizer(llm=llm)
