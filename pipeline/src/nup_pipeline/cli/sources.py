@@ -52,6 +52,8 @@ def default_sources() -> list[Source]:
         _rss("theverge-ai",          "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"),
         _rss("bbc-technology",       "https://feeds.bbci.co.uk/news/technology/rss.xml"),
         _rss("futurism-ai",          "https://futurism.com/categories/ai-artificial-intelligence/feed"),
+        _rss("forbes-ai",            "https://www.forbes.com/ai/feed/"),
+        # NB: marktechpost — уже выше в списке как 'marktechpost'.
 
         # ─── AI labs / vendor blogs ────────────────────────────────────────
         _rss("openai-blog",          "https://openai.com/blog/rss.xml"),
@@ -75,6 +77,20 @@ def default_sources() -> list[Source]:
 
         # ─── Metaverse / XR ───────────────────────────────────────────────
         _rss("techcrunch-metaverse", "https://techcrunch.com/tag/metaverse/feed/"),
+        _rss("xrtoday-atom",         "https://www.xrtoday.com/feed/atom/"),
+
+        # ─── Business / Leadership ───────────────────────────────────────
+        _rss("forbes-leadership",    "https://www.forbes.com/leadership/feed/"),
+        _rss("hrdive-news",          "https://www.hrdive.com/feeds/news/"),
+        # NB: cnbc.com/leadership и bbc.com/news/topics/* RSS не отдают,
+        # для них нужен HTML-адаптер (следующая итерация).
+
+        # ─── Product / Discovery ─────────────────────────────────────────
+        _rss("producthunt",          "https://www.producthunt.com/feed"),
+
+        # ─── Psychology / Neuroscience ───────────────────────────────────
+        _rss("psychologytoday",      "https://www.psychologytoday.com/us/rss.xml"),
+        _rss("psychologytoday-intl", "https://www.psychologytoday.com/intl/rss.xml"),
 
         # ─── YouTube-каналы ───────────────────────────────────────────────
         # `_yt_handle` принимает @handle URL; channel_id резолвится автоматом
