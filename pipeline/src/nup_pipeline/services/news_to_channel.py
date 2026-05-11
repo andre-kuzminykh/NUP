@@ -14,7 +14,7 @@ from nup_pipeline.domain.article import Article
 from nup_pipeline.domain.source import Source
 from nup_pipeline.services.ingest import IngestService
 from nup_pipeline.services.summarize import BilingualSummarizer, SummarizerError
-from nup_pipeline.services.text_format import bilingual_caption
+from nup_pipeline.services.text_format import single_lang_post
 from nup_pipeline.services.text_publication import TextPublisher
 
 log = logging.getLogger(__name__)
@@ -53,20 +53,26 @@ class NewsToChannel:
                     )
                     stats["failed"] += 1
                     continue
-                caption = bilingual_caption(
-                    title_ru=bundle.title_ru,
-                    content_ru=bundle.content_ru,
-                    title_en=bundle.title_en,
-                    content_en=bundle.content_en,
+                ru_text = single_lang_post(
+                    title=bundle.title_ru,
+                    content=bundle.content_ru,
                     link=bundle.link,
+                    lang="ru",
                 )
-                try:
-                    self._publisher.publish(self._channel, caption)
-                    stats["published"] += 1
-                except Exception as e:
-                    log.warning(
-                        "publish failed",
-                        extra={"article_id": article.id, "err": str(e)},
-                    )
-                    stats["failed"] += 1
+                en_text = single_lang_post(
+                    title=bundle.title_en,
+                    content=bundle.content_en,
+                    link=bundle.link,
+                    lang="en",
+                )
+                for text in (ru_text, en_text):  # RU first, EN second
+                    try:
+                        self._publisher.publish(self._channel, text)
+                        stats["published"] += 1
+                    except Exception as e:
+                        log.warning(
+                            "publish failed",
+                            extra={"article_id": article.id, "err": str(e)},
+                        )
+                        stats["failed"] += 1
         return stats

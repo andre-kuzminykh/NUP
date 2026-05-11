@@ -1,26 +1,22 @@
-"""Bilingual caption / message formatter (F011, F009).
+"""Text formatters for the channel.
 
-Layout:
-    *{title_ru}*
+- `single_lang_post(...)` — one language per post (used by F003 channel
+  publishing: RU and EN go as two separate messages).
+- `bilingual_caption(...)` — RU + EN packed into one caption (used by F011
+  operator preview, where one Reels = one preview message).
 
-    {content_ru}
-
-    *{title_en}*
-
-    {content_en}
-
-    {link?}
-
-Hard-truncated to 1024 chars (Telegram caption limit). Truncation strategy:
-keep RU and EN headlines intact, distribute the body budget equally.
-
-Tested by tests/unit/test_bilingual_caption.py (REQ-F011-003).
+Tested by tests/unit/test_single_lang_post.py and test_bilingual_caption.py.
 """
 from __future__ import annotations
 
-# Telegram caption limit (sendVideo). sendMessage has 4096, but a caption is
-# the common case for F011/F012 — pick the stricter one to be safe everywhere.
+# Telegram caption limit (sendVideo). sendMessage has 4096.
 CAPTION_LIMIT = 1024
+MESSAGE_LIMIT = 4096
+
+_SOURCE_LABEL = {
+    "ru": "📰 Полная новость",
+    "en": "📰 Full story",
+}
 
 
 def _fit(text: str, budget: int) -> str:
@@ -31,6 +27,37 @@ def _fit(text: str, budget: int) -> str:
     if budget <= 1:
         return text[:budget]
     return text[: budget - 1].rstrip() + "…"
+
+
+def single_lang_post(
+    *,
+    title: str,
+    content: str,
+    link: str | None = None,
+    lang: str = "ru",
+) -> str:
+    """One-language post for the channel: bold headline, body, hyperlinked source.
+
+    Layout (Markdown for Telegram sendMessage):
+        *{title}*
+
+        {content}
+
+        [📰 Полная новость](link)        # lang="ru"
+        [📰 Full story](link)            # lang="en"
+
+    Capped at 4096 chars (Telegram sendMessage limit).
+    """
+    if lang not in _SOURCE_LABEL:
+        raise ValueError(f"unknown lang {lang!r}, expected one of {list(_SOURCE_LABEL)}")
+    head = f"*{title.strip()}*"
+    body = content.strip()
+    link_block = f"[{_SOURCE_LABEL[lang]}]({link})" if link else ""
+    parts = [p for p in (head, body, link_block) if p]
+    out = "\n\n".join(parts)
+    if len(out) > MESSAGE_LIMIT:
+        out = out[: MESSAGE_LIMIT - 1].rstrip() + "…"
+    return out
 
 
 def bilingual_caption(

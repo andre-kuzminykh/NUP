@@ -3,17 +3,18 @@
 ```code-fences, без комментариев):
 
 {
-  "title_ru": "лаконичный заголовок на русском, до 90 символов",
-  "content_ru": "2–3 предложения по-русски, передающие суть новости",
-  "title_en": "concise English headline, up to 90 characters",
-  "content_en": "2–3 sentences in English with the same factual content"
+  "title_ru": "лаконичный заголовок на русском, до 100 символов",
+  "content_ru": "4–6 предложений по-русски с конкретикой: кто, что, где, когда, какой результат / последствие. Без воды и канцелярита. Можно ссылаться на исследователей, компании, числа.",
+  "title_en": "concise English headline, up to 100 characters",
+  "content_en": "4–6 English sentences with the same factual depth: who, what, where, when, outcome. No fluff."
 }
 
 Правила:
-- Сохраняй технические термины как есть (LLM, multiagent systems, RAG, transformer, GPU, FLOPS).
-- Не пиши префиксы вроде «Заголовок:», «Краткое содержание:», «Summary:».
-- Никаких ссылок и дат публикации внутри текста.
+- Сохраняй технические термины как есть (LLM, multiagent systems, RAG, transformer, GPU, FLOPS, AGI, RLHF).
+- Не пиши префиксы вроде «Заголовок:», «Краткое содержание:», «Summary:», «In conclusion:».
+- Никаких ссылок и дат публикации внутри текста — они подставляются отдельно.
 - title_en можно сделать копией оригинального заголовка, если он уже короткий и фактический.
+- content_ru и content_en должны быть СОДЕРЖАТЕЛЬНЫМИ: укажи названия продуктов / организаций, числа, эффект; не просто перескажи общим словом.
 
 ИСХОДНЫЙ ЗАГОЛОВОК:
 {{title}}

@@ -47,9 +47,14 @@ class HttpxFetcher:
 
 
 class OpenAIJsonLlm:
-    """Minimal LLM port: gpt-4.1 with response_format=json_object."""
+    """Minimal LLM port using response_format=json_object.
 
-    def __init__(self, api_key: str, model: str = "gpt-4.1") -> None:
+    Model name is read from $OPENAI_MODEL (default: gpt-4.1-mini — lightweight,
+    cheap, good enough for short summaries). Override in .env to use anything
+    your account has access to (gpt-4.1, gpt-4o-mini, gpt-5-mini, ...).
+    """
+
+    def __init__(self, api_key: str, model: str | None = None) -> None:
         try:
             from openai import OpenAI  # type: ignore
         except ImportError as e:
@@ -57,7 +62,10 @@ class OpenAIJsonLlm:
                 "Install `openai` to use OpenAIJsonLlm (pip install openai)"
             ) from e
         self._client = OpenAI(api_key=api_key)
-        self._model = model
+        # Default per operator request. Override via OPENAI_MODEL env if the
+        # account doesn't have access (then OpenAI returns 404 model_not_found
+        # and the log message is obvious).
+        self._model = model or os.environ.get("OPENAI_MODEL", "gpt-5.4-light")
 
     def complete_json(self, prompt: str) -> dict:
         resp = self._client.chat.completions.create(
@@ -87,7 +95,8 @@ def _build_orchestrator() -> NewsToChannel:
     summarizer = BilingualSummarizer(llm=llm)
 
     tg = TelegramClient(token=token)
-    rate_limiter = InMemoryRateLimiter(min_interval_sec=60)
+    publish_interval = float(os.environ.get("PUBLISH_INTERVAL_SEC", "10"))
+    rate_limiter = InMemoryRateLimiter(min_interval_sec=publish_interval)
 
     class _PubRepo:
         def __init__(self) -> None:

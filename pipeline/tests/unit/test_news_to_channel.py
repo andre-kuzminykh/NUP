@@ -83,12 +83,12 @@ class InMemPubRepo:
 
 
 @pytest.mark.unit
-def test_full_flow_saves_articles_and_publishes_bilingual() -> None:
-    # Wiring: fetcher → ingest → summarizer → publisher
+def test_full_flow_publishes_two_messages_per_article_ru_first() -> None:
+    """Each article → 2 messages: RU first, then EN. Same channel."""
     article_repo = InMemoryArticleRepo()
     pub_repo = InMemPubRepo()
     tg = FakeTelegram()
-    rate_limiter = InMemoryRateLimiter(min_interval_sec=0)  # no spacing in tests
+    rate_limiter = InMemoryRateLimiter(min_interval_sec=0)
     publisher = TextPublisher(
         client=tg, rate_limiter=rate_limiter, repo=pub_repo,
         sleep=lambda _: None, clock=lambda: 0.0,
@@ -99,22 +99,26 @@ def test_full_flow_saves_articles_and_publishes_bilingual() -> None:
         publisher=publisher,
         channel_id="@d_media_ai",
     )
-
     sources = [Source(id="guardian", kind=SourceKind.RSS, url="https://x/feed")]
     stats = n2c.run_once(sources)
 
-    # Both articles in DB.
     assert len(article_repo.all()) == 2
-    # Both summaries sent to TG, bilingual.
-    assert len(tg.sent) == 2
-    for msg in tg.sent:
-        assert msg["chat_id"] == "@d_media_ai"
-        # RU and EN headlines both present in the bilingual caption.
-        assert any(s in msg["text"] for s in ("OpenAI выпустила", "Anthropic привлёк"))
-        assert any(s in msg["text"] for s in ("OpenAI launches", "Anthropic raises"))
-    # Publications persisted.
+    # 2 articles × 2 languages = 4 messages.
+    assert len(tg.sent) == 4
+    assert all(m["chat_id"] == "@d_media_ai" for m in tg.sent)
+
+    ru_msgs = [m for m in tg.sent if "Полная новость" in m["text"]]
+    en_msgs = [m for m in tg.sent if "Full story" in m["text"]]
+    assert len(ru_msgs) == 2
+    assert len(en_msgs) == 2
+
+    # First message is RU.
+    assert "Полная новость" in tg.sent[0]["text"]
+    # Second is EN of the same article.
+    assert "Full story" in tg.sent[1]["text"]
+
     assert all(p.status is PublicationStatus.SENT for p in pub_repo.rows)
-    assert stats == {"fetched": 2, "new": 2, "published": 2, "failed": 0}
+    assert stats == {"fetched": 2, "new": 2, "published": 4, "failed": 0}
 
 
 @pytest.mark.unit
@@ -135,6 +139,7 @@ def test_rerun_does_not_republish_known_articles() -> None:
     )
     sources = [Source(id="guardian", kind=SourceKind.RSS, url="https://x/feed")]
     n2c.run_once(sources)
-    n2c.run_once(sources)   # second tick
+    n2c.run_once(sources)
     assert len(article_repo.all()) == 2
-    assert len(tg.sent) == 2                  # no second publish
+    # First tick: 4 messages (2 articles × 2 langs). Second tick: 0 (all dups).
+    assert len(tg.sent) == 4
