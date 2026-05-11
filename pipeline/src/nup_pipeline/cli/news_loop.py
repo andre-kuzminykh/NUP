@@ -88,7 +88,13 @@ def _build_orchestrator() -> NewsToChannel:
     proxy_pool = ProxyPool(proxies, strategy=os.environ.get("PROXY_POOL_STRATEGY", "round_robin")) if proxies else None
 
     fetcher = HttpxFetcher(timeout=float(os.environ.get("FETCH_TIMEOUT_SEC", "30")))
-    article_repo = InMemoryArticleRepo()
+    # Persistent repo if DATABASE_URL is set (compose default), in-memory otherwise.
+    database_url = os.environ.get("DATABASE_URL", "")
+    if database_url:
+        from nup_pipeline.infra.article_repo_pg import PostgresArticleRepo
+        article_repo = PostgresArticleRepo(database_url)
+    else:
+        article_repo = InMemoryArticleRepo()
     ingest = IngestService(fetcher=fetcher, article_repo=article_repo, proxy_pool=proxy_pool)
 
     llm = OpenAIJsonLlm(api_key=os.environ["OPENAI_API_KEY"])

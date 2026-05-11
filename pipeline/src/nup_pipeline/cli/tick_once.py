@@ -1,9 +1,14 @@
 """CLI: один прогон news_to_channel и выход. Удобно для отладки без ожидания
 NEWS_LOOP_INTERVAL_SEC.
 
-Запуск в контейнере:
+Примеры:
     docker compose exec news-worker python -m nup_pipeline.cli.tick_once
     docker compose exec news-worker python -m nup_pipeline.cli.tick_once --source guardian-ai
+    docker compose exec news-worker python -m nup_pipeline.cli.tick_once --no-publish
+        # ingest + summarise но НЕ публикует — чтобы засеять БД старыми статьями
+        # и не залить канал.
+    docker compose exec news-worker python -m nup_pipeline.cli.tick_once --seed
+        # самый быстрый seed: только ingest, без LLM-вызовов.
 """
 from __future__ import annotations
 
@@ -21,11 +26,12 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     p = argparse.ArgumentParser(description="Run news_to_channel one tick and exit.")
-    p.add_argument(
-        "--source",
-        help="Один источник по id (см. default_sources). Без флага — все.",
-        default=None,
-    )
+    p.add_argument("--source", default=None,
+                   help="Один источник по id (см. default_sources). Без флага — все.")
+    p.add_argument("--no-publish", action="store_true",
+                   help="Прогнать суммаризацию, но НЕ публиковать в канал.")
+    p.add_argument("--seed", action="store_true",
+                   help="Только ingest (без LLM, без TG). Засеять БД канонами ссылок.")
     args = p.parse_args()
 
     sources = default_sources()
@@ -35,7 +41,36 @@ def main() -> None:
             ids = ", ".join(s.id for s in default_sources())
             raise SystemExit(f"unknown source {args.source!r}; known: {ids}")
 
+    # --seed: используем напрямую IngestService, минуя LLM и Telegram.
+    if args.seed:
+        from nup_pipeline.cli.news_loop import HttpxFetcher
+        from nup_pipeline.infra.article_repo import InMemoryArticleRepo
+        from nup_pipeline.services.ingest import IngestService
+        import os
+
+        database_url = os.environ.get("DATABASE_URL", "")
+        if database_url:
+            from nup_pipeline.infra.article_repo_pg import PostgresArticleRepo
+            repo = PostgresArticleRepo(database_url)
+        else:
+            repo = InMemoryArticleRepo()
+        ingest = IngestService(fetcher=HttpxFetcher(), article_repo=repo)
+        total_new = 0
+        for src in sources:
+            new = ingest.ingest_source(src)
+            total_new += len(new)
+            print(f"[{src.id}] new={len(new)}")
+        print(json.dumps({"seeded_new": total_new}, indent=2, ensure_ascii=False))
+        return
+
     orchestrator = _build_orchestrator()
+    if args.no_publish:
+        # Подменяем publisher на no-op, чтобы пройти весь pipeline,
+        # но НЕ слать сообщения в TG.
+        class _NoopPublisher:
+            def publish(self, chat_id, text):
+                return None
+        orchestrator._publisher = _NoopPublisher()
     stats = orchestrator.run_once(sources)
     print(json.dumps(stats, indent=2, ensure_ascii=False))
 
