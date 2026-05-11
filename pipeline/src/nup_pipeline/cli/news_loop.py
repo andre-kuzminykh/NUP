@@ -32,6 +32,12 @@ from nup_pipeline.services.text_publication import TextPublisher
 log = logging.getLogger("news_loop")
 
 
+_BROWSER_UA = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+)
+
+
 class HttpxFetcher:
     def __init__(self, timeout: float = 30.0) -> None:
         self._timeout = timeout
@@ -40,8 +46,18 @@ class HttpxFetcher:
         kwargs = {"timeout": self._timeout, "follow_redirects": True}
         if proxy:
             kwargs["proxy"] = proxy
-        with httpx.Client(**kwargs) as client:
-            resp = client.get(url, headers={"User-Agent": "Mozilla/5.0 (NUP/0.1)"})
+        # YouTube из EU-регионов редиректит на consent.youtube.com (GDPR).
+        # Cookies CONSENT=YES+1 и SOCS=CAI пропускают форму, сразу отдают HTML
+        # с channelId. Для прочих доменов cookies не отправляются.
+        cookies = {"CONSENT": "YES+1", "SOCS": "CAI"} if "youtube.com" in url else {}
+        with httpx.Client(**kwargs, cookies=cookies) as client:
+            resp = client.get(
+                url,
+                headers={
+                    "User-Agent": _BROWSER_UA,
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+            )
             resp.raise_for_status()
             return resp.content
 
