@@ -140,14 +140,22 @@ def _build_orchestrator(max_per_source: int | None = None) -> NewsToChannel:
         summarizer=summarizer,
         publisher=publisher,
         channel_id=channel,
+        # Silent-seed первый ingest каждого источника, чтобы backlog не залил
+        # канал. Чтобы принудительно сразу публиковать — NEWS_LOOP_SILENT_FIRST_SEED=0.
+        article_repo=article_repo,
+        silent_first_seed=os.environ.get("NEWS_LOOP_SILENT_FIRST_SEED", "1") not in ("0", "false", "no"),
     )
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     interval = int(os.environ.get("NEWS_LOOP_INTERVAL_SEC", "1800"))  # 30 мин по умолчанию
+    initial_delay = int(os.environ.get("NEWS_LOOP_INITIAL_DELAY_SEC", str(interval)))
     sources = default_sources()
     orchestrator = _build_orchestrator()
+    log.info("news loop ready; first tick in %ds, then every %ds", initial_delay, interval)
+    if initial_delay > 0:
+        time.sleep(initial_delay)
     while True:
         try:
             stats = orchestrator.run_once(sources)

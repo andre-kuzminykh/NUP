@@ -1,7 +1,15 @@
 """F001 + F002 + F003 — end-to-end orchestrator.
 
-For each active source: ingest new articles, summarise each (RU + EN),
-publish the bilingual caption to the target channel via TextPublisher.
+Для каждого активного источника: ingest → summarize → publish RU + EN.
+
+Anti-flood (per-source silent first ingest):
+Когда источник появляется в системе впервые (в `articles` нет ни одной строки
+с его `source_id`), мы НЕ публикуем backlog в канал — просто сохраняем
+текущие свежие item'ы в БД. На следующем тике публиковать будем только то,
+что появилось в фиде ПОСЛЕ этого первого «тихого» ingest'а.
+
+Это включается через `silent_first_seed=True` + переданный `article_repo`.
+В тестах оба не передаются → flag отключён, поведение классическое.
 
 Tested by tests/unit/test_news_to_channel.py.
 """
@@ -24,6 +32,10 @@ class _Publisher(Protocol):
     def publish(self, chat_id: str, text: str): ...
 
 
+class _ArticleReader(Protocol):
+    def list_by_source(self, source_id: str) -> list[Article]: ...
+
+
 class NewsToChannel:
     def __init__(
         self,
@@ -31,18 +43,40 @@ class NewsToChannel:
         summarizer: BilingualSummarizer,
         publisher: TextPublisher | _Publisher,
         channel_id: str,
+        *,
+        article_repo: _ArticleReader | None = None,
+        silent_first_seed: bool = False,
     ) -> None:
         self._ingest = ingest
         self._summarizer = summarizer
         self._publisher = publisher
         self._channel = channel_id
+        self._repo = article_repo
+        self._silent_first_seed = silent_first_seed and article_repo is not None
 
     def run_once(self, sources: list[Source]) -> dict[str, int]:
-        stats = {"fetched": 0, "new": 0, "published": 0, "failed": 0}
+        stats = {"fetched": 0, "new": 0, "published": 0, "failed": 0, "silent_seeded": 0}
         for src in sources:
+            # Pre-count BEFORE ingest — нам важно знать, был ли источник
+            # «знаком» до этого tick'а. После ingest_source repo уже содержит
+            # вновь сохранённые item'ы.
+            had_any_before = False
+            if self._silent_first_seed and self._repo is not None:
+                had_any_before = bool(self._repo.list_by_source(src.id))
+
             new_articles: list[Article] = self._ingest.ingest_source(src)
             stats["fetched"] += len(new_articles)
             stats["new"] += len(new_articles)
+
+            if self._silent_first_seed and not had_any_before and new_articles:
+                # Первый ingest этого источника — публиковать не будем.
+                stats["silent_seeded"] += len(new_articles)
+                log.info(
+                    "first-time ingest, items seeded silently",
+                    extra={"source_id": src.id, "count": len(new_articles)},
+                )
+                continue
+
             for article in new_articles:
                 try:
                     bundle = self._summarizer.summarize(article)

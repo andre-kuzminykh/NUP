@@ -118,7 +118,75 @@ def test_full_flow_publishes_two_messages_per_article_ru_first() -> None:
     assert "Full story" in tg.sent[1]["text"]
 
     assert all(p.status is PublicationStatus.SENT for p in pub_repo.rows)
-    assert stats == {"fetched": 2, "new": 2, "published": 4, "failed": 0}
+    assert stats == {"fetched": 2, "new": 2, "published": 4, "failed": 0, "silent_seeded": 0}
+
+
+@pytest.mark.unit
+def test_silent_first_seed_does_not_publish_backlog() -> None:
+    """When silent_first_seed=True and DB has no rows for the source,
+    the first ingest seeds the DB silently without any Telegram publish."""
+    article_repo = InMemoryArticleRepo()
+    pub_repo = InMemPubRepo()
+    tg = FakeTelegram()
+    rate_limiter = InMemoryRateLimiter(min_interval_sec=0)
+    publisher = TextPublisher(
+        client=tg, rate_limiter=rate_limiter, repo=pub_repo,
+        sleep=lambda _: None, clock=lambda: 0.0,
+    )
+    n2c = NewsToChannel(
+        ingest=IngestService(fetcher=FakeFetcher(RSS), article_repo=article_repo),
+        summarizer=BilingualSummarizer(llm=FakeLlm()),
+        publisher=publisher,
+        channel_id="@d_media_ai",
+        article_repo=article_repo,
+        silent_first_seed=True,
+    )
+    sources = [Source(id="guardian", kind=SourceKind.RSS, url="https://x/feed")]
+    stats = n2c.run_once(sources)
+    assert len(article_repo.all()) == 2     # articles are saved
+    assert tg.sent == []                      # but NOT published to Telegram
+    assert stats["silent_seeded"] == 2
+    assert stats["published"] == 0
+
+
+@pytest.mark.unit
+def test_silent_seed_yields_to_normal_publish_on_second_tick() -> None:
+    """First tick: silent seed (no publish). Second tick: same articles
+    are already in DB so ingest returns []. To exercise the publish path
+    we manually pre-load one article into the repo (simulating prior seed),
+    then run with silent_first_seed=True — since repo is non-empty for this
+    source, we should publish."""
+    article_repo = InMemoryArticleRepo()
+    # Pre-load: a placeholder article (not from the RSS feed) — simulates
+    # the state after a previous silent seed.
+    from nup_pipeline.domain.article import Article
+    article_repo.save(Article(
+        source_id="guardian",
+        link="https://example.com/old-already-seen",
+        title="old",
+        raw_content="",
+    ))
+
+    pub_repo = InMemPubRepo()
+    tg = FakeTelegram()
+    rate_limiter = InMemoryRateLimiter(min_interval_sec=0)
+    publisher = TextPublisher(
+        client=tg, rate_limiter=rate_limiter, repo=pub_repo,
+        sleep=lambda _: None, clock=lambda: 0.0,
+    )
+    n2c = NewsToChannel(
+        ingest=IngestService(fetcher=FakeFetcher(RSS), article_repo=article_repo),
+        summarizer=BilingualSummarizer(llm=FakeLlm()),
+        publisher=publisher,
+        channel_id="@d_media_ai",
+        article_repo=article_repo,
+        silent_first_seed=True,
+    )
+    sources = [Source(id="guardian", kind=SourceKind.RSS, url="https://x/feed")]
+    stats = n2c.run_once(sources)
+    # Source already had rows → 2 new articles publish RU+EN normally.
+    assert stats["silent_seeded"] == 0
+    assert stats["published"] == 4
 
 
 @pytest.mark.unit
