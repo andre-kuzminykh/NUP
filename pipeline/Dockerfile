@@ -19,7 +19,7 @@ COPY alembic/ ./alembic/ 2>/dev/null || true
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-EXPOSE 8000
+EXPOSE 8010
 
 # Default: API. Worker запускается через docker-compose с command override.
-CMD ["uvicorn", "nup_pipeline.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "nup_pipeline.api.app:app", "--host", "0.0.0.0", "--port", "8010"]

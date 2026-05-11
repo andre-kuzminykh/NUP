@@ -1,7 +1,11 @@
 # Top-level compose: backend (pipeline/) + operator bot + news worker.
-# На VM `human-1` у тебя уже крутится docker с dataist_media — это compose
-# поднимается рядом, своими портами 8000/5432/6379/9000/9001, чтобы не
-# конфликтовать с уже запущенными контейнерами.
+# На VM `human-1` у тебя уже крутится много контейнеров (dataist-bot,
+# dataist-service, pg-proxy-5433, hmnd-*, slack-task-*, *-maturity-bot и т.д.).
+# Хост-порты этого стека выбраны заведомо в стороне:
+#   api      → 8010
+#   postgres → 5440  (pg-proxy уже занял 5433)
+#   redis    → 6390
+#   minio    → 9020 (API) / 9021 (console)
 
 services:
   postgres:
@@ -10,7 +14,7 @@ services:
       POSTGRES_USER: nup
       POSTGRES_PASSWORD: nup
       POSTGRES_DB: nup
-    ports: ["5433:5432"]
+    ports: ["5440:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     restart: unless-stopped
     healthcheck:
@@ -21,7 +25,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports: ["6380:6379"]
+    ports: ["6390:6379"]
     restart: unless-stopped
 
   minio:
@@ -30,7 +34,7 @@ services:
     environment:
       MINIO_ROOT_USER: nup
       MINIO_ROOT_PASSWORD: nupnupnup
-    ports: ["9010:9000", "9011:9001"]
+    ports: ["9020:9000", "9021:9001"]
     volumes: [miniodata:/data]
     restart: unless-stopped
 
@@ -41,7 +45,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://nup:nup@postgres:5432/nup
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT: http://minio:9000
-    ports: ["8001:8000"]
+    ports: ["8010:8010"]
     depends_on: [postgres, redis, minio]
     restart: unless-stopped
 
@@ -59,7 +63,7 @@ services:
     build: ./bot
     env_file: ./bot/.env
     environment:
-      BACKEND_URL: http://api:8000
+      BACKEND_URL: http://api:8010
     depends_on: [api]
     restart: unless-stopped
 
