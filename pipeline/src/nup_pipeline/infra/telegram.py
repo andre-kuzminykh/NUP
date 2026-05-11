@@ -71,10 +71,11 @@ class TelegramClient:
 
     def send_video(
         self,
-        chat_id: str,
+        chat_id: str | int,
         video_url: str,
         *,
         caption: str | None = None,
+        reply_markup: dict | None = None,
     ) -> int:
         params: dict = {
             "chat_id": chat_id,
@@ -83,6 +84,8 @@ class TelegramClient:
         }
         if caption is not None:
             params["caption"] = caption
+        if reply_markup is not None:
+            params["reply_markup"] = reply_markup
         result = self._call_with_retry("sendVideo", params)
         return int(result["message_id"])
 

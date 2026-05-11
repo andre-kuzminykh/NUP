@@ -11,3 +11,4 @@ from aiogram import Router
 
 base_router = Router(name="base")
 renders_router = Router(name="renders")
+reviews_router = Router(name="reviews")

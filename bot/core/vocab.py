@@ -31,3 +31,20 @@ RENDER_INVALID_UUID = (
 )
 
 RENDER_BACKEND_ERROR = "⚠️ Бэкенд временно недоступен, попробуйте позже."
+
+# --- F003 / F012 — Review callbacks (bilingual via core.i18n.bi) ----------
+
+REVIEW_APPROVED_RU = "✅ Опубликовано в канал."
+REVIEW_APPROVED_EN = "✅ Published to channel."
+
+REVIEW_DECLINED_RU = "❌ Отклонено, в канал не уходит."
+REVIEW_DECLINED_EN = "❌ Declined, will not be posted."
+
+REVIEW_EDIT_STARTED_RU = "✏️ Режим редактирования включён. Полный UI кадров — в следующей итерации."
+REVIEW_EDIT_STARTED_EN = "✏️ Edit mode on. Full per-frame UI is coming in the next iteration."
+
+REVIEW_INVALID_RU = "⚠️ Неизвестное действие, попробуйте ещё раз."
+REVIEW_INVALID_EN = "⚠️ Unknown action, please retry."
+
+REVIEW_BACKEND_ERROR_RU = "⚠️ Бэкенд не отвечает, попробуйте позже."
+REVIEW_BACKEND_ERROR_EN = "⚠️ Backend is unavailable, please retry later."
