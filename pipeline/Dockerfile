@@ -8,9 +8,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -e .
 
+# Stage 1 — deps. Кэшируется до тех пор, пока не меняется pyproject.toml.
+# Заглушка src/ нужна, потому что setuptools ищет пакет по `where = ["src"]`
+# ещё на этапе egg_info, до COPY реального исходника на следующем слое.
+COPY pyproject.toml ./
+RUN mkdir -p src/nup_pipeline && touch src/nup_pipeline/__init__.py && \
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -e .
+
+# Stage 2 — реальный source. Не сбрасывает кэш зависимостей.
 COPY src/ ./src/
 COPY docs/ ./docs/
 
