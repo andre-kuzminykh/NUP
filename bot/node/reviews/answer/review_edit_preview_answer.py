@@ -21,7 +21,12 @@ Caption обновляется на текущее состояние, inline-ke
 """
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+from aiogram.types import InputMediaVideo
+
+log = logging.getLogger("review_edit_preview")
 
 
 def _kb(review_id: str) -> dict:
@@ -66,12 +71,25 @@ class ReviewEditPreviewAnswer:
         kb = _kb(review_id)
         caption = _caption(data)
         msg = event.message
-        # Меняем caption (под видео) + новую keyboard. Если caption тот же,
-        # Telegram вернёт 400 — игнорируем.
+        # Если на кандидате есть file_id — подменяем САМО видео (instant,
+        # т.к. Telegram уже хранит mp4). Иначе fallback на caption-only.
+        file_id = data.get("active_file_id")
+        if file_id:
+            try:
+                await msg.edit_media(
+                    InputMediaVideo(
+                        media=file_id,
+                        caption=caption,
+                        parse_mode="Markdown",
+                    ),
+                    reply_markup=kb,
+                )
+                return
+            except Exception as e:
+                log.warning("edit_media failed: %s; falling back to caption-only", e)
         try:
             await msg.edit_caption(caption=caption, reply_markup=kb, parse_mode="Markdown")
         except Exception:
-            # Caption может быть identical → 400. Хоть kb обновим.
             try:
                 await msg.edit_reply_markup(reply_markup=kb)
             except Exception:

@@ -159,6 +159,7 @@ def main() -> int:
                 "video_url": url,
                 "local_path": str(local),
                 "preview_url": c.get("preview_url", ""),
+                "file_id": None,  # заполним preupload-ом ниже
             })
             mark = " (DUP)" if c["video_url"] in used_urls and j > 0 else ""
             print(f"  seg{i}/cand{j} ({kw!r}){mark}: {url[:60]}…")
@@ -219,6 +220,35 @@ def main() -> int:
     # тот же TELEGRAM_BOT_TOKEN (но тогда возможен конфликт polling).
     review_token = os.environ.get("REVIEW_BOT_TOKEN") or os.environ["TELEGRAM_BOT_TOKEN"]
     tg = TelegramClient(token=review_token)
+
+    # 8a. Preupload всех кандидатов → file_id. В edit-mode бот подменяет
+    # видео через editMessageMedia мгновенно по file_id, без скачивания
+    # mp4 заново. Каждый upload идёт silent + сразу deleteMessage, чтобы
+    # не спамить чат оператора.
+    total_cands = sum(len(s["candidates"]) for s in segments_snapshot)
+    print(f"preupload: {total_cands} clips → telegram file_id …")
+    uploaded = 0
+    for i, seg in enumerate(segments_snapshot):
+        for j, cand in enumerate(seg["candidates"]):
+            local = cand.get("local_path")
+            if not local or not os.path.exists(local):
+                continue
+            try:
+                file_id, scratch_msg_id = tg.upload_video_for_file_id(
+                    reviewer_chat_id, local,
+                )
+                tg.delete_message(reviewer_chat_id, scratch_msg_id)
+                cand["file_id"] = file_id
+                uploaded += 1
+                if uploaded % 10 == 0:
+                    print(f"  preuploaded {uploaded}/{total_cands}")
+            except TelegramError as e:
+                print(f"  preupload seg{i}/cand{j} failed: {e}; nav fallback to URL")
+    print(f"preupload done: {uploaded}/{total_cands} file_ids")
+    # Re-persist snapshot с file_id-ами.
+    review.segments_snapshot = segments_snapshot
+    rev_repo.save(review)
+
     try:
         msg_id = tg.send_video_file(
             reviewer_chat_id,

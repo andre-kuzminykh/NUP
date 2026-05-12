@@ -96,6 +96,7 @@ class TelegramClient:
         *,
         caption: str | None = None,
         reply_markup: dict | None = None,
+        disable_notification: bool = False,
     ) -> int:
         """Upload a local MP4 to Telegram (multipart/form-data).
 
@@ -103,6 +104,54 @@ class TelegramClient:
         Не идёт через _call_with_retry (он принимает JSON params), у multipart
         своя обёртка. Retry/backoff здесь не делаем — для смок-теста хватит.
         """
+        result = self._send_video_file_raw(
+            chat_id, local_path,
+            caption=caption, reply_markup=reply_markup,
+            disable_notification=disable_notification,
+        )
+        return int(result["message_id"])
+
+    def upload_video_for_file_id(
+        self,
+        chat_id: str | int,
+        local_path: str,
+    ) -> tuple[str, int]:
+        """Preupload: грузим mp4 silent-ом, возвращаем (file_id, message_id).
+
+        Используется для F013 — чтобы в edit-mode переключать клип через
+        editMessageMedia мгновенно (по file_id) без скачивания заново. Сразу
+        после получения file_id вызывающий код обычно зовёт delete_message.
+        """
+        result = self._send_video_file_raw(
+            chat_id, local_path, disable_notification=True,
+        )
+        video = result.get("video") or {}
+        file_id = video.get("file_id")
+        if not file_id:
+            raise TelegramError("sendVideo response missing video.file_id")
+        return str(file_id), int(result["message_id"])
+
+    def delete_message(self, chat_id: str | int, message_id: int) -> None:
+        try:
+            self._call_with_retry(
+                "deleteMessage",
+                {"chat_id": chat_id, "message_id": message_id},
+            )
+        except TelegramError:
+            # Уже удалено или слишком старое — для preupload это не критично.
+            pass
+
+    # --- internals ----------------------------------------------------------
+
+    def _send_video_file_raw(
+        self,
+        chat_id: str | int,
+        local_path: str,
+        *,
+        caption: str | None = None,
+        reply_markup: dict | None = None,
+        disable_notification: bool = False,
+    ) -> dict:
         url = f"{API_BASE}/bot{self._token}/sendVideo"
         data: dict = {"chat_id": str(chat_id), "parse_mode": "Markdown"}
         if caption is not None:
@@ -110,8 +159,10 @@ class TelegramClient:
         if reply_markup is not None:
             import json as _json
             data["reply_markup"] = _json.dumps(reply_markup, ensure_ascii=False)
+        if disable_notification:
+            data["disable_notification"] = "true"
         with open(local_path, "rb") as f:
-            files = {"video": ("reel.mp4", f, "video/mp4")}
+            files = {"video": ("clip.mp4", f, "video/mp4")}
             with httpx.Client(timeout=180.0) as client:
                 resp = client.post(url, data=data, files=files)
         if resp.status_code >= 400:
@@ -120,9 +171,7 @@ class TelegramClient:
         payload = resp.json()
         if not payload.get("ok"):
             raise TelegramError(payload.get("description") or "ok=false")
-        return int(payload["result"]["message_id"])
-
-    # --- internals ----------------------------------------------------------
+        return payload["result"]
 
     def _call_with_retry(self, method: str, params: dict) -> dict:
         last_err: Exception | None = None
