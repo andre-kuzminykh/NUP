@@ -130,6 +130,15 @@ def cancel_edit(
     return _state(repo.get(review_id), editor)
 
 
+def _ensure_in_edit(review_id: str, repo, editor: ReviewEditor) -> None:
+    """Авто-вход в IN_EDIT, если оператор давит стрелки в PENDING_REVIEW
+    (бывает после автоматического cancel в approve→fail или если первый
+    тап на стрелку прилетел раньше чем edit-mode успел проинициализироваться)."""
+    s = repo.get(review_id)
+    if s is not None and s.status is ReviewStatus.PENDING_REVIEW:
+        editor.start(review_id)
+
+
 @router.post("/{review_id}/move")
 def move(
     review_id: str,
@@ -138,6 +147,7 @@ def move(
     repo: Annotated[object, Depends(get_review_repo)],
 ):
     try:
+        _ensure_in_edit(review_id, repo, editor)
         editor.move(review_id, body.direction)
     except KeyError:
         raise HTTPException(404, "review not found")
@@ -154,6 +164,7 @@ def pick(
     repo: Annotated[object, Depends(get_review_repo)],
 ):
     try:
+        _ensure_in_edit(review_id, repo, editor)
         editor.pick(review_id, body.direction)
     except KeyError:
         raise HTTPException(404, "review not found")

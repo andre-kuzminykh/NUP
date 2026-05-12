@@ -30,8 +30,12 @@ def _best_portrait_file(video_files: list[dict]) -> dict | None:
     ]
     if not portrait:
         return None
-    # highest resolution wins
-    return max(portrait, key=lambda f: int(f["height"]))
+    # Highest resolution до Full-HD (1920×1080 portrait). UHD/4K весят >50MB,
+    # что превышает лимит Telegram bot uploadа (50MB) для preupload-флоу.
+    # Если HD-варианта нет — берём минимально доступный.
+    hd = [f for f in portrait if int(f["height"]) <= 1920]
+    pool = hd if hd else portrait
+    return max(pool, key=lambda f: int(f["height"]))
 
 
 class PexelsSearch:

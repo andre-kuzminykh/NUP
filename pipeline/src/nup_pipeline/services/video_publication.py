@@ -22,6 +22,9 @@ from nup_pipeline.infra.telegram import TelegramError
 
 class _TelegramVideoPort(Protocol):
     def send_video(self, chat_id, video_url, *, caption=None, reply_markup=None) -> int: ...
+    def send_video_file(
+        self, chat_id, local_path, *, caption=None, reply_markup=None,
+    ) -> int: ...
 
 
 class _PublicationRepo(Protocol):
@@ -40,7 +43,13 @@ class VideoPublisher:
     def publish(self, chat_id, video_uri: str, caption: str | None = None) -> int:
         pub = Publication(chat_id=str(chat_id), kind=PublicationKind.VIDEO)
         try:
-            message_id = self._client.send_video(chat_id, video_uri, caption=caption)
+            # Локальный путь → multipart upload. URL → sendVideo by URL.
+            if video_uri.startswith(("http://", "https://")):
+                message_id = self._client.send_video(chat_id, video_uri, caption=caption)
+            else:
+                message_id = self._client.send_video_file(
+                    chat_id, video_uri, caption=caption,
+                )
         except TelegramError as e:
             pub.status = PublicationStatus.FAILED
             pub.error = str(e)
