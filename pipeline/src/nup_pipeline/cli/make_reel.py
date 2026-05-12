@@ -45,6 +45,8 @@ from nup_pipeline.infra.pixabay import PixabaySearch
 from nup_pipeline.infra.telegram import TelegramClient
 from nup_pipeline.services.ffmpeg_builder import build as build_ffmpeg
 from nup_pipeline.services.summarize import BilingualSummarizer
+from nup_pipeline.services.visual_keywords import VisualKeywords
+from nup_pipeline.services.voiceover_scripter import VoiceoverScripter
 
 log = logging.getLogger("make_reel")
 
@@ -114,17 +116,22 @@ def main() -> int:
     article = max(candidates, key=lambda a: a.created_at)
     print(f"article: [{article.source_id}] {article.title}")
 
-    # 2. Summary
+    # 2. Bilingual summary (для заголовка, подписи и keyword-search)
     llm = OpenAIJsonLlm(api_key=os.environ["OPENAI_API_KEY"])
     bundle = BilingualSummarizer(llm=llm).summarize(article)
     print(f"RU title:   {bundle.title_ru}")
-    print(f"RU content: {bundle.content_ru[:120]}…")
 
-    # 3. Split into sentences (segments)
-    sentences = split_sentences(bundle.content_ru)
+    # 2b. Voiceover-script со структурой Hook→Суть→Почему→Контекст→Вывод.
+    # Озвучка отличается от summary — это полноценный сценарий для Shorts.
+    print("generating voiceover script (hook→…→outro)…")
+    voice_text = VoiceoverScripter(llm=llm).script(bundle.content_ru)
+    print(f"voice ({len(voice_text)} chars): {voice_text[:140]}…")
+
+    # 3. Split voice_text into sentences (= segments)
+    sentences = split_sentences(voice_text)
     n = len(sentences)
     if n == 0:
-        print("empty summary; abort")
+        print("empty voiceover; abort")
         return 1
     print(f"{n} sentences → {n} segments")
 
@@ -146,11 +153,40 @@ def main() -> int:
     total_dur = sum(durations)
     print(f"total duration: {total_dur:.1f} sec")
 
-    # 5. Stock clips
-    query_full = (bundle.title_en or article.title or "technology").strip()
-    query = " ".join(query_full.split()[:4])
-    print(f"stock query: {query!r}; need {n} clips")
-    clips = _get_candidates(query, need=n)
+    # 5. Stock clips — keywords подбирает отдельный LLM-вызов на основе
+    # title_en + content_en (без proper nouns, чтобы Pexels попадал в тему).
+    print("extracting visual keywords for stock search…")
+    kws = VisualKeywords(llm=llm).keywords_for(bundle.title_en, bundle.content_en)
+    if not kws:
+        kws = [bundle.title_en or article.title or "technology"]
+    print(f"keywords: {kws}")
+
+    # Для разнообразия фоны разных сегментов ищем по РАЗНЫМ keywords.
+    clips: list[dict] = []
+    for i in range(n):
+        kw = kws[i % len(kws)]
+        try:
+            seg_clips = (
+                PexelsSearch().search_videos(kw, per_page=3)
+                if os.environ.get("PEXELS_API_KEY") else []
+            )
+        except Exception as e:
+            log.warning(f"pexels {kw!r}: {e}")
+            seg_clips = []
+        if not seg_clips and os.environ.get("PIXABAY_API_KEY"):
+            try:
+                seg_clips = PixabaySearch().search_videos(kw, per_page=3)
+            except Exception as e:
+                log.warning(f"pixabay {kw!r}: {e}")
+        if seg_clips:
+            clips.append(seg_clips[0])
+            print(f"  seg{i} ({kw!r}): {seg_clips[0]['video_url'][:80]}…")
+        else:
+            print(f"  seg{i} ({kw!r}): no clip")
+    # Если для каких-то сегментов клипов не нашли — забиваем дублями.
+    if len(clips) < n and clips:
+        while len(clips) < n:
+            clips.append(clips[len(clips) % len(clips)])
     if not clips:
         print("no stock clips; configure PEXELS_API_KEY / PIXABAY_API_KEY")
         return 1

@@ -96,6 +96,15 @@ class OpenAIJsonLlm:
         except json.JSONDecodeError:
             return {}
 
+    def complete_text(self, prompt: str) -> str:
+        """Plain-text completion (используется VoiceoverScripter / VisualKeywords)."""
+        resp = self._client.chat.completions.create(
+            model=self._model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+        )
+        return (resp.choices[0].message.content or "").strip()
+
 
 def _build_orchestrator(
     max_per_source: int | None = None,

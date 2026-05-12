@@ -21,38 +21,24 @@ from nup_pipeline.domain.segment import Segment, chunk_subtitle
 OUT_W = 1080
 OUT_H = 1920
 MUSIC_VOLUME = 0.01
-# Максимум знаков в строке субтитра. При превышении чанк разбивается на 2 строки
-# по ближайшему пробелу. Подобрано под fontsize=52 и box-padding=18 на 1080px.
-SUBTITLE_MAX_CHARS_PER_LINE = 22
+# Чанки по 2 слова: русские слова длиннее английских, 3 часто не помещаются.
+# 2 слова почти всегда умещаются в одну строку без переноса.
+SUBTITLE_WORDS_PER_CHUNK = 2
 # Шрифт с кириллицей; ставится в Dockerfile (fonts-dejavu-core).
 DEFAULT_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 
-def _wrap_chunk(text: str, max_chars: int = SUBTITLE_MAX_CHARS_PER_LINE) -> str:
-    """Если chunk длиннее max_chars — разбить на 2 строки по ближайшему к
-    середине пробелу. Возвращает строку с реальным `\\n` внутри (нужно потом
-    превратить в drawtext-escape \\\\n через _esc_drawtext)."""
-    if len(text) <= max_chars:
-        return text
-    mid = len(text) // 2
-    left = text.rfind(" ", 0, mid + 1)
-    right = text.find(" ", mid)
-    candidates = [c for c in (left, right) if c != -1]
-    if not candidates:
-        return text  # одно очень длинное слово — нечего ломать
-    idx = min(candidates, key=lambda c: abs(c - mid))
-    return text[:idx] + "\n" + text[idx + 1 :]
-
-
 def _esc_drawtext(s: str) -> str:
     """Escape a string for ffmpeg drawtext text=... value (single-quoted form).
-    Реальный \\n (newline) превращается в FFmpeg-escape \\\\n внутри фильтра."""
+    Wrap-логику (multi-line через \\n) сняли: drawtext \\n внутри filtergraph
+    рендерится непредсказуемо. Если 2-словный чанк всё равно слишком длинный
+    (редкий случай), пусть лучше переползёт край, чем выйдет литералом 'n'.
+    """
     return (
         s.replace("\\", "\\\\")
         .replace(":", r"\:")
         .replace("'", r"\\'")
         .replace(",", r"\,")
-        .replace("\n", "\\n")
     )
 
 
@@ -68,7 +54,7 @@ def _segment_video_filter(
         f"trim=duration={dur:.3f},"
         f"setpts=PTS-STARTPTS"
     )
-    chunks = chunk_subtitle(subtitle)
+    chunks = chunk_subtitle(subtitle, n=SUBTITLE_WORDS_PER_CHUNK)
     non_empty = [c for c in chunks if c]
     if non_empty:
         per = dur / len(chunks)
@@ -78,8 +64,8 @@ def _segment_video_filter(
             t0 = i * per
             t1 = (i + 1) * per
             chain += (
-                f",drawtext=fontfile='{DEFAULT_FONT}':text='{_esc_drawtext(_wrap_chunk(c))}':"
-                f"fontcolor=white:fontsize=52:line_spacing=8:"
+                f",drawtext=fontfile='{DEFAULT_FONT}':text='{_esc_drawtext(c)}':"
+                f"fontcolor=white:fontsize=58:"
                 f"box=1:boxcolor=black@0.55:boxborderw=18:"
                 f"x=(w-text_w)/2:y=h*0.72:"
                 f"enable='between(t,{t0:.3f},{t1:.3f})'"
