@@ -170,10 +170,14 @@ def main() -> int:
     print(f"rendered: {out_path} ({size_mb:.1f} MB)")
 
     if args.no_publish:
-        # Скопируем в /tmp/reel_<id>.mp4 для удобного scp.
-        keep = "/tmp/last_reel.mp4"
+        # Сохраняем в host-mounted директорию (см. docker-compose: ./reels_out → /app/reels_out).
+        out_dir = os.environ.get("REELS_OUT_DIR", "/tmp")
+        os.makedirs(out_dir, exist_ok=True)
+        keep = os.path.join(out_dir, "last_reel.mp4")
         shutil.copy(out_path, keep)
-        print(f"saved local copy: {keep}  (use gcloud scp to download)")
+        print(f"saved: {keep}")
+        if out_dir.startswith("/app/reels_out"):
+            print("on host: ~/nup/reels_out/last_reel.mp4  (use gcloud scp to download)")
         return 0
 
     # 6. Upload to channel

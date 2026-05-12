@@ -55,6 +55,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://nup:nup@postgres:5432/nup
       REDIS_URL: redis://redis:6379/0
+      REELS_OUT_DIR: /app/reels_out
+    volumes:
+      - ./reels_out:/app/reels_out
     command: ["python", "-m", "nup_pipeline.cli.news_loop"]
     depends_on: [postgres, redis]
     restart: unless-stopped
