@@ -132,9 +132,18 @@ def main() -> int:
     )
     print(f"per-segment keywords: {per_seg_kws}")
 
+    # Preupload-клиент создаём заранее (нужен внутри цикла сегментов).
+    review_token = os.environ.get("REVIEW_BOT_TOKEN") or os.environ["TELEGRAM_BOT_TOKEN"]
+    reviewer_chat_id = int(os.environ.get("OPERATOR_CHAT_ID", "0"))
+    if not reviewer_chat_id:
+        print("OPERATOR_CHAT_ID not set; abort")
+        return 1
+    tg = TelegramClient(token=review_token)
+
     used_urls: set[str] = set()
     segments_snapshot: list[dict] = []
     chosen_video_paths: list[Path] = []
+    uploaded = 0
     for i in range(n):
         kw = per_seg_kws[i]
         # Берём с запасом, чтобы найти ≥3 уникальных + еще для повтор-keyword'ов.
@@ -155,14 +164,34 @@ def main() -> int:
             url = c["video_url"]
             local = tmpdir / f"bg_{i:02d}_{j}{Path(url).suffix.split('?')[0] or '.mp4'}"
             _download(url, str(local))
+            # Preupload в Telegram → file_id, сразу deleteMessage.
+            file_id: str | None = None
+            try:
+                file_id, scratch_msg_id = tg.upload_video_for_file_id(
+                    reviewer_chat_id, str(local),
+                )
+                tg.delete_message(reviewer_chat_id, scratch_msg_id)
+                uploaded += 1
+            except TelegramError as e:
+                print(f"  seg{i}/cand{j} preupload failed: {e}; nav fallback to URL")
+            # Локальный mp4 нужен только для ffmpeg-рендера активного клипа.
+            # Остальные кандидаты — выкидываем, чтобы не забить диск.
+            if j != 0:
+                try:
+                    local.unlink()
+                except OSError:
+                    pass
+                local_path_str = ""
+            else:
+                local_path_str = str(local)
             candidates_meta.append({
                 "video_url": url,
-                "local_path": str(local),
+                "local_path": local_path_str,
                 "preview_url": c.get("preview_url", ""),
-                "file_id": None,  # заполним preupload-ом ниже
+                "file_id": file_id,
             })
             mark = " (DUP)" if c["video_url"] in used_urls and j > 0 else ""
-            print(f"  seg{i}/cand{j} ({kw!r}){mark}: {url[:60]}…")
+            print(f"  seg{i}/cand{j} ({kw!r}){mark}: {url[:60]}… file_id={'✓' if file_id else '✗'}")
         segments_snapshot.append({
             "text": sentences[i],
             "audio_path": str(audio_paths[i]),
@@ -171,6 +200,7 @@ def main() -> int:
             "active_idx": 0,
         })
         chosen_video_paths.append(Path(candidates_meta[0]["local_path"]))
+    print(f"preupload done: {uploaded} file_ids cached")
 
     # 6. Render
     segments_for_build = [
@@ -195,10 +225,6 @@ def main() -> int:
     review_id = str(uuid.uuid4())
     channel_id_raw = os.environ.get("TELEGRAM_CHANNEL_ID") or "0"
     channel_id = int(channel_id_raw) if channel_id_raw.lstrip("-").isdigit() else 0
-    reviewer_chat_id = int(os.environ.get("OPERATOR_CHAT_ID", "0"))
-    if not reviewer_chat_id:
-        print("OPERATOR_CHAT_ID not set; abort")
-        return 1
     review = ReviewSession.new(
         render_job_id=review_id,  # we don't have a separate render_job table here
         reviewer_chat_id=reviewer_chat_id,
@@ -215,40 +241,8 @@ def main() -> int:
     rev_repo.save(review)
     print(f"review session saved: {review.id}")
 
-    # 8. Send to operator с [✅/✏️/❌] кнопками.
-    # REVIEW_BOT_TOKEN — отдельный бот для ревью; если не задан, берём
-    # тот же TELEGRAM_BOT_TOKEN (но тогда возможен конфликт polling).
-    review_token = os.environ.get("REVIEW_BOT_TOKEN") or os.environ["TELEGRAM_BOT_TOKEN"]
-    tg = TelegramClient(token=review_token)
-
-    # 8a. Preupload всех кандидатов → file_id. В edit-mode бот подменяет
-    # видео через editMessageMedia мгновенно по file_id, без скачивания
-    # mp4 заново. Каждый upload идёт silent + сразу deleteMessage, чтобы
-    # не спамить чат оператора.
-    total_cands = sum(len(s["candidates"]) for s in segments_snapshot)
-    print(f"preupload: {total_cands} clips → telegram file_id …")
-    uploaded = 0
-    for i, seg in enumerate(segments_snapshot):
-        for j, cand in enumerate(seg["candidates"]):
-            local = cand.get("local_path")
-            if not local or not os.path.exists(local):
-                continue
-            try:
-                file_id, scratch_msg_id = tg.upload_video_for_file_id(
-                    reviewer_chat_id, local,
-                )
-                tg.delete_message(reviewer_chat_id, scratch_msg_id)
-                cand["file_id"] = file_id
-                uploaded += 1
-                if uploaded % 10 == 0:
-                    print(f"  preuploaded {uploaded}/{total_cands}")
-            except TelegramError as e:
-                print(f"  preupload seg{i}/cand{j} failed: {e}; nav fallback to URL")
-    print(f"preupload done: {uploaded}/{total_cands} file_ids")
-    # Re-persist snapshot с file_id-ами.
-    review.segments_snapshot = segments_snapshot
-    rev_repo.save(review)
-
+    # 8. Send to operator с [✅/✏️/❌] кнопками. file_id-ы кандидатов уже
+    # собраны в шаге 5 — здесь только финальный reel с inline-клавиатурой.
     try:
         msg_id = tg.send_video_file(
             reviewer_chat_id,
