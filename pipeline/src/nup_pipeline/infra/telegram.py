@@ -89,6 +89,35 @@ class TelegramClient:
         result = self._call_with_retry("sendVideo", params)
         return int(result["message_id"])
 
+    def send_video_file(
+        self,
+        chat_id: str | int,
+        local_path: str,
+        *,
+        caption: str | None = None,
+    ) -> int:
+        """Upload a local MP4 to Telegram (multipart/form-data).
+
+        Bot API лимит на upload через бота — 50 MB. Подходит для коротких Reels.
+        Не идёт через _call_with_retry (он принимает JSON params), у multipart
+        своя обёртка. Retry/backoff здесь не делаем — для смок-теста хватит.
+        """
+        url = f"{API_BASE}/bot{self._token}/sendVideo"
+        data: dict = {"chat_id": str(chat_id), "parse_mode": "Markdown"}
+        if caption is not None:
+            data["caption"] = caption
+        with open(local_path, "rb") as f:
+            files = {"video": ("reel.mp4", f, "video/mp4")}
+            with httpx.Client(timeout=180.0) as client:
+                resp = client.post(url, data=data, files=files)
+        if resp.status_code >= 400:
+            body = self._safe_json(resp)
+            raise TelegramError(body.get("description") or f"HTTP {resp.status_code}")
+        payload = resp.json()
+        if not payload.get("ok"):
+            raise TelegramError(payload.get("description") or "ok=false")
+        return int(payload["result"]["message_id"])
+
     # --- internals ----------------------------------------------------------
 
     def _call_with_retry(self, method: str, params: dict) -> dict:
