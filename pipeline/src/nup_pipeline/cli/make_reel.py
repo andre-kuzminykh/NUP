@@ -179,12 +179,15 @@ def main() -> int:
     size_mb = os.path.getsize(out_path) / (1024 * 1024)
     print(f"rendered: {out_path} ({size_mb:.1f} MB, ~{total_dur:.0f}s)")
 
+    # Save to host-mounted dir ALWAYS, regardless of --no-publish.
+    # Если TG-upload потом упадёт, файл всё равно остаётся на хосте.
+    out_dir = os.environ.get("REELS_OUT_DIR", "/tmp")
+    os.makedirs(out_dir, exist_ok=True)
+    keep = os.path.join(out_dir, "last_reel.mp4")
+    shutil.copy(out_path, keep)
+    print(f"saved: {keep}")
+
     if args.no_publish:
-        out_dir = os.environ.get("REELS_OUT_DIR", "/tmp")
-        os.makedirs(out_dir, exist_ok=True)
-        keep = os.path.join(out_dir, "last_reel.mp4")
-        shutil.copy(out_path, keep)
-        print(f"saved: {keep}")
         return 0
 
     # 7. Telegram upload
@@ -201,8 +204,20 @@ def main() -> int:
             return 1
         target = int(op)
     print(f"uploading to {target}…")
-    msg_id = tg.send_video_file(target, out_path, caption=caption)
-    print(f"OK, message_id={msg_id}")
+    try:
+        msg_id = tg.send_video_file(target, out_path, caption=caption)
+        print(f"OK, message_id={msg_id}")
+    except Exception as e:
+        msg = str(e)
+        print(f"FAILED to upload to Telegram: {msg}")
+        if "bot can't initiate conversation" in msg or "Forbidden" in msg:
+            print(
+                "\n→ Telegram запретил боту писать тебе первым.\n"
+                "  Открой https://t.me/dataist_media_bot и нажми Start (или напиши /start),\n"
+                "  потом запусти make_reel ещё раз. Файл уже сохранён локально:\n"
+                f"  {keep}"
+            )
+        return 2
     return 0
 
 
