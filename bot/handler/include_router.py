@@ -16,6 +16,7 @@ from aiogram import Dispatcher
 import handler.v1.user.base.F001.start_widget  # noqa: F401
 import handler.v1.user.renders.F002.render_status_widget  # noqa: F401
 import handler.v1.user.reviews.F003.review_callback_widget  # noqa: F401
+import handler.v1.user.reviews.F003.edit_callback_widget  # noqa: F401
 from handler.v1.user.router import base_router, renders_router, reviews_router
 
 

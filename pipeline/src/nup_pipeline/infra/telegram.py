@@ -95,6 +95,7 @@ class TelegramClient:
         local_path: str,
         *,
         caption: str | None = None,
+        reply_markup: dict | None = None,
     ) -> int:
         """Upload a local MP4 to Telegram (multipart/form-data).
 
@@ -106,6 +107,9 @@ class TelegramClient:
         data: dict = {"chat_id": str(chat_id), "parse_mode": "Markdown"}
         if caption is not None:
             data["caption"] = caption
+        if reply_markup is not None:
+            import json as _json
+            data["reply_markup"] = _json.dumps(reply_markup, ensure_ascii=False)
         with open(local_path, "rb") as f:
             files = {"video": ("reel.mp4", f, "video/mp4")}
             with httpx.Client(timeout=180.0) as client:

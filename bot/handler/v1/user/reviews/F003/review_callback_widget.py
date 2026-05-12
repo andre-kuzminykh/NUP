@@ -24,7 +24,7 @@ from handler.v1.user.router import reviews_router
 from node.reviews.answer.review_approved_answer import ReviewApprovedAnswer
 from node.reviews.answer.review_backend_error_answer import ReviewBackendErrorAnswer
 from node.reviews.answer.review_declined_answer import ReviewDeclinedAnswer
-from node.reviews.answer.review_edit_started_answer import ReviewEditStartedAnswer
+from node.reviews.answer.review_edit_preview_answer import ReviewEditPreviewAnswer
 from node.reviews.answer.review_invalid_answer import ReviewInvalidAnswer
 from node.reviews.code.review_callback_code import ReviewCallbackCode
 from node.reviews.trigger.review_callback_trigger import ReviewCallbackTrigger
@@ -32,7 +32,7 @@ from node.reviews.trigger.review_callback_trigger import ReviewCallbackTrigger
 ANSWER_REGISTRY = {
     "review_approved": ReviewApprovedAnswer(),
     "review_declined": ReviewDeclinedAnswer(),
-    "review_edit_started": ReviewEditStartedAnswer(),
+    "review_edit_preview": ReviewEditPreviewAnswer(),
     "review_invalid": ReviewInvalidAnswer(),
     "review_backend_error": ReviewBackendErrorAnswer(),
 }

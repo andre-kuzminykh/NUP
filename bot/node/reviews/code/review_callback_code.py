@@ -32,9 +32,9 @@ class ReviewCallbackCode:
             if action == "decline":
                 payload = await self._api.decline(review_id)
                 return {"answer_name": "review_declined", "data": payload}
-            # action == "edit"
+            # action == "edit" — переходим в edit-mode и сразу рисуем preview
             payload = await self._api.start_edit(review_id)
-            return {"answer_name": "review_edit_started", "data": payload}
+            return {"answer_name": "review_edit_preview", "data": payload}
         except NotFoundError:
             return {"answer_name": "review_invalid", "data": {}}
         except BackendError as e:

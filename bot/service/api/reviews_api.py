@@ -33,11 +33,11 @@ class ReviewsAPI:
         self._base_url = base_url or config.BACKEND_URL
         self._timeout = timeout if timeout is not None else config.REQUEST_TIMEOUT
 
-    async def _post(self, path: str) -> dict:
+    async def _post(self, path: str, *, body: dict | None = None) -> dict:
         url = f"{self._base_url}/v1/reviews{path}"
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
-                resp = await client.post(url)
+                resp = await client.post(url, json=body) if body else await client.post(url)
         except httpx.HTTPError as e:
             raise BackendError(str(e)) from e
         if resp.status_code == 404:
@@ -54,3 +54,12 @@ class ReviewsAPI:
 
     async def start_edit(self, review_id: str) -> dict:
         return await self._post(f"/{review_id}/start-edit")
+
+    async def cancel_edit(self, review_id: str) -> dict:
+        return await self._post(f"/{review_id}/cancel-edit")
+
+    async def move(self, review_id: str, direction: str) -> dict:
+        return await self._post(f"/{review_id}/move", body={"direction": direction})
+
+    async def pick(self, review_id: str, direction: str) -> dict:
+        return await self._post(f"/{review_id}/pick", body={"direction": direction})
