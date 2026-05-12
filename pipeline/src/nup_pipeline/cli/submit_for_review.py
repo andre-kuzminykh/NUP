@@ -238,6 +238,13 @@ def main() -> int:
     review.message_id = msg_id
     rev_repo.save(review)
     print(f"OK, review={review.id}, message_id={msg_id}")
+
+    # Disk hygiene: после успешной отправки оператору локальные исходники
+    # (HD-кандидаты Pexels ~30 файлов по 5-15 MB) больше не нужны. Сам
+    # mp4 уже скопирован в REELS_OUT_DIR/last_reel.mp4, а edit-mode
+    # перекачивает кандидатов из video_url в segments_snapshot.
+    shutil.rmtree(tmpdir, ignore_errors=True)
+    print(f"cleaned tmpdir: {tmpdir}")
     return 0
 
 
