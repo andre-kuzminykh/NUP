@@ -56,6 +56,7 @@ def _payload(r: ReviewSession) -> dict[str, Any]:
         "candidate_idx": active_idx,
         "candidate_total": len(candidates),
         "active_video_url": active.get("video_url") if active else None,
+        "active_preview_url": active.get("preview_url") if active else None,
     }
 
 

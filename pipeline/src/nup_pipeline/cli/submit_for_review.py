@@ -84,7 +84,7 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     p = argparse.ArgumentParser(description="Render Reel and submit for operator review.")
     p.add_argument("--source", default=None)
-    p.add_argument("--candidates", type=int, default=3,
+    p.add_argument("--candidates", type=int, default=10,
                    help="Сколько вариантов клипа держать на каждый сегмент.")
     args = p.parse_args()
 

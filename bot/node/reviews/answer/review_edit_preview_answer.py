@@ -49,11 +49,14 @@ def _kb(review_id: str) -> dict:
 
 def _caption(p: dict) -> str:
     seg_text = (p.get("segment_text") or "").strip()
+    preview_url = p.get("active_preview_url") or p.get("active_video_url") or ""
+    preview_line = f"\n[👁 Посмотреть клип]({preview_url})" if preview_url else ""
     return (
         f"✏️ *Редактирование*\n"
         f"Кадр *{p.get('cursor', 0) + 1}/{p.get('total', 0)}*: "
         f"_{seg_text[:200]}_\n"
         f"Клип *{p.get('candidate_idx', 0) + 1}/{p.get('candidate_total', 0)}*"
+        f"{preview_line}"
     )
 
 
