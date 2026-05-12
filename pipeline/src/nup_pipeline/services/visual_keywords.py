@@ -66,9 +66,49 @@ class VisualKeywords:
         out: list[str] = []
         for line in raw.splitlines():
             kw = line.strip().strip("-•*").strip()
-            # Skip numbered lines like "1. ..."
             if kw and not kw[0].isdigit():
                 out.append(kw)
             if len(out) >= 5:
                 break
         return out
+
+    def keywords_per_segment(
+        self, title_en: str, sentences: list[str], fallback: list[str] | None = None,
+    ) -> list[str]:
+        """По одному визуальному keyword'у на каждое предложение из сценария.
+
+        Каждый сегмент Reels получает собственный, отличный от соседей
+        запрос для stock-search — это убирает «одни и те же кадры подряд».
+        """
+        if not sentences:
+            return []
+        numbered = "\n".join(f"{i+1}. {s.strip()}" for i, s in enumerate(sentences))
+        prompt = (
+            "You're choosing search terms for stock-video sites.\n\n"
+            f"Article title (for context): {title_en[:200]}\n\n"
+            "For EACH numbered sentence below, output ONE short ENGLISH visual\n"
+            "keyword (1-3 words, lowercase, NO proper nouns, NO numbers).\n"
+            "Output the keywords in the SAME ORDER as sentences, one per line.\n"
+            "Make each keyword DIFFERENT from the previous one — variety matters.\n\n"
+            f"SENTENCES:\n{numbered}\n\n"
+            "OUTPUT (one keyword per line, same order):"
+        )
+        try:
+            raw = self._llm.complete_text(prompt) or ""
+        except Exception:
+            raw = ""
+        out: list[str] = []
+        for line in raw.splitlines():
+            kw = line.strip().strip("-•*").strip()
+            # Skip leading "1. " numbering if LLM still numbered
+            if kw and kw[0].isdigit() and "." in kw[:4]:
+                kw = kw.split(".", 1)[1].strip()
+            if kw:
+                out.append(kw)
+            if len(out) >= len(sentences):
+                break
+        # Pad with fallback / generic if LLM was lazy.
+        pool = fallback or out or ["technology"]
+        while len(out) < len(sentences):
+            out.append(pool[len(out) % len(pool)])
+        return out[: len(sentences)]

@@ -125,24 +125,33 @@ def main() -> int:
         audio_paths.append(path)
         print(f"  seg{i}: {durations[-1]:.1f}s")
 
-    # 5. Visual keywords + N candidates per segment
-    kws = VisualKeywords(llm=llm).keywords_for(bundle.title_en, bundle.content_en)
-    if not kws:
-        kws = [bundle.title_en or "technology"]
-    print(f"keywords: {kws}")
+    # 5. Per-segment keywords + N candidates per segment (с дедупом active-клипа)
+    per_seg_kws = VisualKeywords(llm=llm).keywords_per_segment(
+        bundle.title_en, sentences,
+        fallback=[bundle.title_en or "technology"],
+    )
+    print(f"per-segment keywords: {per_seg_kws}")
 
+    used_urls: set[str] = set()
     segments_snapshot: list[dict] = []
     chosen_video_paths: list[Path] = []
     for i in range(n):
-        kw = kws[i % len(kws)]
-        cands = _candidates_for(kw, want=args.candidates)
-        if not cands:
+        kw = per_seg_kws[i]
+        # Берём с запасом, чтобы найти ≥3 уникальных + еще для повтор-keyword'ов.
+        cands_raw = _candidates_for(kw, want=max(args.candidates * 2, 6))
+        if not cands_raw:
             print(f"  seg{i}: NO clips for {kw!r}; abort")
             return 1
-        # Download all candidates so user can switch in edit-mode without
-        # paying network latency on each tap.
+        # Сначала пробуем выбрать active из не-использованных.
+        unused = [c for c in cands_raw if c["video_url"] not in used_urls]
+        ordered = unused + [c for c in cands_raw if c["video_url"] in used_urls]
+        # Берём первые N для отображения в edit-mode.
+        candidates = ordered[: args.candidates]
+        active = candidates[0]
+        used_urls.add(active["video_url"])
+
         candidates_meta = []
-        for j, c in enumerate(cands):
+        for j, c in enumerate(candidates):
             url = c["video_url"]
             local = tmpdir / f"bg_{i:02d}_{j}{Path(url).suffix.split('?')[0] or '.mp4'}"
             _download(url, str(local))
@@ -151,7 +160,8 @@ def main() -> int:
                 "local_path": str(local),
                 "preview_url": c.get("preview_url", ""),
             })
-            print(f"  seg{i}/cand{j}: {url[:70]}…")
+            mark = " (DUP)" if c["video_url"] in used_urls and j > 0 else ""
+            print(f"  seg{i}/cand{j} ({kw!r}){mark}: {url[:60]}…")
         segments_snapshot.append({
             "text": sentences[i],
             "audio_path": str(audio_paths[i]),
@@ -204,8 +214,11 @@ def main() -> int:
     rev_repo.save(review)
     print(f"review session saved: {review.id}")
 
-    # 8. Send to operator with [❌ Отклонить / ✏️ Редактировать / ✅ Опубликовать]
-    tg = TelegramClient(token=os.environ["TELEGRAM_BOT_TOKEN"])
+    # 8. Send to operator с [✅/✏️/❌] кнопками.
+    # REVIEW_BOT_TOKEN — отдельный бот для ревью; если не задан, берём
+    # тот же TELEGRAM_BOT_TOKEN (но тогда возможен конфликт polling).
+    review_token = os.environ.get("REVIEW_BOT_TOKEN") or os.environ["TELEGRAM_BOT_TOKEN"]
+    tg = TelegramClient(token=review_token)
     try:
         msg_id = tg.send_video_file(
             reviewer_chat_id,
@@ -216,7 +229,11 @@ def main() -> int:
     except TelegramError as e:
         print(f"FAILED to send to operator: {e}")
         if "Forbidden" in str(e):
-            print("→ open https://t.me/dataist_media_bot and press Start, then re-run")
+            print(
+                "→ Открой нового review-бота в Telegram и нажми Start.\n"
+                "  Если используешь REVIEW_BOT_TOKEN — ищи его по username из BotFather,\n"
+                "  иначе — https://t.me/dataist_media_bot."
+            )
         return 2
     review.message_id = msg_id
     rev_repo.save(review)

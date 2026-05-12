@@ -50,3 +50,45 @@ def test_llm_failure_returns_empty() -> None:
         def complete_text(self, prompt):
             raise RuntimeError("boom")
     assert VisualKeywords(llm=BrokenLlm()).keywords_for("t", "b") == []
+
+
+@pytest.mark.unit
+def test_keywords_per_segment_one_per_sentence() -> None:
+    llm = FakeLlm("call center\nheadset operator\nai voice")
+    kws = VisualKeywords(llm=llm).keywords_per_segment("title", ["s1", "s2", "s3"])
+    assert kws == ["call center", "headset operator", "ai voice"]
+
+
+@pytest.mark.unit
+def test_keywords_per_segment_strips_numbered_prefix() -> None:
+    llm = FakeLlm("1. call center\n2. headset operator\n3. ai voice")
+    kws = VisualKeywords(llm=llm).keywords_per_segment("title", ["s1", "s2", "s3"])
+    assert kws == ["call center", "headset operator", "ai voice"]
+
+
+@pytest.mark.unit
+def test_keywords_per_segment_pads_with_fallback_if_lazy_llm() -> None:
+    llm = FakeLlm("just one")
+    kws = VisualKeywords(llm=llm).keywords_per_segment(
+        "title", ["s1", "s2", "s3"], fallback=["tech", "office"]
+    )
+    # LLM gave 1, need 3; pad cycling through ['just one'] then fallback if needed.
+    assert len(kws) == 3
+    assert kws[0] == "just one"
+
+
+@pytest.mark.unit
+def test_keywords_per_segment_llm_failure_uses_fallback() -> None:
+    class BrokenLlm:
+        def complete_text(self, prompt):
+            raise RuntimeError("boom")
+    kws = VisualKeywords(llm=BrokenLlm()).keywords_per_segment(
+        "t", ["s1", "s2"], fallback=["technology"]
+    )
+    assert kws == ["technology", "technology"]
+
+
+@pytest.mark.unit
+def test_keywords_per_segment_empty_sentences_empty_result() -> None:
+    llm = FakeLlm("ignored")
+    assert VisualKeywords(llm=llm).keywords_per_segment("t", []) == []
