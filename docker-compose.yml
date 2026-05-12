@@ -45,6 +45,11 @@ services:
       DATABASE_URL: postgresql+psycopg2://nup:nup@postgres:5432/nup
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT: http://minio:9000
+      REELS_OUT_DIR: /app/reels_out
+    volumes:
+      # Тот же монт, что у news-worker: api читает voice_NN.mp3 + bg_NN.mp4
+      # для пересборки reel.mp4 на «💾 Сохранить» (F013 ReelRebuilder).
+      - ./reels_out:/app/reels_out
     ports: ["8010:8010"]
     depends_on: [postgres, redis, minio]
     restart: unless-stopped
