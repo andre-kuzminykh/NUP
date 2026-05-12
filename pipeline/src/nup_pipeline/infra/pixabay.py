@@ -45,12 +45,19 @@ class PixabaySearch:
         self._timeout = timeout
         self._transport = transport
 
-    def search_videos(self, query: str, *, per_page: int = 3) -> list[dict]:
+    def search_videos(
+        self,
+        query: str,
+        *,
+        per_page: int = 3,
+        page: int = 1,
+    ) -> list[dict]:
         params = {
             "key": self._key,
             "q": query,
             "per_page": max(3, per_page),
             "video_type": "film",
+            "page": page,
         }
         if self._transport is not None:
             resp = self._transport(params)

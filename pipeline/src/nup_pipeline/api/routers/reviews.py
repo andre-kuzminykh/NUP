@@ -19,6 +19,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
 from nup_pipeline.api.deps import (
+    get_candidate_refresher,
     get_review_decider,
     get_review_editor,
     get_review_repo,
@@ -28,6 +29,7 @@ from nup_pipeline.domain.review import (
     ReviewSession,
     ReviewStatus,
 )
+from nup_pipeline.services.candidate_refresher import CandidateRefresher
 from nup_pipeline.services.review_decision import ReviewDecider
 from nup_pipeline.services.review_editor import ReviewEditor
 
@@ -166,6 +168,26 @@ def pick(
     try:
         _ensure_in_edit(review_id, repo, editor)
         editor.pick(review_id, body.direction)
+    except KeyError:
+        raise HTTPException(404, "review not found")
+    except (IllegalReviewStateError, ValueError) as e:
+        raise HTTPException(409, str(e))
+    return _state(repo.get(review_id), editor)
+
+
+@router.post("/{review_id}/refresh-candidates")
+def refresh_candidates(
+    review_id: str,
+    editor: Annotated[ReviewEditor, Depends(get_review_editor)],
+    repo: Annotated[object, Depends(get_review_repo)],
+    refresher: Annotated[CandidateRefresher, Depends(get_candidate_refresher)],
+):
+    """🔄 Найти ещё — заменить кандидаты текущего сегмента свежей партией
+    из Pexels/Pixabay (следующая страница). Auto-входит в IN_EDIT, если
+    был в PENDING_REVIEW."""
+    try:
+        _ensure_in_edit(review_id, repo, editor)
+        refresher.refresh(review_id)
     except KeyError:
         raise HTTPException(404, "review not found")
     except (IllegalReviewStateError, ValueError) as e:

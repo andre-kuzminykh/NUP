@@ -63,3 +63,17 @@ class ReviewsAPI:
 
     async def pick(self, review_id: str, direction: str) -> dict:
         return await self._post(f"/{review_id}/pick", body={"direction": direction})
+
+    async def refresh_candidates(self, review_id: str) -> dict:
+        # Долго: бекенд качает + uploadит ~10 mp4 в Telegram. 30-60 с легко.
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            url = f"{self._base_url}/v1/reviews/{review_id}/refresh-candidates"
+            try:
+                resp = await client.post(url)
+            except httpx.HTTPError as e:
+                raise BackendError(str(e)) from e
+        if resp.status_code == 404:
+            raise NotFoundError("refresh-candidates")
+        if resp.status_code >= 400:
+            raise BackendError(f"backend {resp.status_code}: {resp.text[:200]}")
+        return resp.json()

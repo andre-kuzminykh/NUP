@@ -41,6 +41,10 @@ def _kb(review_id: str) -> dict:
                 {"text": "Клип ▶",   "callback_data": f"edit:{review_id}:clip_next"},
             ],
             [
+                {"text": "🔄 Найти ещё",
+                 "callback_data": f"edit:{review_id}:refresh"},
+            ],
+            [
                 {"text": "✅ Опубликовать",
                  "callback_data": f"edit:{review_id}:approve"},
             ],

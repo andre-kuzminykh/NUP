@@ -30,12 +30,13 @@ def _best_portrait_file(video_files: list[dict]) -> dict | None:
     ]
     if not portrait:
         return None
-    # Highest resolution до Full-HD (1920×1080 portrait). UHD/4K весят >50MB,
-    # что превышает лимит Telegram bot uploadа (50MB) для preupload-флоу.
-    # Если HD-варианта нет — берём минимально доступный.
-    hd = [f for f in portrait if int(f["height"]) <= 1920]
-    pool = hd if hd else portrait
-    return max(pool, key=lambda f: int(f["height"]))
+    # Берём самый низкокачественный вариант ≥720 по высоте — это даёт
+    # 2-5 MB файлы (vs 10-20 MB у HD/UHD) и легко проходит лимит Telegram
+    # bot upload (50 MB) + быстрее грузится на телефоне в edit-mode preview.
+    # Если в наборе нет 720+ — fallback на минимально доступный.
+    candidates_720 = [f for f in portrait if int(f["height"]) >= 720]
+    pool = candidates_720 if candidates_720 else portrait
+    return min(pool, key=lambda f: int(f["height"]))
 
 
 class PexelsSearch:
@@ -56,10 +57,16 @@ class PexelsSearch:
         *,
         per_page: int = 3,
         orientation: str = "portrait",
+        page: int = 1,
     ) -> list[dict]:
         url = f"{API_BASE}/videos/search?query={httpx.QueryParams({'q':query})['q']}"
         # use proper param encoding:
-        params = {"query": query, "per_page": per_page, "orientation": orientation}
+        params = {
+            "query": query,
+            "per_page": per_page,
+            "orientation": orientation,
+            "page": page,
+        }
         headers = {"Authorization": self._key}
         if self._transport is not None:
             resp = self._transport(url, params)

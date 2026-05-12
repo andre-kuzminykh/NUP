@@ -8,8 +8,11 @@ from fastapi import FastAPI
 
 from nup_pipeline.api import deps
 from nup_pipeline.api.routers import renders, reviews
+from nup_pipeline.infra.pexels import PexelsSearch
+from nup_pipeline.infra.pixabay import PixabaySearch
 from nup_pipeline.infra.review_repo_pg import PostgresReviewRepo
 from nup_pipeline.infra.telegram import TelegramClient
+from nup_pipeline.services.candidate_refresher import CandidateRefresher
 from nup_pipeline.services.review_decision import ReviewDecider
 from nup_pipeline.services.review_editor import ReviewEditor
 from nup_pipeline.services.video_publication import VideoPublisher
@@ -44,11 +47,22 @@ def _wire_review_services(app: FastAPI) -> None:
     decider = ReviewDecider(review_repo=repo, video_publisher=video_publisher)
     editor = ReviewEditor(repo=repo)
 
+    # Refresher грузит свежие кандидаты + uploadит в Telegram через
+    # тот же REVIEW_BOT_TOKEN, что и submit_for_review.
+    review_token = os.environ.get("REVIEW_BOT_TOKEN") or bot_token
+    refresh_tg = TelegramClient(token=review_token)
+    pexels = PexelsSearch() if os.environ.get("PEXELS_API_KEY") else None
+    pixabay = PixabaySearch() if os.environ.get("PIXABAY_API_KEY") else None
+    refresher = CandidateRefresher(
+        repo=repo, pexels=pexels, pixabay=pixabay, telegram=refresh_tg,
+    )
+
     app.dependency_overrides[deps.get_review_repo] = lambda: repo
     app.dependency_overrides[deps.get_review_decider] = lambda: decider
     app.dependency_overrides[deps.get_review_editor] = lambda: editor
     app.dependency_overrides[deps.get_video_publisher] = lambda: video_publisher
-    log.info("review services wired (Postgres + Telegram)")
+    app.dependency_overrides[deps.get_candidate_refresher] = lambda: refresher
+    log.info("review services wired (Postgres + Telegram + Refresher)")
 
 
 def build_app() -> FastAPI:

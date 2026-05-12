@@ -5,6 +5,7 @@ Production wiring строится один раз в api/app.py на основ
 """
 from __future__ import annotations
 
+from nup_pipeline.services.candidate_refresher import CandidateRefresher
 from nup_pipeline.services.review_decision import ReviewDecider
 from nup_pipeline.services.review_editor import ReviewEditor
 from nup_pipeline.services.video_assembly import AssembleService
@@ -32,3 +33,7 @@ def get_review_editor() -> ReviewEditor:  # pragma: no cover
 
 def get_video_publisher() -> VideoPublisher:  # pragma: no cover
     raise RuntimeError("get_video_publisher must be wired in api.app")
+
+
+def get_candidate_refresher() -> CandidateRefresher:  # pragma: no cover
+    raise RuntimeError("get_candidate_refresher must be wired in api.app")

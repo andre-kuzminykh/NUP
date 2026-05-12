@@ -47,6 +47,8 @@ class EditCallbackCode:
             elif action == "decline":
                 payload = await self._api.decline(review_id)
                 return {"answer_name": "review_declined", "data": payload}
+            elif action == "refresh":
+                payload = await self._api.refresh_candidates(review_id)
             else:
                 return {"answer_name": "review_invalid", "data": {}}
         except NotFoundError:

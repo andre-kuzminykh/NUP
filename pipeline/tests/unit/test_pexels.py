@@ -32,7 +32,7 @@ _FAKE_RESPONSE = {
 
 
 @pytest.mark.unit
-def test_search_returns_normalized_items_with_highest_portrait() -> None:
+def test_search_returns_normalized_items_with_lowest_720plus_portrait() -> None:
     def transport(url, params):
         assert params["query"] == "AI robots"
         assert params["orientation"] == "portrait"
@@ -40,10 +40,12 @@ def test_search_returns_normalized_items_with_highest_portrait() -> None:
 
     out = PexelsSearch(api_key="k", transport=transport).search_videos("AI robots")
     assert len(out) == 2
-    # Highest portrait of first video wins.
-    assert out[0]["video_url"] == "https://x/portrait_high.mp4"
-    assert out[0]["height"] == 1920
+    # Lowest portrait ≥720 wins (smaller files = faster preupload + phone load).
+    # Для первого видео это 540×960, для второго — 720×1280 (единственный portrait).
+    assert out[0]["video_url"] == "https://x/portrait_low.mp4"
+    assert out[0]["height"] == 960
     assert out[1]["video_url"] == "https://x/portrait_2.mp4"
+    assert out[1]["height"] == 1280
 
 
 @pytest.mark.unit

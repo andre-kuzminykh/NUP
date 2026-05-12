@@ -196,8 +196,10 @@ def main() -> int:
             "text": sentences[i],
             "audio_path": str(audio_paths[i]),
             "duration": durations[i],
+            "keyword": kw,
             "candidates": candidates_meta,
             "active_idx": 0,
+            "refresh_offset": 0,
         })
         chosen_video_paths.append(Path(candidates_meta[0]["local_path"]))
     print(f"preupload done: {uploaded} file_ids cached")
