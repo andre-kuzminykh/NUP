@@ -28,9 +28,9 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Column,
     DateTime,
-    Integer,
     String,
     select,
 )
@@ -44,14 +44,16 @@ class _ReviewRow(Base):
     __tablename__ = "reviews"
     id = Column(String, primary_key=True)
     render_job_id = Column(String, nullable=False)
-    reviewer_chat_id = Column(Integer, nullable=False)
-    channel_id = Column(Integer, nullable=False)
+    # Telegram ID-ы могут быть >2^31 (особенно channel_id вида -100...);
+    # обязательно BigInteger, не Integer.
+    reviewer_chat_id = Column(BigInteger, nullable=False)
+    channel_id = Column(BigInteger, nullable=False)
     status = Column(String, nullable=False)
-    message_id = Column(Integer, nullable=True)
+    message_id = Column(BigInteger, nullable=True)
     output_uri = Column(String, nullable=True)
     caption = Column(String, nullable=True)
-    publication_message_id = Column(Integer, nullable=True)
-    # Используем JSON, не JSONB: совместимость с SQLite для unit-тестов.
+    publication_message_id = Column(BigInteger, nullable=True)
+    # JSON (не JSONB) — для совместимости с SQLite в unit-тестах.
     segments_snapshot = Column(JSON, nullable=True)
     edit_state = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False)
