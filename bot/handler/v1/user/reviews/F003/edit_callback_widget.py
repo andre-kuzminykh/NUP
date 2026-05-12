@@ -34,13 +34,16 @@ ANSWER_REGISTRY = {
 @reviews_router.callback_query(F.data.startswith("edit:"))
 async def handle_edit_callback(callback: CallbackQuery, state: FSMContext) -> None:
     trigger_data = await EditCallbackTrigger().run(callback, state)
-    # «Найти ещё» работает 30-60 с (search + download + preupload). Показываем
+    # «Найти ещё» / «Сохранить» — долгие операции (30-60 с). Показываем
     # лоадер сразу, чтобы оператор не думал, что бот завис.
-    if trigger_data.get("action") == "refresh":
+    loading_text = {
+        "refresh": "⏳ Подбираю новые клипы для этого кадра… (~30-60 с)",
+        "save": "⏳ Сохраняю и пересобираю видео… (~20-40 с)",
+    }.get(trigger_data.get("action") or "")
+    if loading_text:
         try:
             await callback.message.edit_caption(
-                caption="⏳ Подбираю новые клипы для этого кадра… (~30-60 с)",
-                parse_mode="Markdown",
+                caption=loading_text, parse_mode="Markdown",
             )
         except Exception:
             pass

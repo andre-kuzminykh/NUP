@@ -8,11 +8,13 @@ from fastapi import FastAPI
 
 from nup_pipeline.api import deps
 from nup_pipeline.api.routers import renders, reviews
+from nup_pipeline.infra.ffmpeg import FfmpegRunner
 from nup_pipeline.infra.pexels import PexelsSearch
 from nup_pipeline.infra.pixabay import PixabaySearch
 from nup_pipeline.infra.review_repo_pg import PostgresReviewRepo
 from nup_pipeline.infra.telegram import TelegramClient
 from nup_pipeline.services.candidate_refresher import CandidateRefresher
+from nup_pipeline.services.reel_rebuilder import ReelRebuilder
 from nup_pipeline.services.review_decision import ReviewDecider
 from nup_pipeline.services.review_editor import ReviewEditor
 from nup_pipeline.services.video_publication import VideoPublisher
@@ -65,12 +67,16 @@ def _wire_review_services(app: FastAPI) -> None:
         telegram=refresh_tg, llm=llm,
     )
 
+    rebuilder = ReelRebuilder(runner=FfmpegRunner())
+
     app.dependency_overrides[deps.get_review_repo] = lambda: repo
     app.dependency_overrides[deps.get_review_decider] = lambda: decider
     app.dependency_overrides[deps.get_review_editor] = lambda: editor
     app.dependency_overrides[deps.get_video_publisher] = lambda: video_publisher
     app.dependency_overrides[deps.get_candidate_refresher] = lambda: refresher
-    log.info("review services wired (Postgres + Telegram + Refresher)")
+    app.dependency_overrides[deps.get_reel_rebuilder] = lambda: rebuilder
+    app.dependency_overrides[deps.get_review_tg_client] = lambda: refresh_tg
+    log.info("review services wired (Postgres + Telegram + Refresher + Rebuilder)")
 
 
 def build_app() -> FastAPI:

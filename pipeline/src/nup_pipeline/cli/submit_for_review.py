@@ -265,12 +265,10 @@ def main() -> int:
     rev_repo.save(review)
     print(f"OK, review={review.id}, message_id={msg_id}")
 
-    # Disk hygiene: после успешной отправки оператору локальные исходники
-    # (HD-кандидаты Pexels ~30 файлов по 5-15 MB) больше не нужны. Сам
-    # mp4 уже скопирован в REELS_OUT_DIR/last_reel.mp4, а edit-mode
-    # перекачивает кандидатов из video_url в segments_snapshot.
-    shutil.rmtree(tmpdir, ignore_errors=True)
-    print(f"cleaned tmpdir: {tmpdir}")
+    # ВАЖНО: tmpdir намеренно НЕ удаляем. Внутри лежат voice_NN.mp3 и
+    # bg_NN_0.mp4 — они нужны для пересборки reel'а при «💾 Сохранить»
+    # в edit-mode (если оператор сменил active_idx). Cleanup tmpdir
+    # происходит на approve/decline.
     return 0
 
 

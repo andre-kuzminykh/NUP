@@ -41,9 +41,10 @@ class EditCallbackCode:
             elif action == "clip_next":
                 payload = await self._api.pick(review_id, "next")
             elif action == "save":
-                # «💾 Сохранить» — выходим из edit-mode, активные picks
-                # остаются в segments_snapshot. Бот покажет главное меню.
-                payload = await self._api.cancel_edit(review_id)
+                # «💾 Сохранить» — пересобираем reel.mp4 из выбранных
+                # candidates[active_idx], меняем видео в чате оператора,
+                # выходим из IN_EDIT в PENDING_REVIEW.
+                payload = await self._api.save_edit(review_id)
                 return {"answer_name": "review_edit_cancelled", "data": payload}
             elif action == "cancel":
                 # «↩️ Отмена» — выходим с полным откатом active_idx → 0.

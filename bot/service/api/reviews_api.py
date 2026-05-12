@@ -61,6 +61,20 @@ class ReviewsAPI:
     async def cancel_edit_revert(self, review_id: str) -> dict:
         return await self._post(f"/{review_id}/cancel-edit-revert")
 
+    async def save_edit(self, review_id: str) -> dict:
+        # Долго: бэкенд пересобирает reel (ffmpeg ~10-30 с) + uploads в Telegram.
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            url = f"{self._base_url}/v1/reviews/{review_id}/save-edit"
+            try:
+                resp = await client.post(url)
+            except httpx.HTTPError as e:
+                raise BackendError(str(e)) from e
+        if resp.status_code == 404:
+            raise NotFoundError("save-edit")
+        if resp.status_code >= 400:
+            raise BackendError(f"backend {resp.status_code}: {resp.text[:200]}")
+        return resp.json()
+
     async def move(self, review_id: str, direction: str) -> dict:
         return await self._post(f"/{review_id}/move", body={"direction": direction})
 

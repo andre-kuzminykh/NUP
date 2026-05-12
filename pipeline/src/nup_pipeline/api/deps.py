@@ -37,3 +37,11 @@ def get_video_publisher() -> VideoPublisher:  # pragma: no cover
 
 def get_candidate_refresher() -> CandidateRefresher:  # pragma: no cover
     raise RuntimeError("get_candidate_refresher must be wired in api.app")
+
+
+def get_reel_rebuilder():  # pragma: no cover
+    raise RuntimeError("get_reel_rebuilder must be wired in api.app")
+
+
+def get_review_tg_client():  # pragma: no cover
+    raise RuntimeError("get_review_tg_client must be wired in api.app")

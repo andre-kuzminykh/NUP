@@ -141,6 +141,45 @@ class TelegramClient:
             # Уже удалено или слишком старое — для preupload это не критично.
             pass
 
+    def edit_message_video_file(
+        self,
+        chat_id: str | int,
+        message_id: int,
+        local_path: str,
+        *,
+        caption: str | None = None,
+        reply_markup: dict | None = None,
+    ) -> None:
+        """Заменить видео в существующем сообщении на свежий локальный mp4.
+
+        Использует editMessageMedia с multipart (attach://video). Нужен для
+        F013 «💾 Сохранить» — после пересборки reel.mp4 показываем оператору
+        новую версию в том же сообщении.
+        """
+        import json as _json
+        url = f"{API_BASE}/bot{self._token}/editMessageMedia"
+        media: dict = {"type": "video", "media": "attach://video"}
+        if caption is not None:
+            media["caption"] = caption
+            media["parse_mode"] = "Markdown"
+        data: dict = {
+            "chat_id": str(chat_id),
+            "message_id": str(message_id),
+            "media": _json.dumps(media, ensure_ascii=False),
+        }
+        if reply_markup is not None:
+            data["reply_markup"] = _json.dumps(reply_markup, ensure_ascii=False)
+        with open(local_path, "rb") as f:
+            files = {"video": ("reel.mp4", f, "video/mp4")}
+            with httpx.Client(timeout=180.0) as client:
+                resp = client.post(url, data=data, files=files)
+        if resp.status_code >= 400:
+            body = self._safe_json(resp)
+            raise TelegramError(body.get("description") or f"HTTP {resp.status_code}")
+        payload = resp.json()
+        if not payload.get("ok"):
+            raise TelegramError(payload.get("description") or "ok=false")
+
     # --- internals ----------------------------------------------------------
 
     def _send_video_file_raw(

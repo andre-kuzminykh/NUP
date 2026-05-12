@@ -20,9 +20,11 @@ from pydantic import BaseModel
 
 from nup_pipeline.api.deps import (
     get_candidate_refresher,
+    get_reel_rebuilder,
     get_review_decider,
     get_review_editor,
     get_review_repo,
+    get_review_tg_client,
 )
 from nup_pipeline.domain.review import (
     IllegalReviewStateError,
@@ -30,6 +32,7 @@ from nup_pipeline.domain.review import (
     ReviewStatus,
 )
 from nup_pipeline.services.candidate_refresher import CandidateRefresher
+from nup_pipeline.services.reel_rebuilder import ReelRebuilder
 from nup_pipeline.services.review_decision import ReviewDecider
 from nup_pipeline.services.review_editor import ReviewEditor
 
@@ -141,6 +144,69 @@ def cancel_edit_revert(
     """↩️ Отмена в edit-mode: выйти и сбросить active_idx=0 во всех сегментах."""
     try:
         editor.cancel_revert(review_id)
+    except KeyError:
+        raise HTTPException(404, "review not found")
+    return _state(repo.get(review_id), editor)
+
+
+@router.post("/{review_id}/save-edit")
+def save_edit(
+    review_id: str,
+    editor: Annotated[ReviewEditor, Depends(get_review_editor)],
+    repo: Annotated[object, Depends(get_review_repo)],
+    rebuilder: Annotated[ReelRebuilder, Depends(get_reel_rebuilder)],
+    tg: Annotated[object, Depends(get_review_tg_client)],
+):
+    """💾 Сохранить в edit-mode: пересобрать reel из выбранных кандидатов
+    (active_idx по сегментам), заменить видео в чате оператора, выйти
+    из IN_EDIT в PENDING_REVIEW."""
+    s = repo.get(review_id)
+    if s is None:
+        raise HTTPException(404, "review not found")
+    # Если ничего не меняли — просто cancel-edit без пересборки.
+    has_picks = any(
+        int((seg or {}).get("active_idx", 0)) != 0
+        for seg in (s.segments_snapshot or [])
+    )
+    if not has_picks:
+        try:
+            editor.cancel(review_id)
+        except KeyError:
+            raise HTTPException(404, "review not found")
+        return _state(repo.get(review_id), editor)
+
+    try:
+        new_path = rebuilder.rebuild(s)
+    except FileNotFoundError as e:
+        raise HTTPException(409, f"work_dir gone: {e}")
+    except (ValueError,) as e:
+        raise HTTPException(409, str(e))
+    s.output_uri = new_path
+    repo.save(s)
+
+    # Заменяем видео в сообщении оператора + восстанавливаем главные кнопки.
+    main_kb = {
+        "inline_keyboard": [
+            [{"text": "✅ Опубликовать", "callback_data": f"review:approve:{review_id}"}],
+            [{"text": "✏️ Редактировать", "callback_data": f"review:edit:{review_id}"}],
+            [{"text": "❌ Отклонить", "callback_data": f"review:decline:{review_id}"}],
+        ]
+    }
+    if s.message_id is not None:
+        try:
+            tg.edit_message_video_file(
+                s.reviewer_chat_id,
+                s.message_id,
+                new_path,
+                caption=s.caption or "",
+                reply_markup=main_kb,
+            )
+        except Exception as e:
+            # Видео уже пересобрано на диске; bot покажет fallback-сообщение.
+            raise HTTPException(502, f"telegram edit failed: {e}")
+
+    try:
+        editor.cancel(review_id)
     except KeyError:
         raise HTTPException(404, "review not found")
     return _state(repo.get(review_id), editor)
