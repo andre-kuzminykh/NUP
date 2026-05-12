@@ -53,8 +53,16 @@ def _wire_review_services(app: FastAPI) -> None:
     refresh_tg = TelegramClient(token=review_token)
     pexels = PexelsSearch() if os.environ.get("PEXELS_API_KEY") else None
     pixabay = PixabaySearch() if os.environ.get("PIXABAY_API_KEY") else None
+    llm = None
+    if os.environ.get("OPENAI_API_KEY"):
+        try:
+            from nup_pipeline.cli.news_loop import OpenAIJsonLlm
+            llm = OpenAIJsonLlm(api_key=os.environ["OPENAI_API_KEY"])
+        except Exception as e:
+            log.warning("LLM wiring failed for refresher: %s", e)
     refresher = CandidateRefresher(
-        repo=repo, pexels=pexels, pixabay=pixabay, telegram=refresh_tg,
+        repo=repo, pexels=pexels, pixabay=pixabay,
+        telegram=refresh_tg, llm=llm,
     )
 
     app.dependency_overrides[deps.get_review_repo] = lambda: repo

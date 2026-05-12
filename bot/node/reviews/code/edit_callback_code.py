@@ -5,11 +5,13 @@ EditCallbackCode — диспетчер действий edit-mode: move/pick/ca
 Feature: F003 — Review callbacks (edit mode)
 
 ## Бизнес-контекст
-Из trigger приходит {action: "frame_prev|frame_next|clip_prev|clip_next|cancel|approve|decline", review_id, arg}.
+Из trigger приходит {action: "frame_prev|frame_next|clip_prev|clip_next|save|cancel|refresh|approve|decline", review_id, arg}.
 - frame_prev/next → backend /move {prev|next}
 - clip_prev/next  → backend /pick {prev|next}
-- cancel          → backend /cancel-edit (вернуться к pending_review)
-- approve         → backend /approve
+- refresh         → backend /refresh-candidates (новые 10 клипов на сегмент)
+- save            → backend /cancel-edit (выйти из edit-mode, сохранив picks)
+- cancel          → backend /cancel-edit-revert (выйти, откатив active_idx=0)
+- approve         → backend /approve  (после выхода из edit-mode, из главного меню)
 - decline         → backend /decline
 """
 from __future__ import annotations
@@ -38,10 +40,18 @@ class EditCallbackCode:
                 payload = await self._api.pick(review_id, "prev")
             elif action == "clip_next":
                 payload = await self._api.pick(review_id, "next")
-            elif action == "cancel":
+            elif action == "save":
+                # «💾 Сохранить» — выходим из edit-mode, активные picks
+                # остаются в segments_snapshot. Бот покажет главное меню.
                 payload = await self._api.cancel_edit(review_id)
                 return {"answer_name": "review_edit_cancelled", "data": payload}
+            elif action == "cancel":
+                # «↩️ Отмена» — выходим с полным откатом active_idx → 0.
+                payload = await self._api.cancel_edit_revert(review_id)
+                return {"answer_name": "review_edit_cancelled", "data": payload}
             elif action == "approve":
+                # Legacy путь: оставлен на случай, если оператор тапнет
+                # подвисший callback с предыдущей клавиатуры.
                 payload = await self._api.approve(review_id)
                 return {"answer_name": "review_approved", "data": payload}
             elif action == "decline":

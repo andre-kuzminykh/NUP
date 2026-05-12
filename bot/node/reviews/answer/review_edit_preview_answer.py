@@ -45,12 +45,12 @@ def _kb(review_id: str) -> dict:
                  "callback_data": f"edit:{review_id}:refresh"},
             ],
             [
-                {"text": "✅ Опубликовать",
-                 "callback_data": f"edit:{review_id}:approve"},
+                {"text": "💾 Сохранить",
+                 "callback_data": f"edit:{review_id}:save"},
             ],
             [
-                {"text": "❌ Отклонить",
-                 "callback_data": f"edit:{review_id}:decline"},
+                {"text": "↩️ Отмена",
+                 "callback_data": f"edit:{review_id}:cancel"},
             ],
         ]
     }

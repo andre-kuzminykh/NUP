@@ -58,6 +58,9 @@ class ReviewsAPI:
     async def cancel_edit(self, review_id: str) -> dict:
         return await self._post(f"/{review_id}/cancel-edit")
 
+    async def cancel_edit_revert(self, review_id: str) -> dict:
+        return await self._post(f"/{review_id}/cancel-edit-revert")
+
     async def move(self, review_id: str, direction: str) -> dict:
         return await self._post(f"/{review_id}/move", body={"direction": direction})
 

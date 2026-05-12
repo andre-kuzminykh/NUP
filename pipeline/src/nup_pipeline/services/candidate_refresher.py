@@ -39,6 +39,10 @@ class _TelegramUploader(Protocol):
     def delete_message(self, chat_id, message_id: int) -> None: ...
 
 
+class _TextLlm(Protocol):
+    def complete_text(self, prompt: str) -> str: ...
+
+
 Downloader = Callable[[str, str], None]
 
 
@@ -62,6 +66,7 @@ class CandidateRefresher:
         *,
         per_page: int = 10,
         download: Downloader | None = None,
+        llm: _TextLlm | None = None,
     ) -> None:
         self._repo = repo
         self._pexels = pexels
@@ -69,12 +74,15 @@ class CandidateRefresher:
         self._tg = telegram
         self._per_page = per_page
         self._download = download or _default_download
+        self._llm = llm
 
     def refresh(self, review_id: str, query: str | None = None) -> dict:
         """Заменить кандидатов текущего сегмента на свежую партию.
 
         query: если задан — переопределяет keyword для поиска. Иначе берём
         из текущего сегмента (`seg['keyword']`) или из текста сегмента.
+        Если по next-странице ничего нового не нашлось — просим LLM выдать
+        другой keyword (один LLM-вызов) и повторяем поиск с page=1.
         """
         r = self._repo.get(review_id)
         if r is None:
@@ -86,36 +94,96 @@ class CandidateRefresher:
         cursor = max(0, min(cursor, len(segments) - 1))
         seg = dict(segments[cursor])
 
-        # Уже виденные URL по этому сегменту (исключаем при поиске).
         seen_urls = {
             c.get("video_url")
             for c in (seg.get("candidates") or [])
             if c.get("video_url")
         }
-        refresh_offset = int(seg.get("refresh_offset", 0)) + 1
-        seg["refresh_offset"] = refresh_offset
+        # tried_keywords хранит все ранее использованные на этом сегменте
+        # запросы, чтобы LLM не выдал то же самое снова.
+        tried_keywords: list[str] = list(seg.get("tried_keywords") or [])
+        original_kw = seg.get("keyword") or (seg.get("text") or "").strip()[:60]
+        if original_kw and original_kw not in tried_keywords:
+            tried_keywords.append(original_kw)
 
-        # Сначала пробуем keyword, потом fallback на текст сегмента.
-        kw = query or seg.get("keyword") or (seg.get("text") or "").strip()[:60]
+        refresh_offset = int(seg.get("refresh_offset", 0)) + 1
+        kw = query or seg.get("keyword") or original_kw
         if not kw:
             return self._payload(r)
 
-        # Поиск свежих кандидатов с offset-ом, чтобы выдача отличалась.
+        fresh = self._search(kw, refresh_offset + 1, seen_urls)
+        if not fresh and self._llm is not None:
+            new_kw = self._rephrase(seg.get("text", ""), tried_keywords)
+            if new_kw and new_kw not in tried_keywords:
+                tried_keywords.append(new_kw)
+                kw = new_kw
+                refresh_offset = 0  # новый keyword → начинаем с page=1
+                fresh = self._search(kw, 1, seen_urls)
+
+        if not fresh:
+            seg["refresh_offset"] = refresh_offset
+            seg["tried_keywords"] = tried_keywords
+            seg["keyword"] = kw
+            segments[cursor] = seg
+            r.segments_snapshot = segments
+            self._repo.save(r)
+            return self._payload(r)
+
+        fresh = fresh[: self._per_page]
+        new_candidates = self._download_and_preupload(r, fresh)
+        if not new_candidates:
+            return self._payload(r)
+
+        seg["candidates"] = new_candidates
+        seg["active_idx"] = 0
+        seg["refresh_offset"] = refresh_offset
+        seg["tried_keywords"] = tried_keywords
+        seg["keyword"] = kw
+        segments[cursor] = seg
+        r.segments_snapshot = segments
+        self._repo.save(r)
+        return self._payload(r)
+
+    # --- helpers -----------------------------------------------------------
+
+    def _search(self, kw: str, page: int, seen_urls: set) -> list[dict]:
         raw: list[dict] = []
         for source in (self._pexels, self._pixabay):
             if source is None:
                 continue
             try:
                 raw += source.search_videos(
-                    kw, per_page=self._per_page, page=refresh_offset + 1,
+                    kw, per_page=self._per_page, page=page,
                 )
             except Exception:
                 continue
-        fresh = [c for c in raw if c.get("video_url") and c["video_url"] not in seen_urls]
-        if not fresh:
-            return self._payload(r)
-        fresh = fresh[: self._per_page]
+        return [
+            c for c in raw
+            if c.get("video_url") and c["video_url"] not in seen_urls
+        ]
 
+    def _rephrase(self, sentence: str, tried: list[str]) -> str:
+        prompt = (
+            "You're choosing search terms for stock-video sites (Pexels/Pixabay).\n"
+            f"Article sentence: {sentence[:200]}\n"
+            f"AVOID these keywords (already tried): {', '.join(tried) or '(none)'}\n"
+            "Output ONE short ENGLISH visual keyword (1-3 words, lowercase, no\n"
+            "proper nouns). Different angle from what was tried before.\n"
+            "OUTPUT (just the keyword):"
+        )
+        try:
+            raw = (self._llm.complete_text(prompt) or "").strip()
+        except Exception:
+            return ""
+        # Первое слово/строка, чистим bullets и нумерацию.
+        line = raw.splitlines()[0].strip().strip("-•*").strip() if raw else ""
+        if line and line[0].isdigit() and "." in line[:4]:
+            line = line.split(".", 1)[1].strip()
+        return line.lower()
+
+    def _download_and_preupload(
+        self, r: ReviewSession, fresh: list[dict],
+    ) -> list[dict]:
         new_candidates: list[dict] = []
         with tempfile.TemporaryDirectory() as tmp:
             for j, c in enumerate(fresh):
@@ -143,15 +211,7 @@ class CandidateRefresher:
                     os.remove(local)
                 except OSError:
                     pass
-        if not new_candidates:
-            return self._payload(r)
-
-        seg["candidates"] = new_candidates
-        seg["active_idx"] = 0
-        segments[cursor] = seg
-        r.segments_snapshot = segments
-        self._repo.save(r)
-        return self._payload(r)
+        return new_candidates
 
     def _payload(self, r: ReviewSession) -> dict[str, Any]:
         # Тонкая обёртка над editor._payload — но мы не зависим от editor,

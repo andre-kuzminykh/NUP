@@ -132,6 +132,20 @@ def cancel_edit(
     return _state(repo.get(review_id), editor)
 
 
+@router.post("/{review_id}/cancel-edit-revert")
+def cancel_edit_revert(
+    review_id: str,
+    editor: Annotated[ReviewEditor, Depends(get_review_editor)],
+    repo: Annotated[object, Depends(get_review_repo)],
+):
+    """↩️ Отмена в edit-mode: выйти и сбросить active_idx=0 во всех сегментах."""
+    try:
+        editor.cancel_revert(review_id)
+    except KeyError:
+        raise HTTPException(404, "review not found")
+    return _state(repo.get(review_id), editor)
+
+
 def _ensure_in_edit(review_id: str, repo, editor: ReviewEditor) -> None:
     """Авто-вход в IN_EDIT, если оператор давит стрелки в PENDING_REVIEW
     (бывает после автоматического cancel в approve→fail или если первый

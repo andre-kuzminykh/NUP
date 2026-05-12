@@ -94,6 +94,22 @@ class ReviewEditor:
         self._repo.save(r)
         return _payload(r)
 
+    def cancel_revert(self, review_id: str) -> dict[str, Any]:
+        """Выйти из IN_EDIT с откатом всех изменений: active_idx → 0 на
+        каждом сегменте. Используется кнопкой «↩️ Отмена» в edit-mode."""
+        r = self._load(review_id)
+        segments = list(r.segments_snapshot or [])
+        for i, seg in enumerate(segments):
+            s = dict(seg)
+            s["active_idx"] = 0
+            segments[i] = s
+        r.segments_snapshot = segments
+        if r.status is ReviewStatus.IN_EDIT:
+            r.transition(ReviewStatus.PENDING_REVIEW)
+        r.edit_state = None
+        self._repo.save(r)
+        return _payload(r)
+
     def move(self, review_id: str, direction: str) -> dict[str, Any]:
         """Перемещение между сегментами (◀ Кадр / Кадр ▶). Clamp на границах."""
         r = self._load(review_id)

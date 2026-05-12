@@ -23,7 +23,22 @@ def _initial_kb(review_id: str) -> dict:
 class ReviewEditCancelledAnswer:
     async def run(self, event: Any, user_lang: str, data: dict) -> None:
         review_id = data.get("review_id", "")
+        # Возвращаем оригинальный caption (без edit-mode счётчиков),
+        # чтобы оператор видел заголовок новости + ссылку.
+        caption = data.get("caption") or ""
         try:
-            await event.message.edit_reply_markup(reply_markup=_initial_kb(review_id))
+            if caption:
+                await event.message.edit_caption(
+                    caption=caption,
+                    reply_markup=_initial_kb(review_id),
+                    parse_mode="Markdown",
+                )
+            else:
+                await event.message.edit_reply_markup(
+                    reply_markup=_initial_kb(review_id),
+                )
         except Exception:
-            pass
+            try:
+                await event.message.edit_reply_markup(reply_markup=_initial_kb(review_id))
+            except Exception:
+                pass
