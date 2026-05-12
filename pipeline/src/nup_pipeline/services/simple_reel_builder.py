@@ -9,6 +9,10 @@ from __future__ import annotations
 
 OUT_W = 1080
 OUT_H = 1920
+# DejaVuSans-Bold ставится в Dockerfile (fonts-dejavu-core). На локальных
+# Debian/Ubuntu — путь тот же. Если шрифт перенесли — переопредели через
+# REELS_FONT_FILE в env или параметром.
+DEFAULT_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 
 def _esc(s: str) -> str:
@@ -31,18 +35,22 @@ def build_simple_reel_ffmpeg(
     font_color: str = "white",
     fontsize: int = 56,
     title_fontsize: int = 64,
+    font_file: str = DEFAULT_FONT,
     ffmpeg_bin: str = "ffmpeg",
 ) -> list[str]:
     """Собрать argv для одного Reels.
 
     chunks — список 3-словных строк (см. domain.segment.chunk_subtitle).
     Они равномерно распределяются по timeline'у.
+
+    font_file нужен для кириллицы (default-шрифт drawtext на slim-образах
+    не покрывает не-ASCII).
     """
     filters: list[str] = []
 
     if title:
         filters.append(
-            f"drawtext=text='{_esc(title)}':"
+            f"drawtext=fontfile='{font_file}':text='{_esc(title)}':"
             f"fontcolor={font_color}:fontsize={title_fontsize}:"
             f"box=1:boxcolor=black@0.5:boxborderw=22:"
             f"x=(w-text_w)/2:y=h*0.18"
@@ -57,7 +65,7 @@ def build_simple_reel_ffmpeg(
             t0 = i * per
             t1 = (i + 1) * per
             filters.append(
-                f"drawtext=text='{_esc(c)}':"
+                f"drawtext=fontfile='{font_file}':text='{_esc(c)}':"
                 f"fontcolor={font_color}:fontsize={fontsize}:"
                 f"box=1:boxcolor=black@0.55:boxborderw=16:"
                 f"x=(w-text_w)/2:y=h*0.72:"

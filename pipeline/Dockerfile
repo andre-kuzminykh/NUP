@@ -1,10 +1,13 @@
 FROM python:3.11-slim
 
-# FFmpeg нужен для F008. Постгрес-libs для psycopg2.
+# FFmpeg для F008 рендера. Постгрес-libs для psycopg2.
+# fonts-dejavu-core — TTF с кириллицей для drawtext-субтитров (без него
+# drawtext падает или рендерит квадраты на любой не-ASCII текст).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libpq5 \
     ca-certificates \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
