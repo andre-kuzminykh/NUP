@@ -75,14 +75,15 @@ class ReviewEditPreviewAnswer:
         kb = _kb(review_id)
         caption = _caption(data)
         msg = event.message
-        # Если на кандидате есть file_id — подменяем САМО видео (instant,
-        # т.к. Telegram уже хранит mp4). Иначе fallback на caption-only.
-        file_id = data.get("active_file_id")
-        if file_id:
+        # Подменяем САМО видео в сообщении: предпочитаем file_id (instant,
+        # Telegram уже хранит mp4), иначе используем video_url — Telegram
+        # сам скачает mp4 с Pexels/Pixabay (~3-5 сек).
+        media_ref = data.get("active_file_id") or data.get("active_video_url")
+        if media_ref:
             try:
                 await msg.edit_media(
                     InputMediaVideo(
-                        media=file_id,
+                        media=media_ref,
                         caption=caption,
                         parse_mode="Markdown",
                     ),

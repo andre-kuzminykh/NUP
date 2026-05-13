@@ -162,32 +162,24 @@ class ReviewBuilder:
             candidates = ordered[: self._cands]
             used_urls.add(candidates[0]["video_url"])
 
+            # ВАЖНО: preupload в Telegram НЕ делаем — оператор не хочет видеть
+            # silent uploads-deletes в чате. file_id заполнится лениво при
+                # первом edit_media в edit-mode (Telegram сам кеширует URL).
             candidates_meta: list[dict] = []
             for j, c in enumerate(candidates):
                 url = c["video_url"]
-                local = work_dir / f"bg_{i:02d}_{j}.mp4"
-                _download(url, str(local))
-                file_id: str | None = None
-                try:
-                    file_id, msg_id = self._tg.upload_video_for_file_id(
-                        review.reviewer_chat_id, str(local),
-                    )
-                    self._tg.delete_message(review.reviewer_chat_id, msg_id)
-                except TelegramError:
-                    file_id = None
-                if j != 0:
-                    try:
-                        local.unlink()
-                    except OSError:
-                        pass
-                    local_path_str = ""
-                else:
+                # Качаем только active-клип (cand[0]) — нужен для ffmpeg.
+                # Остальные кандидаты подгружаются по URL при «Сохранить».
+                local_path_str = ""
+                if j == 0:
+                    local = work_dir / f"bg_{i:02d}_{j}.mp4"
+                    _download(url, str(local))
                     local_path_str = str(local)
                 candidates_meta.append({
                     "video_url": url,
                     "local_path": local_path_str,
                     "preview_url": c.get("preview_url", ""),
-                    "file_id": file_id,
+                    "file_id": None,
                 })
             segments_snapshot.append({
                 "text": sentences[i],

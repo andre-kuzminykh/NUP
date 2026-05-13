@@ -199,33 +199,20 @@ class CandidateRefresher:
     def _download_and_preupload(
         self, r: ReviewSession, fresh: list[dict],
     ) -> list[dict]:
+        # Без preupload в Telegram (оператор не хочет видеть silent
+        # uploads-deletes в чате). Просто сохраняем URL — edit-mode swap
+        # пойдёт через editMessageMedia by URL.
         new_candidates: list[dict] = []
-        with tempfile.TemporaryDirectory() as tmp:
-            for j, c in enumerate(fresh):
-                url = c["video_url"]
-                local = str(Path(tmp) / f"refresh_{j}.mp4")
-                try:
-                    self._download(url, local)
-                except Exception:
-                    continue
-                file_id: str | None = None
-                try:
-                    file_id, msg_id = self._tg.upload_video_for_file_id(
-                        r.reviewer_chat_id, local,
-                    )
-                    self._tg.delete_message(r.reviewer_chat_id, msg_id)
-                except Exception:
-                    file_id = None
-                new_candidates.append({
-                    "video_url": url,
-                    "local_path": "",
-                    "preview_url": c.get("preview_url", ""),
-                    "file_id": file_id,
-                })
-                try:
-                    os.remove(local)
-                except OSError:
-                    pass
+        for c in fresh:
+            url = c.get("video_url") or ""
+            if not url:
+                continue
+            new_candidates.append({
+                "video_url": url,
+                "local_path": "",
+                "preview_url": c.get("preview_url", ""),
+                "file_id": None,
+            })
         return new_candidates
 
     def _payload(self, r: ReviewSession) -> dict[str, Any]:
