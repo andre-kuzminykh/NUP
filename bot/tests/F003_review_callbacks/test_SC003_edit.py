@@ -23,8 +23,8 @@ from tests.F003_review_callbacks.conftest import REVIEW_ID
 @pytest.mark.asyncio
 async def test_edit_enters_preview_mode(make_callback, mock_state, fake_api_factory) -> None:
     cb = make_callback(f"review:edit:{REVIEW_ID}")
-    # message.edit_caption нужен для edit-mode answer'а
     cb.message.edit_caption = AsyncMock()
+    cb.message.edit_media = AsyncMock()
     fake_api = fake_api_factory(edit_return={
         "review_id": REVIEW_ID,
         "status": "in_edit",
@@ -40,9 +40,10 @@ async def test_edit_enters_preview_mode(make_callback, mock_state, fake_api_fact
     fake_api.start_edit.assert_awaited_once_with(REVIEW_ID)
     fake_api.approve.assert_not_awaited()
     fake_api.decline.assert_not_awaited()
-    cb.message.edit_caption.assert_awaited_once()
-    kwargs = cb.message.edit_caption.call_args.kwargs
-    caption = kwargs["caption"]
+    # Ответ-нода теперь подменяет САМО видео через edit_media (file_id или URL).
+    cb.message.edit_media.assert_awaited_once()
+    media_arg = cb.message.edit_media.call_args.args[0]
+    caption = getattr(media_arg, "caption", "")
     assert "Редактирование" in caption
     assert "Кадр" in caption and "Клип" in caption
-    assert kwargs["reply_markup"] is not None
+    assert cb.message.edit_media.call_args.kwargs["reply_markup"] is not None

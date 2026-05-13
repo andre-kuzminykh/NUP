@@ -44,26 +44,29 @@ def edit_callback(make_callback):
 @pytest.mark.asyncio
 async def test_frame_next_calls_move_next(edit_callback, mock_state) -> None:
     cb = edit_callback(f"edit:{REVIEW_ID}:frame_next")
+    cb.message.edit_media = AsyncMock()
     api = AsyncMock()
     api.move = AsyncMock(return_value=_payload(cursor=1))
     with patch("node.reviews.code.edit_callback_code.ReviewsAPI", return_value=api):
         await handle_edit_callback(cb, mock_state)
     api.move.assert_awaited_once_with(REVIEW_ID, "next")
-    cb.message.edit_caption.assert_awaited_once()
-    caption = cb.message.edit_caption.call_args.kwargs["caption"]
-    assert "Кадр *2/3*" in caption
+    # Ответ-нода свапает САМО видео — caption внутри InputMediaVideo.
+    cb.message.edit_media.assert_awaited_once()
+    media_arg = cb.message.edit_media.call_args.args[0]
+    assert "Кадр *2/3*" in getattr(media_arg, "caption", "")
 
 
 @pytest.mark.asyncio
 async def test_clip_prev_calls_pick_prev(edit_callback, mock_state) -> None:
     cb = edit_callback(f"edit:{REVIEW_ID}:clip_prev")
+    cb.message.edit_media = AsyncMock()
     api = AsyncMock()
     api.pick = AsyncMock(return_value=_payload(cand=2))
     with patch("node.reviews.code.edit_callback_code.ReviewsAPI", return_value=api):
         await handle_edit_callback(cb, mock_state)
     api.pick.assert_awaited_once_with(REVIEW_ID, "prev")
-    caption = cb.message.edit_caption.call_args.kwargs["caption"]
-    assert "Клип *3/3*" in caption
+    media_arg = cb.message.edit_media.call_args.args[0]
+    assert "Клип *3/3*" in getattr(media_arg, "caption", "")
 
 
 @pytest.mark.asyncio

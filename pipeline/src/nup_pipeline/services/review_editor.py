@@ -76,8 +76,19 @@ class ReviewEditor:
     # --- public API --------------------------------------------------------
 
     def start(self, review_id: str) -> dict[str, Any]:
-        """Перевести в IN_EDIT. Инициализирует edit_state, не трогая snapshot."""
+        """Перевести в IN_EDIT. Инициализирует edit_state, не трогая snapshot.
+
+        Идемпотентно: повторный вызов на review, который уже в IN_EDIT,
+        возвращает текущий payload без 409. Это важно потому что
+        бот делает /start-edit при каждом тапе «Редактировать», и
+        после неудачного save review может зависнуть в IN_EDIT.
+        """
         r = self._load(review_id)
+        if r.status is ReviewStatus.IN_EDIT:
+            if not r.edit_state:
+                r.edit_state = {"cursor": 0}
+                self._repo.save(r)
+            return _payload(r)
         r.transition(ReviewStatus.IN_EDIT)
         if not r.edit_state:
             r.edit_state = {"cursor": 0}
