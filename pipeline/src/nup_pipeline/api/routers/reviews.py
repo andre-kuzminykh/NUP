@@ -17,7 +17,7 @@ import logging
 import re
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 logger = logging.getLogger("reviews_api")
@@ -185,6 +185,7 @@ def _main_keyboard(review_id: str) -> dict:
 
 @router.post("/{review_id}/regenerate")
 def regenerate(
+    request: Request,
     review_id: str,
     repo: Annotated[object, Depends(get_review_repo)],
     art_repo: Annotated[object, Depends(get_article_repo)],
@@ -211,6 +212,9 @@ def regenerate(
         editor.cancel(review_id)
         s = repo.get(review_id)
 
+    # Скрываем текущий reel под placeholder'ом на время полной пересборки.
+    _swap_to_saving_placeholder(request, tg, s)
+
     builder.build(article, s)
     s = repo.get(review_id)
 
@@ -229,8 +233,28 @@ def regenerate(
     return _state(s, editor)
 
 
+def _swap_to_saving_placeholder(request, tg, s) -> None:
+    """Подменить видео в чате оператора на чёрный 1-сек mp4 c caption
+    «⏳ Сохраняю и пересобираю видео…», чтобы во время рендера он не
+    залипал на последнем тапнутом клипе."""
+    placeholder = getattr(request.app.state, "saving_placeholder", None)
+    if not placeholder or s.message_id is None:
+        return
+    try:
+        tg.edit_message_video_file(
+            s.reviewer_chat_id,
+            s.message_id,
+            placeholder,
+            caption="⏳ Сохраняю и пересобираю видео… (~20-40 с)",
+            reply_markup={"inline_keyboard": []},
+        )
+    except Exception as e:
+        logger.warning("placeholder swap failed for %s: %s", s.id, e)
+
+
 @router.post("/{review_id}/save-edit")
 def save_edit(
+    request: Request,
     review_id: str,
     editor: Annotated[ReviewEditor, Depends(get_review_editor)],
     repo: Annotated[object, Depends(get_review_repo)],
@@ -254,6 +278,10 @@ def save_edit(
         except KeyError:
             raise HTTPException(404, "review not found")
         return _state(repo.get(review_id), editor)
+
+    # Скрываем последний тапнутый клип под чёрным placeholder'ом + caption
+    # с прогрессом — иначе оператор смотрит на стейл-клип ~30 секунд.
+    _swap_to_saving_placeholder(request, tg, s)
 
     try:
         new_path = rebuilder.rebuild(s)
