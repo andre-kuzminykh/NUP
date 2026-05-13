@@ -17,7 +17,7 @@ import logging
 import re
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
 logger = logging.getLogger("reviews_api")
@@ -185,7 +185,6 @@ def _main_keyboard(review_id: str) -> dict:
 
 @router.post("/{review_id}/regenerate")
 def regenerate(
-    request: Request,
     review_id: str,
     repo: Annotated[object, Depends(get_review_repo)],
     art_repo: Annotated[object, Depends(get_article_repo)],
@@ -212,49 +211,70 @@ def regenerate(
         editor.cancel(review_id)
         s = repo.get(review_id)
 
-    # Скрываем текущий reel под placeholder'ом на время полной пересборки.
-    _swap_to_saving_placeholder(request, tg, s)
+    # Удаляем сообщение с видео + шлём «⏳…», чтобы в чате не висел
+    # старый reel пока идёт полная пересборка.
+    loading_msg_id = _start_saving_view(
+        tg, s, "⏳ Перегенерирую видео целиком… (~3-5 мин)",
+    )
 
     builder.build(article, s)
     s = repo.get(review_id)
 
-    # Заменяем видео + caption + клавиатуру в существующем сообщении.
-    if s.message_id is not None:
-        try:
-            tg.edit_message_video_file(
-                s.reviewer_chat_id,
-                s.message_id,
-                s.output_uri,
-                caption=s.caption or "",
-                reply_markup=_main_keyboard(review_id),
-            )
-        except Exception as e:
-            raise HTTPException(502, f"telegram edit failed: {e}")
+    new_msg_id = _finish_saving_view(
+        tg, s, loading_msg_id, s.output_uri,
+        caption=s.caption or "",
+        reply_markup=_main_keyboard(review_id),
+    )
+    if new_msg_id is not None:
+        s.message_id = new_msg_id
+        repo.save(s)
     return _state(s, editor)
 
 
-def _swap_to_saving_placeholder(request, tg, s) -> None:
-    """Подменить видео в чате оператора на чёрный 1-сек mp4 c caption
-    «⏳ Сохраняю и пересобираю видео…», чтобы во время рендера он не
-    залипал на последнем тапнутом клипе."""
-    placeholder = getattr(request.app.state, "saving_placeholder", None)
-    if not placeholder or s.message_id is None:
-        return
+def _start_saving_view(tg, s, text: str) -> int | None:
+    """Удалить старое видео-сообщение в чате оператора и отправить
+    короткое текстовое сообщение «⏳…», чтобы во время рендера в чате
+    НЕ висело старое видео (placeholder-видео всё равно показывает
+    кадр, что плохо). Возвращает message_id текстового сообщения,
+    чтобы потом его удалить после публикации нового reel."""
+    if s.message_id is not None:
+        try:
+            tg.delete_message(s.reviewer_chat_id, s.message_id)
+        except Exception as e:
+            logger.warning("delete old video failed for %s: %s", s.id, e)
     try:
-        tg.edit_message_video_file(
+        return int(tg.send_message(str(s.reviewer_chat_id), text, disable_preview=True))
+    except Exception as e:
+        logger.warning("send loading text failed for %s: %s", s.id, e)
+        return None
+
+
+def _finish_saving_view(
+    tg, s, loading_msg_id: int | None, new_video_path: str,
+    caption: str, reply_markup: dict,
+) -> int | None:
+    """Отправить новый reel и удалить временное текстовое сообщение.
+    Возвращает новый message_id (его нужно сохранить в review)."""
+    new_id: int | None = None
+    try:
+        new_id = tg.send_video_file(
             s.reviewer_chat_id,
-            s.message_id,
-            placeholder,
-            caption="⏳ Сохраняю и пересобираю видео… (~20-40 с)",
-            reply_markup={"inline_keyboard": []},
+            new_video_path,
+            caption=caption,
+            reply_markup=reply_markup,
         )
     except Exception as e:
-        logger.warning("placeholder swap failed for %s: %s", s.id, e)
+        logger.warning("send new reel failed for %s: %s", s.id, e)
+    if loading_msg_id is not None:
+        try:
+            tg.delete_message(s.reviewer_chat_id, loading_msg_id)
+        except Exception:
+            pass
+    return new_id
 
 
 @router.post("/{review_id}/save-edit")
 def save_edit(
-    request: Request,
     review_id: str,
     editor: Annotated[ReviewEditor, Depends(get_review_editor)],
     repo: Annotated[object, Depends(get_review_repo)],
@@ -279,9 +299,10 @@ def save_edit(
             raise HTTPException(404, "review not found")
         return _state(repo.get(review_id), editor)
 
-    # Скрываем последний тапнутый клип под чёрным placeholder'ом + caption
-    # с прогрессом — иначе оператор смотрит на стейл-клип ~30 секунд.
-    _swap_to_saving_placeholder(request, tg, s)
+    # Удаляем старое сообщение с видео + шлём короткий текст «⏳…».
+    loading_msg_id = _start_saving_view(
+        tg, s, "⏳ Сохраняю и пересобираю видео… (~20-40 с)",
+    )
 
     try:
         new_path = rebuilder.rebuild(s)
@@ -295,21 +316,15 @@ def save_edit(
         logger.exception("save-edit unexpected error for %s", review_id)
         raise HTTPException(500, f"rebuild failed: {e}")
     s.output_uri = new_path
-    repo.save(s)
 
-    # Заменяем видео в сообщении оператора + восстанавливаем главные кнопки.
-    if s.message_id is not None:
-        try:
-            tg.edit_message_video_file(
-                s.reviewer_chat_id,
-                s.message_id,
-                new_path,
-                caption=s.caption or "",
-                reply_markup=_main_keyboard(review_id),
-            )
-        except Exception as e:
-            # Видео уже пересобрано на диске; bot покажет fallback-сообщение.
-            raise HTTPException(502, f"telegram edit failed: {e}")
+    new_msg_id = _finish_saving_view(
+        tg, s, loading_msg_id, new_path,
+        caption=s.caption or "",
+        reply_markup=_main_keyboard(review_id),
+    )
+    if new_msg_id is not None:
+        s.message_id = new_msg_id
+    repo.save(s)
 
     try:
         editor.cancel(review_id)

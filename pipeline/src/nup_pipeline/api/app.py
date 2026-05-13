@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -25,29 +24,6 @@ from nup_pipeline.services.review_editor import ReviewEditor
 from nup_pipeline.services.video_publication import VideoPublisher
 
 log = logging.getLogger(__name__)
-
-
-def _ensure_saving_placeholder() -> Path:
-    """Тихий 1-секундный 1080×1920 чёрный mp4 — показываем оператору
-    в edit-mode «💾 Сохранить» вместо последнего тапнутого клипа, пока
-    идёт пересборка. Генерируем 1 раз при старте api."""
-    out = Path("/tmp/saving_placeholder.mp4")
-    if out.exists() and out.stat().st_size > 0:
-        return out
-    try:
-        subprocess.run(
-            [
-                "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-                "-f", "lavfi", "-i", "color=c=black:s=1080x1920:d=1",
-                "-f", "lavfi", "-i", "anullsrc=channel_layout=mono:sample_rate=44100",
-                "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
-                "-c:a", "aac", "-shortest", str(out),
-            ],
-            check=True, capture_output=True, timeout=30,
-        )
-    except Exception as e:
-        log.warning("saving placeholder mp4 generation failed: %s", e)
-    return out
 
 
 def _wire_review_services(app: FastAPI) -> None:
@@ -96,8 +72,6 @@ def _wire_review_services(app: FastAPI) -> None:
     )
 
     rebuilder = ReelRebuilder(runner=FfmpegRunner())
-    placeholder_path = _ensure_saving_placeholder()
-    app.state.saving_placeholder = str(placeholder_path)
 
     art_repo = PostgresArticleRepo(db_url)
     tts = None
