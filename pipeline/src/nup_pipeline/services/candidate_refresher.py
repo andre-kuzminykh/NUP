@@ -8,10 +8,9 @@
    гарантированно получить НЕ те же видео.
 3. Качает mp4 во временный файл → uploadит в Telegram (silent) →
    фиксирует file_id → удаляет message + локальный файл.
-4. Заменяет `segments_snapshot[cursor]['candidates']` на новые, ставит
-   active_idx=0, инкрементит refresh_offset.
-
-Tested by tests/unit/test_candidate_refresher.py.
+4. ДОБАВЛЯЕТ свежих кандидатов В КОНЕЦ списка (cap MAX_CANDIDATES_PER_SEG=90),
+   старые НЕ убирает. active_idx переставляется на ПЕРВЫЙ новый клип, чтобы
+   оператор сразу увидел свежий вариант.
 """
 from __future__ import annotations
 
@@ -21,6 +20,9 @@ from pathlib import Path
 from typing import Any, Callable, Protocol
 
 from nup_pipeline.domain.review import ReviewSession
+
+
+MAX_CANDIDATES_PER_SEG = 90
 
 
 class _ReviewRepo(Protocol):
@@ -129,13 +131,26 @@ class CandidateRefresher:
             self._repo.save(r)
             return self._payload(r)
 
-        fresh = fresh[: self._per_page]
+        # Ограничиваем сколько ещё можно добавить, чтобы не пробить лимит 90.
+        existing = list(seg.get("candidates") or [])
+        room = max(0, MAX_CANDIDATES_PER_SEG - len(existing))
+        if room == 0:
+            seg["refresh_offset"] = refresh_offset
+            seg["tried_keywords"] = tried_keywords
+            seg["keyword"] = kw
+            segments[cursor] = seg
+            r.segments_snapshot = segments
+            self._repo.save(r)
+            return self._payload(r)
+        fresh = fresh[: min(self._per_page, room)]
         new_candidates = self._download_and_preupload(r, fresh)
         if not new_candidates:
             return self._payload(r)
 
-        seg["candidates"] = new_candidates
-        seg["active_idx"] = 0
+        # Append + перевод курсора на первый новый клип.
+        first_new_idx = len(existing)
+        seg["candidates"] = existing + new_candidates
+        seg["active_idx"] = first_new_idx
         seg["refresh_offset"] = refresh_offset
         seg["tried_keywords"] = tried_keywords
         seg["keyword"] = kw
