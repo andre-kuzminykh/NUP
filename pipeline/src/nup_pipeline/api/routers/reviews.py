@@ -13,12 +13,14 @@ Endpoints:
 """
 from __future__ import annotations
 
+import logging
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
-import re
+logger = logging.getLogger("reviews_api")
 
 from nup_pipeline.api.deps import (
     get_article_repo,
@@ -256,9 +258,14 @@ def save_edit(
     try:
         new_path = rebuilder.rebuild(s)
     except FileNotFoundError as e:
+        logger.warning("save-edit failed for %s: work_dir/file gone: %s", review_id, e)
         raise HTTPException(409, f"work_dir gone: {e}")
-    except (ValueError,) as e:
+    except ValueError as e:
+        logger.warning("save-edit failed for %s: %s", review_id, e)
         raise HTTPException(409, str(e))
+    except Exception as e:
+        logger.exception("save-edit unexpected error for %s", review_id)
+        raise HTTPException(500, f"rebuild failed: {e}")
     s.output_uri = new_path
     repo.save(s)
 
