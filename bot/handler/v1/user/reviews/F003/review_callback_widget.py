@@ -26,6 +26,7 @@ from node.reviews.answer.review_backend_error_answer import ReviewBackendErrorAn
 from node.reviews.answer.review_declined_answer import ReviewDeclinedAnswer
 from node.reviews.answer.review_edit_preview_answer import ReviewEditPreviewAnswer
 from node.reviews.answer.review_invalid_answer import ReviewInvalidAnswer
+from node.reviews.answer.review_regenerated_answer import ReviewRegeneratedAnswer
 from node.reviews.code.review_callback_code import ReviewCallbackCode
 from node.reviews.trigger.review_callback_trigger import ReviewCallbackTrigger
 
@@ -33,6 +34,7 @@ ANSWER_REGISTRY = {
     "review_approved": ReviewApprovedAnswer(),
     "review_declined": ReviewDeclinedAnswer(),
     "review_edit_preview": ReviewEditPreviewAnswer(),
+    "review_regenerated": ReviewRegeneratedAnswer(),
     "review_invalid": ReviewInvalidAnswer(),
     "review_backend_error": ReviewBackendErrorAnswer(),
 }
@@ -41,6 +43,16 @@ ANSWER_REGISTRY = {
 @reviews_router.callback_query(F.data.startswith("review:"))
 async def handle_review_callback(callback: CallbackQuery, state: FSMContext) -> None:
     trigger_data = await ReviewCallbackTrigger().run(callback, state)
+    # «Перегенерировать» работает 3-5 минут — заменяем caption на лоадер,
+    # чтобы оператор видел прогресс пока бэкенд молотит ffmpeg + 140 uploads.
+    if trigger_data.get("action") == "regenerate":
+        try:
+            await callback.message.edit_caption(
+                caption="⏳ Перегенерирую видео целиком… (~3-5 мин)",
+                parse_mode="Markdown",
+            )
+        except Exception:
+            pass
     code_result = await ReviewCallbackCode().run(trigger_data, state)
     answer = ANSWER_REGISTRY[code_result["answer_name"]]
     await answer.run(event=callback, user_lang="ru", data=code_result["data"])

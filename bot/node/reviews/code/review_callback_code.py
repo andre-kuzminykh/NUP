@@ -12,7 +12,7 @@ from typing import Any
 from service.api.reviews_api import BackendError, NotFoundError, ReviewsAPI
 
 
-VALID_ACTIONS = {"approve", "decline", "edit"}
+VALID_ACTIONS = {"approve", "decline", "edit", "regenerate"}
 
 
 class ReviewCallbackCode:
@@ -32,6 +32,11 @@ class ReviewCallbackCode:
             if action == "decline":
                 payload = await self._api.decline(review_id)
                 return {"answer_name": "review_declined", "data": payload}
+            if action == "regenerate":
+                # «🔁 Перегенерировать» — полная пересборка: новый voiceover,
+                # новые keywords, новые клипы. Долго (~3-5 мин).
+                payload = await self._api.regenerate(review_id)
+                return {"answer_name": "review_regenerated", "data": payload}
             # action == "edit" — переходим в edit-mode и сразу рисуем preview
             payload = await self._api.start_edit(review_id)
             return {"answer_name": "review_edit_preview", "data": payload}

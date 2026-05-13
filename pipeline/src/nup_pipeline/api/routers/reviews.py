@@ -18,9 +18,13 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 
+import re
+
 from nup_pipeline.api.deps import (
+    get_article_repo,
     get_candidate_refresher,
     get_reel_rebuilder,
+    get_review_builder,
     get_review_decider,
     get_review_editor,
     get_review_repo,
@@ -33,8 +37,19 @@ from nup_pipeline.domain.review import (
 )
 from nup_pipeline.services.candidate_refresher import CandidateRefresher
 from nup_pipeline.services.reel_rebuilder import ReelRebuilder
+from nup_pipeline.services.review_builder import ReviewBuilder
 from nup_pipeline.services.review_decision import ReviewDecider
 from nup_pipeline.services.review_editor import ReviewEditor
+
+
+_ARTICLE_LINK_RE = re.compile(r"\]\((https?://[^)]+)\)")
+
+
+def _extract_article_link(caption: str | None) -> str | None:
+    if not caption:
+        return None
+    m = _ARTICLE_LINK_RE.search(caption)
+    return m.group(1) if m else None
 
 router = APIRouter(prefix="/v1/reviews", tags=["reviews"])
 
@@ -149,6 +164,69 @@ def cancel_edit_revert(
     return _state(repo.get(review_id), editor)
 
 
+def _main_keyboard(review_id: str) -> dict:
+    return {
+        "inline_keyboard": [
+            [{"text": "🔁 Перегенерировать",
+              "callback_data": f"review:regenerate:{review_id}"}],
+            [
+                {"text": "❌ Отклонить",
+                 "callback_data": f"review:decline:{review_id}"},
+                {"text": "✏️ Редактировать",
+                 "callback_data": f"review:edit:{review_id}"},
+                {"text": "✅ Принять",
+                 "callback_data": f"review:approve:{review_id}"},
+            ],
+        ]
+    }
+
+
+@router.post("/{review_id}/regenerate")
+def regenerate(
+    review_id: str,
+    repo: Annotated[object, Depends(get_review_repo)],
+    art_repo: Annotated[object, Depends(get_article_repo)],
+    builder: Annotated[ReviewBuilder | None, Depends(get_review_builder)],
+    editor: Annotated[ReviewEditor, Depends(get_review_editor)],
+    tg: Annotated[object, Depends(get_review_tg_client)],
+):
+    """🔁 Перегенерировать reel целиком для той же статьи: новый
+    voiceover, новые keywords, новые клипы. ~3-5 мин."""
+    if builder is None:
+        raise HTTPException(503, "review builder not wired (missing OPENAI/ELEVENLABS keys)")
+    s = repo.get(review_id)
+    if s is None:
+        raise HTTPException(404, "review not found")
+    link = _extract_article_link(s.caption)
+    if not link:
+        raise HTTPException(409, "cannot find article link in review caption")
+    article = art_repo.get_by_canonical(link)
+    if article is None:
+        raise HTTPException(409, f"article not found for link {link}")
+
+    # Если review был в IN_EDIT — выйти, чтобы builder.save не конфликтовал.
+    if s.status is ReviewStatus.IN_EDIT:
+        editor.cancel(review_id)
+        s = repo.get(review_id)
+
+    builder.build(article, s)
+    s = repo.get(review_id)
+
+    # Заменяем видео + caption + клавиатуру в существующем сообщении.
+    if s.message_id is not None:
+        try:
+            tg.edit_message_video_file(
+                s.reviewer_chat_id,
+                s.message_id,
+                s.output_uri,
+                caption=s.caption or "",
+                reply_markup=_main_keyboard(review_id),
+            )
+        except Exception as e:
+            raise HTTPException(502, f"telegram edit failed: {e}")
+    return _state(s, editor)
+
+
 @router.post("/{review_id}/save-edit")
 def save_edit(
     review_id: str,
@@ -185,13 +263,6 @@ def save_edit(
     repo.save(s)
 
     # Заменяем видео в сообщении оператора + восстанавливаем главные кнопки.
-    main_kb = {
-        "inline_keyboard": [
-            [{"text": "✅ Опубликовать", "callback_data": f"review:approve:{review_id}"}],
-            [{"text": "✏️ Редактировать", "callback_data": f"review:edit:{review_id}"}],
-            [{"text": "❌ Отклонить", "callback_data": f"review:decline:{review_id}"}],
-        ]
-    }
     if s.message_id is not None:
         try:
             tg.edit_message_video_file(
@@ -199,7 +270,7 @@ def save_edit(
                 s.message_id,
                 new_path,
                 caption=s.caption or "",
-                reply_markup=main_kb,
+                reply_markup=_main_keyboard(review_id),
             )
         except Exception as e:
             # Видео уже пересобрано на диске; bot покажет fallback-сообщение.

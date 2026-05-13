@@ -16,12 +16,19 @@ from typing import Any
 
 class ReviewCallbackTrigger:
     async def run(self, callback: Any, state: Any) -> dict:
-        # Acknowledge the callback so the spinner goes away immediately.
-        await callback.answer()
-
         data = callback.data or ""
         parts = data.split(":")
         if len(parts) != 3 or parts[0] != "review":
+            try:
+                await callback.answer()
+            except Exception:
+                pass
             return {"action": None, "review_id": None, "raw": data}
         _, action, review_id = parts
+        # «Перегенерировать» — долгая операция, шлём оператору тост заранее.
+        toast = "🔁 Перегенерирую видео… (~3-5 мин)" if action == "regenerate" else ""
+        try:
+            await callback.answer(text=toast or "", show_alert=False)
+        except Exception:
+            pass
         return {"action": action, "review_id": review_id, "raw": data}

@@ -45,3 +45,11 @@ def get_reel_rebuilder():  # pragma: no cover
 
 def get_review_tg_client():  # pragma: no cover
     raise RuntimeError("get_review_tg_client must be wired in api.app")
+
+
+def get_review_builder():  # pragma: no cover
+    raise RuntimeError("get_review_builder must be wired in api.app")
+
+
+def get_article_repo():  # pragma: no cover
+    raise RuntimeError("get_article_repo must be wired in api.app")

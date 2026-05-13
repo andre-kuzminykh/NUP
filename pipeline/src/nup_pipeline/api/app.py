@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
 
 from nup_pipeline.api import deps
 from nup_pipeline.api.routers import renders, reviews
+from nup_pipeline.infra.article_repo_pg import PostgresArticleRepo
+from nup_pipeline.infra.elevenlabs_tts import ElevenLabsTTS
 from nup_pipeline.infra.ffmpeg import FfmpegRunner
 from nup_pipeline.infra.pexels import PexelsSearch
 from nup_pipeline.infra.pixabay import PixabaySearch
@@ -15,6 +18,7 @@ from nup_pipeline.infra.review_repo_pg import PostgresReviewRepo
 from nup_pipeline.infra.telegram import TelegramClient
 from nup_pipeline.services.candidate_refresher import CandidateRefresher
 from nup_pipeline.services.reel_rebuilder import ReelRebuilder
+from nup_pipeline.services.review_builder import ReviewBuilder
 from nup_pipeline.services.review_decision import ReviewDecider
 from nup_pipeline.services.review_editor import ReviewEditor
 from nup_pipeline.services.video_publication import VideoPublisher
@@ -69,6 +73,26 @@ def _wire_review_services(app: FastAPI) -> None:
 
     rebuilder = ReelRebuilder(runner=FfmpegRunner())
 
+    art_repo = PostgresArticleRepo(db_url)
+    tts = None
+    review_builder = None
+    if os.environ.get("ELEVENLABS_API_KEY") and llm is not None:
+        try:
+            tts = ElevenLabsTTS()
+            review_builder = ReviewBuilder(
+                llm=llm,
+                tts=tts,
+                pexels=pexels,
+                pixabay=pixabay,
+                telegram=refresh_tg,
+                ffmpeg_runner=FfmpegRunner(),
+                review_repo=repo,
+                out_root=Path(os.environ.get("REELS_OUT_DIR", "/tmp")),
+                candidates_per_segment=10,
+            )
+        except Exception as e:
+            log.warning("ReviewBuilder wiring failed: %s", e)
+
     app.dependency_overrides[deps.get_review_repo] = lambda: repo
     app.dependency_overrides[deps.get_review_decider] = lambda: decider
     app.dependency_overrides[deps.get_review_editor] = lambda: editor
@@ -76,7 +100,9 @@ def _wire_review_services(app: FastAPI) -> None:
     app.dependency_overrides[deps.get_candidate_refresher] = lambda: refresher
     app.dependency_overrides[deps.get_reel_rebuilder] = lambda: rebuilder
     app.dependency_overrides[deps.get_review_tg_client] = lambda: refresh_tg
-    log.info("review services wired (Postgres + Telegram + Refresher + Rebuilder)")
+    app.dependency_overrides[deps.get_article_repo] = lambda: art_repo
+    app.dependency_overrides[deps.get_review_builder] = lambda: review_builder
+    log.info("review services wired (Postgres + Telegram + Refresher + Rebuilder + Builder)")
 
 
 def build_app() -> FastAPI:

@@ -10,12 +10,19 @@ from typing import Any
 
 
 def _initial_kb(review_id: str) -> dict:
-    """Снова те же 3 кнопки, что были при первом appearance видео."""
+    """Главная клавиатура: 🔁 Перегенерировать сверху + 3 в ряд снизу."""
     return {
         "inline_keyboard": [
-            [{"text": "✅ Опубликовать", "callback_data": f"review:approve:{review_id}"}],
-            [{"text": "✏️ Редактировать", "callback_data": f"review:edit:{review_id}"}],
-            [{"text": "❌ Отклонить", "callback_data": f"review:decline:{review_id}"}],
+            [{"text": "🔁 Перегенерировать",
+              "callback_data": f"review:regenerate:{review_id}"}],
+            [
+                {"text": "❌ Отклонить",
+                 "callback_data": f"review:decline:{review_id}"},
+                {"text": "✏️ Редактировать",
+                 "callback_data": f"review:edit:{review_id}"},
+                {"text": "✅ Принять",
+                 "callback_data": f"review:approve:{review_id}"},
+            ],
         ]
     }
 

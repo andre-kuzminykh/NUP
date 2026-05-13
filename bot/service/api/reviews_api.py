@@ -75,6 +75,20 @@ class ReviewsAPI:
             raise BackendError(f"backend {resp.status_code}: {resp.text[:200]}")
         return resp.json()
 
+    async def regenerate(self, review_id: str) -> dict:
+        # Полная пересборка: ~3-5 мин (LLM + TTS + 140 preupload-ов + ffmpeg).
+        async with httpx.AsyncClient(timeout=600.0) as client:
+            url = f"{self._base_url}/v1/reviews/{review_id}/regenerate"
+            try:
+                resp = await client.post(url)
+            except httpx.HTTPError as e:
+                raise BackendError(str(e)) from e
+        if resp.status_code == 404:
+            raise NotFoundError("regenerate")
+        if resp.status_code >= 400:
+            raise BackendError(f"backend {resp.status_code}: {resp.text[:200]}")
+        return resp.json()
+
     async def move(self, review_id: str, direction: str) -> dict:
         return await self._post(f"/{review_id}/move", body={"direction": direction})
 
