@@ -404,9 +404,9 @@
             <div class="text-center mb-12">
                 <div class="kbd mb-4 text-cyber-orange border-cyber-orange/20 bg-cyber-orange/5">Bonus &amp; Context</div>
                 <h2 class="text-3xl md:text-5xl font-black tracking-tight uppercase">Beyond the Core Path</h2>
-                <p class="mt-4 max-w-2xl mx-auto">Optional material: a Russian-language deep dive, the research behind the method, and the demo product built along the way.</p>
+                <p class="mt-4 max-w-2xl mx-auto">Optional material: a deep dive on running LLMs in production, plus the research behind this course’s method.</p>
             </div>
-            <div id="extras-list" class="grid md:grid-cols-3 gap-6"></div>
+            <div id="extras-list" class="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto"></div>
         </section>
 
     </main>
@@ -452,15 +452,12 @@
         ];
 
         const extras = [
-            { slug: 'itmo', title: 'LLM в проде', icon: 'languages', badge: 'RU',
-              desc: 'How to build, deploy and manage AI systems inside a company. A Russian-language deep dive by Andre Kuzminykh.',
-              tags: ['LLM', 'Production', 'RU'] },
+            { slug: 'itmo', title: 'LLM in Production', icon: 'server', badge: 'Talk',
+              desc: 'How to build, deploy and manage AI systems inside a company. A deep dive by Andre Kuzminykh.',
+              tags: ['LLM', 'Production', 'Deploy'] },
             { slug: 'conf', title: 'Training AI Product Engineers', icon: 'microscope', badge: 'Paper',
               desc: 'The research and methodology behind this course — an ICID-2026 submission on teaching engineering in human-AI teams.',
               tags: ['Research', 'Method', 'ITMO'] },
-            { slug: 'hub', title: 'AI Tech Recruitment Hub', icon: 'app-window', badge: 'Demo',
-              desc: 'The example product landing built along the course — the "TalentHub" AI recruitment demo.',
-              tags: ['Demo', 'Product', 'Landing'] },
         ];
 
         const STORAGE_KEY = 'nup-course-progress-v1';
