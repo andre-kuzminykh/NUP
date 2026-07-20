@@ -10,12 +10,12 @@ Capability. Here there's no ambiguity — it's rising, fast. On the coding test,
 
 The best models are now nearly identical. Six leading labs run neck and neck, the gap between the best U.S. and Chinese model is 2.7%, and free models trail by 3.3%. Which means strong AI is available to everyone — and the model itself has stopped being an advantage. When cheap DeepSeek showed a strong result early in the year, U.S. tech lost more than a trillion dollars of value in a single day: the market grasped that cheap, open AI breaks the familiar business models.
 
-Work. Here's the underrated part. Employment of developers aged 22–25 fell nearly 20% since 2024, while more experienced engineers are being hired. AI didn't "replace programmers" — it took the routine juniors used to grow on. The first rung of the career ladder is simply vanishing. Students already feel it: CS enrollment dropped 11% in a year. And a third of companies admit they plan to cut people in the coming year.
+Work. Here's the underrated part. Employment of developers aged 22–25 fell nearly 20% over the past year, while more experienced engineers are being hired. AI didn't "replace programmers" — it took the routine juniors used to grow on. The first rung of the career ladder is simply vanishing. Students already feel it: CS enrollment dropped 11% in a year. And a third of companies admit they plan to cut people in the coming year.
 
 Now my opinion. Since everyone has the same model, the winner is not whoever has better access but whoever rebuilt everything around it: how tasks are framed, where the data lives, how results get checked, who's accountable. Just handing your team access to a neural network doesn't speed up work — it speeds up the mess. Hence the new core skill — not "writing code," but owning the outcome. A weak specialist with AI just does bad work faster. A strong one starts running a whole system.
 
 And one more thing. Building became nearly free, and people get $172B of value for free — a mountain of value almost no one has learned to turn into money yet. The barrier to entry collapsed: where you once needed a team costing a million a year, one person with agents is now enough. So the winner is not whoever has the better model but whoever can get a product to people and keep them.
 
-The honest bottom line: the question is no longer whether AI works — it works. The question is whether you're ready to use it. The technology has already outrun us. What's left is to see who catches up faster — not in capability, but in readiness.
+The bottom line: the question is no longer whether AI works — it works. The question is whether you're ready to use it. The technology has already outrun us. What's left is to see who catches up faster — not in capability, but in readiness.
 
 #thoughts
