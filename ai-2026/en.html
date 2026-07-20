@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dataist / Analysis | AI in 2026: Scale vs. Readiness</title>
+    <title>Dataist / Analysis | AI Has Outrun Us: What Changed in 2026</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/andre-kuzminykh/dataist/refs/heads/main/favicon.png">
@@ -12,8 +12,8 @@
     <!-- Open Graph -->
     <!-- Replace og:url and og:image with final addresses after publishing -->
     <meta property="og:site_name" content="Dataist / Analysis" />
-    <meta property="og:title" content="AI in 2026: Scale vs. Readiness" />
-    <meta property="og:description" content="What changed in AI between 2025 and 2026 — based on the Stanford HAI AI Index reports — and why the technology is scaling faster than the systems around it can adapt. An author's read of the trends, plus a personal opinion." />
+    <meta property="og:title" content="AI Has Outrun Us: What Changed in 2026" />
+    <meta property="og:description" content="What changed in AI between 2025 and 2026 — based on the Stanford HAI AI Index reports. Capability shot ahead, while people, processes and laws lag behind. An author's read of the trends." />
     <meta property="og:type" content="article" />
     <meta property="og:url" content="https://dataist.ai/ai-2026/en" />
     <meta property="og:image" content="https://raw.githubusercontent.com/andre-kuzminykh/dataist/refs/heads/main/favicon.png" />
@@ -131,19 +131,19 @@
     <style>
         .figx{
             --ink:#0a0a0a; --mut:rgba(0,0,0,.55); --faint:rgba(0,0,0,.34);
-            --line:rgba(0,0,0,.30); --brd:rgba(0,0,0,.10); --soft:rgba(0,0,0,.035);
-            --card:#ffffff; --flame:#F97316; --plum:#8B5CF6; --rail:rgba(0,0,0,.16);
-            background:var(--card); border:1px solid var(--brd); border-radius:22px;
-            padding:36px 22px; margin:2.6rem 0; box-shadow:0 4px 24px rgba(0,0,0,.04);
-            color:var(--ink); overflow:hidden;
+            --line:rgba(0,0,0,.26); --brd:rgba(0,0,0,.12); --soft:rgba(0,0,0,.04);
+            --card:#F5F5F7; --flame:#F97316; --plum:#8B5CF6; --rail:rgba(0,0,0,.20);
+            background:transparent; border:0; border-radius:0;
+            padding:10px 0; margin:2.4rem 0; box-shadow:none;
+            color:var(--ink);
             font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
         }
         .dark .figx{
             --ink:#F5F5F7; --mut:rgba(255,255,255,.60); --faint:rgba(255,255,255,.36);
-            --line:rgba(255,255,255,.32); --brd:rgba(255,255,255,.12); --soft:rgba(255,255,255,.05);
-            --card:#1C1C1E; --rail:rgba(255,255,255,.20); box-shadow:0 4px 24px rgba(255,255,255,.04);
+            --line:rgba(255,255,255,.30); --brd:rgba(255,255,255,.14); --soft:rgba(255,255,255,.055);
+            --card:#000000; --rail:rgba(255,255,255,.26);
         }
-        @media (min-width:768px){ .figx{padding:44px 36px; border-radius:26px} }
+        @media (min-width:768px){ .figx{padding:14px 0} }
 
         .figx .cap{margin-top:26px; text-align:center; font-size:13.5px; line-height:1.5; color:var(--mut)}
         .figx .cap b{color:var(--ink); font-weight:600}
@@ -183,7 +183,7 @@
 
         .fxsteps{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; width:100%; max-width:860px; margin:0 auto}
         .fxstep .dotrow{position:relative; width:100%; display:flex; justify-content:center}
-        .fxstep .dotrow::before{content:""; position:absolute; left:-6px; right:-6px; top:50%; height:2px;
+        .fxstep .dotrow::before{content:""; position:absolute; left:-5px; right:-5px; top:50%; height:2px;
             transform:translateY(-50%); background:var(--rail)}
         .fxstep:first-child .dotrow::before{left:50%}
         .fxstep:last-child .dotrow::before{right:50%}
@@ -226,14 +226,23 @@
         @media (max-width:560px){ .fxdelta{grid-template-columns:1fr; gap:10px}
             .fxdelta .mid{flex-direction:row; gap:10px} .fxdelta .mid .fxarr{transform:rotate(135deg)} }
 
-        .fxbars{max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
-        .fxbar-row{display:grid; grid-template-columns:130px 1fr; gap:14px; align-items:center}
-        .fxbar-row .rl{font-size:14px; font-weight:600; text-align:right; color:var(--ink)}
-        .fxbar-track{position:relative; display:flex; flex-direction:column; gap:7px}
-        .fxbar{height:26px; border-radius:8px; display:flex; align-items:center; padding-left:12px; font-size:13px; font-weight:800; color:#fff; min-width:44px}
-        .fxbar.a{background:linear-gradient(90deg,#F97316,#F59E0B)}
-        .fxbar.b{background:var(--soft); color:var(--mut); border:1px solid var(--brd)}
-        @media (max-width:560px){ .fxbar-row{grid-template-columns:104px 1fr} .fxbar-row .rl{font-size:12.5px} }
+        /* Twin bars — label left, value outside on the right */
+        .fxbars{max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:22px}
+        .fxb-metric{display:grid; grid-template-columns:130px 1fr; gap:8px 14px; align-items:center}
+        .fxb-cat{font-size:13.5px; font-weight:700; text-align:right; color:var(--ink); line-height:1.25}
+        .fxb-pair{display:flex; flex-direction:column; gap:9px; min-width:0}
+        .fxb-line{display:grid; grid-template-columns:64px 1fr 42px; gap:10px; align-items:center; min-width:0}
+        .fxb-name{font-size:12.5px; font-weight:600; color:var(--mut); white-space:nowrap}
+        .fxb-track{height:22px; border-radius:7px; background:var(--soft); border:1px solid var(--brd); overflow:hidden; min-width:0}
+        .fxb-fill{display:block; height:100%; border-radius:6px}
+        .fxb-fill.a{background:linear-gradient(90deg,#F97316,#F59E0B)}
+        .fxb-fill.b{background:linear-gradient(90deg,#8B5CF6,#B364B1)}
+        .fxb-val{font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--ink); text-align:left}
+        @media (max-width:560px){
+            .fxb-metric{grid-template-columns:1fr; gap:6px}
+            .fxb-cat{text-align:left}
+            .fxb-line{grid-template-columns:58px 1fr 38px; gap:8px}
+        }
 
         .vsx{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:2.2rem 0;
             --ink:#0a0a0a; --mut:rgba(0,0,0,.55); --brd:rgba(0,0,0,.10); --card:#fff; color:var(--ink)}
@@ -311,11 +320,11 @@
                 </div>
 
                 <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-[4.5rem] font-sans font-bold tracking-tighter mb-6 leading-[1.05] text-black dark:text-white">
-                    AI in 2026
+                    AI has outrun us
                 </h1>
 
                 <p class="text-xl md:text-2xl lg:text-3xl text-apple-textMutedLight dark:text-apple-textMutedDark font-medium tracking-tight mt-6 max-w-3xl mx-auto">
-                    Scale vs. readiness: what changed in a year
+                    2026: capability shot ahead, while people, processes and laws lag behind
                 </p>
 
                 <!-- Cover (gradient hero; swap for your own image if you like) -->
@@ -327,7 +336,7 @@
                             <span class="ar">→</span>
                             <span class="n">2026</span>
                         </div>
-                        <div class="tagline">The technology is scaling faster than the systems around it can adapt</div>
+                        <div class="tagline">Capability is growing faster than everything around it can adjust</div>
                     </div>
                 </div>
             </header>
@@ -337,17 +346,17 @@
 
                 <!-- Lead -->
                 <p class="article-p fade-in font-medium text-xl md:text-2xl border-l-2 border-black dark:border-white pl-5 md:pl-8 mt-2 mb-12 text-apple-textMutedLight dark:text-apple-textMutedDark">
-                    A year ago the AI Index recorded the headline: artificial intelligence had become a mainstream force. The 2026 edition answers the next question — what happens after arrival. The short answer: AI capability is not plateauing. It is accelerating and reaching people faster than the personal computer or the internet did. But the data does not point in a single direction. It reveals a technology scaling faster than the systems around it can adapt — regulation, evaluation, education, the labor market.
+                    A year ago the AI Index recorded the headline: artificial intelligence had become an ordinary, mainstream technology. The 2026 report answers the next question — what came after. The short answer: AI didn't slow down. It sped up and reached people faster than the personal computer or the internet ever did. But the picture is neither rosy nor simple. Over the year one core tension came into focus: AI itself shot ahead, while everything around it — people, companies, laws, education, the job market — is failing to keep up.
                 </p>
 
                 <p class="article-p fade-in">
-                    Every figure below comes from two <b>Stanford HAI AI Index</b> reports, the 2025 and 2026 editions — an independent initiative that has spent nearly a decade bringing reliable data to a field that moves faster than most efforts to measure it. I took the comparable metrics and looked not at individual records but at the <b>trajectory</b>: where the whole system is heading. First, what changed between 2025 and 2026, honestly and with numbers. Then, what it means — and my opinion.
+                    Every figure below comes from two <b>Stanford HAI AI Index</b> reports, the 2025 and 2026 editions — an independent study that has spent nearly a decade gathering data across the whole field, relied on by governments, companies and researchers. I looked not at individual records but at what actually changed over the year. First the facts and the comparison. Then what follows from them.
                 </p>
 
-                <h2 class="article-h2 fade-in">Money: a doubling in one year</h2>
+                <h2 class="article-h2 fade-in">Money: a doubling in a year</h2>
 
                 <p class="article-p fade-in">
-                    The first thing that jumps out is capital. U.S. private AI investment grew from <b>$109B</b> to <b>$286B</b> in a year. Global corporate AI investment more than doubled: private investment rose 127.5% and now makes up 60% of the total. Generative AI grew more than 200% and captured nearly half of all private AI funding. Newly funded AI companies rose 71%, and billion-dollar funding rounds nearly doubled.
+                    The first thing that jumps out is money. U.S. private AI investment grew from <b>$109B</b> to <b>$286B</b> in a year. Global corporate investment more than doubled, generative AI added over 200% and took nearly half of all private money. Newly funded AI companies rose 71%, and billion-dollar rounds nearly doubled.
                 </p>
 
                 <!-- INFOGRAPHIC 1: investment doubling -->
@@ -372,13 +381,13 @@
                 </div>
 
                 <p class="article-p fade-in">
-                    But this money-rain has a shadow: AI company revenue is rising at historic rates, and compute and infrastructure spend is rising even faster. Google alone reported more than $150B in annual capex. This is not a pure bubble, but it is not free growth either: the industry is betting a decade ahead without yet knowing whether all that capacity will pay off.
+                    And this is no longer cautious interest — it's the whole industry betting ten years ahead. With one big caveat: revenue is growing fast, but spending on compute is growing faster. Google alone poured more than $150B into infrastructure in a year. Whether those buildouts pay off, no one yet knows — but it's too late to back out.
                 </p>
 
-                <h2 class="article-h2 fade-in">Adoption: from curiosity to infrastructure</h2>
+                <h2 class="article-h2 fade-in">Adoption: from toy to infrastructure</h2>
 
                 <p class="article-p fade-in">
-                    Money follows demand — and demand went mass-market. Organizational AI adoption rose from 78% to <b>88%</b> in a year (up from 55% two years earlier). Generative AI is now used in at least one business function at 70% of companies. At the population level, generative AI reached <b>53% adoption in three years</b> — faster than the personal computer or the internet.
+                    Money follows demand — and demand went mass-market. The share of companies using AI is now <b>88%</b>, up from 78% a year ago and 55% two years before. At 70%, it's built into at least one workflow. And among ordinary people, generative AI reached <b>53%</b> in three years — faster than the computer or the internet did.
                 </p>
 
                 <!-- INFOGRAPHIC 2: adoption growth -->
@@ -392,49 +401,49 @@
                 </div>
 
                 <p class="article-p fade-in">
-                    And here is the first crack between noise and reality. Adoption of "AI in general" is 88%. Deployment of autonomous <b>AI agents</b> is in the single digits across nearly all business functions. Between "we use ChatGPT" and "we have an agent in production that carries a task to completion on its own" lies a chasm. Most companies are still standing at its edge.
+                    But here's the first gap between the noise and reality. "We use AI" — 88%. But full <b>AI agents</b>, the kind that carry a task to completion on their own, have been deployed by single-digit percentages of companies. Between "we switched on ChatGPT" and "we have an agent running in production" lies a chasm, and most are still standing at its edge.
                 </p>
 
                 <p class="article-p fade-in">
-                    More striking still is the value to consumers. The estimated U.S. consumer surplus from generative AI grew <b>54% in a year</b>: from $112B to $172B, with the median value per user tripling. And people get almost all of it for free. Enormous value is being created and given away — a gap that will matter later; we'll come back to it.
+                    And one more number. The value people get from free AI tools grew <b>54%</b> in a year: from $112B to $172B in the U.S., and per user it tripled. Almost all of it is free. Enormous value is created and handed out for nothing; what that leads to will become clear a little later.
                 </p>
 
-                <h2 class="article-h2 fade-in">Capability: the frontier turned jagged</h2>
+                <h2 class="article-h2 fade-in">Capability: brilliant and helpless at once</h2>
 
                 <p class="article-p fade-in">
-                    On raw capability there is no ambiguity: it is rising, fast. On the key coding benchmark SWE-bench Verified, scores climbed <b>from 60% to nearly 100%</b> of the human baseline in a year. On Humanity's Last Exam — a test built to be hard for AI — models gained 30 percentage points in a year. Gemini Deep Think won a <b>gold medal</b> at the International Mathematical Olympiad. AI agents on OSWorld (real computer tasks) rose from 12% to 66% success.
+                    On raw capability there's no ambiguity: AI got noticeably smarter, fast. On the main coding test, models climbed <b>from 60% to nearly 100%</b> of the human level in a year. On an exam built to be hard for machines — plus 30 points in a year. AI won <b>gold</b> at the Math Olympiad and now finishes two-thirds of real computer tasks — up from 12% to 66%.
                 </p>
 
                 <p class="article-p fade-in">
-                    Yet the same model that wins olympiad gold cannot reliably read an analog clock — it tells the time correctly just 50.6% of the time versus 90.1% for humans. Robots succeed at only 12% of household tasks. Researchers call this the <b>jagged frontier</b>: AI is brilliant and helpless at once, and no average score can tell you where exactly it will trip.
+                    And the very same model that wins olympiad gold can't read an analog clock — it gets the time right only half the time, while humans get 90%. Robots handle just 12% of household chores. Researchers call this the <b>jagged frontier</b>: AI is powerful and helpless within a single step, and no average score tells you where it will trip. Science shows the same gap — AI beats human chemists, yet reproduces an already-published study less than 20% of the time.
                 </p>
 
                 <!-- INFOGRAPHIC 3: jagged frontier -->
                 <div class="vsx fade-in">
                     <div class="col">
-                        <div class="hd">🚀 Already beats humans</div>
-                        <p class="tx"><b>Gold</b> at the International Math Olympiad</p>
-                        <p class="tx"><b>SWE-bench</b>: 60% → ~100% of human level in a year</p>
-                        <p class="tx"><b>OSWorld agents</b>: 12% → 66% success</p>
+                        <div class="hd">🚀 Already stronger than humans</div>
+                        <p class="tx"><b>Gold</b> at the Math Olympiad</p>
+                        <p class="tx"><b>Code</b>: 60% → nearly 100% of human level in a year</p>
+                        <p class="tx"><b>Computer tasks</b>: 12% → 66% success</p>
                         <p class="tx">Exams in law, tax, finance: <b>60–90%</b></p>
                     </div>
                     <div class="col">
-                        <div class="hd">🧩 Still fails</div>
-                        <p class="tx"><b>Analog clocks</b>: 50.6% vs. 90.1% for humans</p>
-                        <p class="tx"><b>Robots</b>: only 12% of household tasks</p>
-                        <p class="tx">On structured benchmarks — <b>fails 1 attempt in 3</b></p>
-                        <p class="tx">Tasks that require judgment and reliability</p>
+                        <div class="hd">🧩 Still can't</div>
+                        <p class="tx"><b>Analog clocks</b>: gets the time right half the time</p>
+                        <p class="tx"><b>Robots</b>: only 12% of household chores</p>
+                        <p class="tx">On strict benchmarks — <b>fails one attempt in three</b></p>
+                        <p class="tx">Reproduce someone's research — <b>under 20%</b></p>
                     </div>
                 </div>
 
                 <p class="article-p fade-in">
-                    The practical lesson of the jagged frontier is simple and hard: <b>never trust the average score</b>. You have to test the system on your exact scenario, not on the leaderboard — especially where the cost of a mistake is high.
+                    So the lesson for anyone putting AI into a real product is simple and hard: <b>don't trust the average score or the pretty rankings</b>. Test it on your own task — especially where a mistake is expensive.
                 </p>
 
-                <h2 class="article-h2 fade-in">The top compressed — and it changes the economics</h2>
+                <h2 class="article-h2 fade-in">The best models are now nearly identical</h2>
 
                 <p class="article-p fade-in">
-                    A year ago the top models were still visibly different. Today they barely are. Four companies cluster within 25 Elo points (a rating from blind human voting). The quality gap between the U.S. and China has <b>effectively closed</b>: in February 2025 DeepSeek-R1 briefly matched the best U.S. model, and by March 2026 the top U.S. model leads by just 2.7%.
+                    A year ago the top models were visibly different. Now, barely. Six leading labs run neck and neck, and the gap between the best U.S. and Chinese model is just <b>2.7%</b> (a year ago China's DeepSeek-R1 even caught up with the U.S. leaders for a while). Open models you can download for free trail by 3.3%.
                 </p>
 
                 <!-- INFOGRAPHIC 4: convergence -->
@@ -451,17 +460,17 @@
                 </div>
 
                 <p class="article-p fade-in">
-                    When the leaders are indistinguishable and open models are breathing down their necks (a 3.3% gap), the model itself stops being an advantage. Competition shifts to cost, reliability and specialization. The release of DeepSeek-R1 — a strong result at a fraction of the cost — wiped more than a trillion dollars off U.S. tech valuations in a single day, as the market suddenly grasped that cheap, open AI puts familiar business models in question.
+                    And that flips the economics. When a strong model is available to everyone and keeps getting cheaper, the model itself stops being an advantage. The fight moves to cost, reliability and narrow specialization. And cheaper doesn't mean worse: small models increasingly beat giants hundreds of times their size. When DeepSeek showed a strong result for a fraction of the money in early 2025, U.S. tech lost more than a trillion dollars of value in a single day — the market suddenly grasped that cheap, open AI breaks the familiar business models.
                 </p>
 
                 <p class="article-p fade-in">
-                    At the same time our measuring instrument is breaking. Benchmarks saturate in months; widely used tests are found to contain up to 42% invalid questions; part of Arena standing reflects adaptation to the platform rather than real capability. We are losing our instruments exactly when we need them most.
+                    Our ruler is breaking too. The tests everyone relies on "run out of road" within months, and up to 42% of the questions in popular ones turn out to be broken. We're losing our measuring instruments exactly when we need them most.
                 </p>
 
                 <h2 class="article-h2 fade-in">Risk is not keeping pace with capability</h2>
 
                 <p class="article-p fade-in">
-                    While capability grows exponentially, responsible AI trails behind. Documented AI incidents rose from <b>233 to 362</b> in a year. Almost every leading developer reports capability benchmarks, but reporting on safety benchmarks stays spotty and reluctant. Worse: recent research shows that improving one responsible-AI dimension (say, safety) can degrade another (say, accuracy).
+                    While AI grows exponentially, safety limps behind. Documented AI failures and incidents rose to <b>362</b>, up from 233 a year ago. Almost every developer reports capability results; on safety, reporting is spotty and reluctant. Medicine shows it live: in 2025 the U.S. regulator cleared 258 AI devices for clinics — most without new clinical trials, and only <b>2.4%</b> backed by randomized-trial data. The technology is rolling into hospitals faster than the evidence that it can be trusted.
                 </p>
 
                 <!-- INFOGRAPHIC 5: incidents -->
@@ -482,17 +491,17 @@
                             <div class="sub">a new high</div>
                         </div>
                     </div>
-                    <div class="cap">The footprint is also physical: training Grok 4 is estimated at <b>72,816 tons of CO₂</b>, and one model's annual inference water use may exceed the drinking needs of 1.2 million people</div>
+                    <div class="cap">The footprint is physical too: training Grok 4 is estimated at <b>72,816 tons of CO₂</b>, and running one model for a year uses as much water as 1.2 million people drink</div>
                 </div>
 
                 <p class="article-p fade-in">
-                    Add the physical footprint. Training Grok 4 is estimated at 72,816 tons of CO₂-equivalent; AI data-center power reached 29.6 GW — comparable to New York state at peak demand. Almost every frontier chip is made by a single Taiwanese foundry, TSMC — which means the entire global AI stack hangs on one point of failure.
+                    Then the physical footprint. Training a single model, Grok 4, is estimated at 72,816 tons of CO₂. AI data-center power reached 29.6 GW — like a whole New York state at peak demand. And almost every frontier chip is made by one Taiwanese foundry — so the entire global AI stack rests on a single point that could one day fail.
                 </p>
 
-                <h2 class="article-h2 fade-in">Labor: the quiet shift starts at the bottom</h2>
+                <h2 class="article-h2 fade-in">Work: the quiet change starts at the bottom</h2>
 
                 <p class="article-p fade-in">
-                    The most underrated part of the 2026 data is the labor market. AI productivity gains are already measurable: <b>14–15%</b> in customer support, <b>26%</b> in software development, up to <b>50%</b> in marketing output. But the effect is uneven, and not everyone feels it first.
+                    The most underrated part of the 2026 data is the job market. The gains from AI are already measurable: <b>+14–15%</b> in support, <b>+26%</b> in development, up to <b>+50%</b> in marketing. But the effect is uneven, and not everyone feels it first.
                 </p>
 
                 <!-- INFOGRAPHIC 6: labor -->
@@ -500,97 +509,97 @@
                     <div class="col">
                         <div class="hd">⚡ Where AI speeds things up</div>
                         <p class="tx">Customer support — <b>+14–15%</b></p>
-                        <p class="tx">Software development — <b>+26%</b></p>
-                        <p class="tx">Marketing output — <b>+50%</b></p>
-                        <p class="tx">Weaker where deeper judgment is required</p>
+                        <p class="tx">Development — <b>+26%</b></p>
+                        <p class="tx">Marketing — <b>+50%</b></p>
+                        <p class="tx">Weaker where you have to think</p>
                     </div>
                     <div class="col">
                         <div class="hd">📉 Who pays first</div>
                         <p class="tx">Employment of <b>developers aged 22–25: −20%</b> since 2024</p>
-                        <p class="tx">Meanwhile the <b>senior-engineer headcount grows</b></p>
-                        <p class="tx">A third of firms expect workforce cuts within a year</p>
-                        <p class="tx">AI-talent inflow to the U.S.: <b>−89%</b> since 2017</p>
+                        <p class="tx">Meanwhile <b>more senior engineers are hired</b></p>
+                        <p class="tx">CS enrollment at universities — <b>−11% in a year</b></p>
+                        <p class="tx">AI-talent inflow to the U.S. — <b>−89%</b> since 2017</p>
                     </div>
                 </div>
 
                 <p class="article-p fade-in">
-                    Here is the key detail: employment of developers aged 22–25 fell nearly 20% since 2024, while the headcount of experienced engineers keeps growing. AI did not "replace programmers." It took the <b>routine part</b> of the work — the very part on which juniors used to grow. The career ladder is breaking at its first rung. A third of organizations already expect to reduce headcount within the year.
+                    Here's the key detail. Employment of developers aged 22–25 fell nearly 20% since 2024 — while more experienced engineers are being hired. AI didn't "replace programmers." It took the <b>routine</b> — the very work juniors used to grow on. The first rung of the career ladder is simply vanishing. Students already feel it: enrollment in CS majors dropped 11% in a year. And a third of companies admit they plan to cut people in the coming year.
                 </p>
 
-                <h2 class="article-h2 fade-in">Geopolitics: sovereignty as the new axis</h2>
+                <h2 class="article-h2 fade-in">Geopolitics: everyone pulls their own way</h2>
 
                 <p class="article-p fade-in">
-                    Governments acted decisively — but in different directions. The EU's first AI Act prohibitions took effect; the U.S. shifted toward deregulation; Japan, South Korea and Italy passed national AI laws. More than half of new national strategies came from developing countries entering the field for the first time. The common denominator is <b>AI sovereignty</b>: the drive to control one's own AI infrastructure.
+                    Governments got serious about AI — but each in its own direction. Europe's first AI Act bans took effect (on emotion recognition and "predictive policing," for example); the U.S., by contrast, lifted rules in the name of "leadership"; Japan, South Korea and Italy passed their own laws. More than half of new national strategies came from developing countries. And at the Paris summit the U.S. and Britain flat-out refused to sign a joint declaration that 60 countries endorsed — the divergence is plain.
                 </p>
 
                 <p class="article-p fade-in">
-                    Model production is still concentrated in the U.S. and China, but open source is redistributing participation: contributions from the "rest of the world" on GitHub already outpace Europe and are approaching the U.S., fueling more linguistically diverse models. Openness became the great equalizer — and, at the same time, an instrument of sovereignty.
+                    The strongest models are still made in the U.S. and China, but open source is reshuffling the players: the "rest of the world" on GitHub already outpaces Europe and is closing on the U.S. Openness became the great equalizer — and, at the same time, a way to not depend on someone else's technology.
                 </p>
 
-                <h2 class="article-h2 fade-in">People: optimism rose — but so did anxiety</h2>
+                <h2 class="article-h2 fade-in">People: calmer and more anxious at once</h2>
 
                 <p class="article-p fade-in">
-                    The public is reading mixed signals. The share of people who see more benefit than harm in AI rose from 55% to 59% in a year — yet the share who say AI makes them nervous climbed to 52%. The most telling divide, though, is between experts and the public.
+                    The public is reading mixed signals. The share who see more benefit than harm in AI rose to 59% from 55% a year ago — yet the share who say AI makes them nervous is now 52%. The most telling divide, though, is between experts and ordinary people.
                 </p>
 
                 <!-- INFOGRAPHIC 7: experts vs public -->
                 <div class="figx fade-in" role="img" aria-label="The expectation gap between experts and the public">
                     <div class="fxbars">
-                        <div class="fxbar-row">
-                            <div class="rl">Impact on jobs</div>
-                            <div class="fxbar-track">
-                                <div class="fxbar a" style="width:73%">Experts · 73%</div>
-                                <div class="fxbar b" style="width:23%">Public · 23%</div>
+                        <div class="fxb-metric">
+                            <div class="fxb-cat">Impact on jobs</div>
+                            <div class="fxb-pair">
+                                <div class="fxb-line"><span class="fxb-name">Experts</span><span class="fxb-track"><span class="fxb-fill a" style="width:73%"></span></span><span class="fxb-val">73%</span></div>
+                                <div class="fxb-line"><span class="fxb-name">Public</span><span class="fxb-track"><span class="fxb-fill b" style="width:23%"></span></span><span class="fxb-val">23%</span></div>
                             </div>
                         </div>
-                        <div class="fxbar-row">
-                            <div class="rl">Impact on economy</div>
-                            <div class="fxbar-track">
-                                <div class="fxbar a" style="width:69%">Experts · 69%</div>
-                                <div class="fxbar b" style="width:21%">Public · 21%</div>
+                        <div class="fxb-metric">
+                            <div class="fxb-cat">Impact on economy</div>
+                            <div class="fxb-pair">
+                                <div class="fxb-line"><span class="fxb-name">Experts</span><span class="fxb-track"><span class="fxb-fill a" style="width:69%"></span></span><span class="fxb-val">69%</span></div>
+                                <div class="fxb-line"><span class="fxb-name">Public</span><span class="fxb-track"><span class="fxb-fill b" style="width:21%"></span></span><span class="fxb-val">21%</span></div>
                             </div>
                         </div>
-                        <div class="fxbar-row">
-                            <div class="rl">Impact on healthcare</div>
-                            <div class="fxbar-track">
-                                <div class="fxbar a" style="width:84%">Experts · 84%</div>
-                                <div class="fxbar b" style="width:44%">Public · 44%</div>
+                        <div class="fxb-metric">
+                            <div class="fxb-cat">Impact on healthcare</div>
+                            <div class="fxb-pair">
+                                <div class="fxb-line"><span class="fxb-name">Experts</span><span class="fxb-track"><span class="fxb-fill a" style="width:84%"></span></span><span class="fxb-val">84%</span></div>
+                                <div class="fxb-line"><span class="fxb-name">Public</span><span class="fxb-track"><span class="fxb-fill b" style="width:44%"></span></span><span class="fxb-val">44%</span></div>
                             </div>
                         </div>
                     </div>
-                    <div class="cap">Share expecting a positive impact. The jobs gap is <b>50 points</b>. 64% of Americans expect AI to mean fewer jobs</div>
+                    <div class="cap">Share expecting a positive impact. The jobs gap is <b>50 points</b>. And 64% of Americans expect AI to mean fewer jobs</div>
                 </div>
 
                 <p class="article-p fade-in">
-                    73% of experts expect a positive impact of AI on jobs — versus just 23% of the general public. A 50-point gap. And the U.S. reported the lowest trust of any surveyed country in its own government to regulate AI: 31%, against a global average of 54%. Those closest to the technology are far more optimistic than those furthest from it. Usually that means the public hasn't yet seen what practitioners already see.
+                    73% of experts expect AI to affect jobs positively — versus just 23% of ordinary people. A 50-point gap. And Americans trust their own government on AI less than anyone in the world: just 31%, against a global average of 54%. Those closest to the technology are markedly more optimistic. Usually that means one thing: the public hasn't yet seen what the people working with AI every day already see.
                 </p>
 
-                <h2 class="article-h2 fade-in">What is actually changing</h2>
+                <h2 class="article-h2 fade-in">What actually changed</h2>
 
                 <p class="article-p fade-in">
-                    Step back from the individual records and look at the trajectory, and five shifts emerge. These — not any specific percentage — define 2026.
+                    Step back from the individual records, and five things stand out from the year. These — not any specific percentage — are the real 2026.
                 </p>
 
                 <div class="fade-in">
                     <div class="list-card">
                         <div class="emoji-chip">🚀</div>
-                        <p class="card-sub"><b class="card-title">Capability accelerates; it is not plateauing.</b><br>Benchmarks meant to last years saturate in months. The plateau everyone expected did not arrive.</p>
+                        <p class="card-sub"><b class="card-title">AI didn't slow down — it sped up.</b><br>Tests meant to last years fall in months. The plateau everyone expected never came.</p>
                     </div>
                     <div class="list-card">
                         <div class="emoji-chip">📉</div>
-                        <p class="card-sub"><b class="card-title">Cost falls and the top converges.</b><br>The leaders are indistinguishable; open models trail by 3.3%. A strong model is now nearly a commodity.</p>
+                        <p class="card-sub"><b class="card-title">Models get cheaper and look alike.</b><br>The leaders are nearly indistinguishable; free ones trail by a few percent. A strong model is now in everyone's hands.</p>
                     </div>
                     <div class="list-card">
                         <div class="emoji-chip">🧩</div>
-                        <p class="card-sub"><b class="card-title">The frontier is jagged, not smooth.</b><br>Olympiad gold and an inability to read a clock in one model. Never trust the average score.</p>
+                        <p class="card-sub"><b class="card-title">Strength comes mixed with helplessness.</b><br>Olympiad gold and can't-read-a-clock in the same model. Never trust the average score.</p>
                     </div>
                     <div class="list-card">
                         <div class="emoji-chip">🏗️</div>
-                        <p class="card-sub"><b class="card-title">Value moves from the model to the system.</b><br>Since everyone has model access, the edge lies in the process, data and people around it.</p>
+                        <p class="card-sub"><b class="card-title">It's no longer about the model, but everything around it.</b><br>Since everyone has AI, the edge is in process, data and people.</p>
                     </div>
                     <div class="list-card">
                         <div class="emoji-chip">⚠️</div>
-                        <p class="card-sub"><b class="card-title">Measurement and governance lag behind.</b><br>Incidents rise, labs disclose less, benchmarks break. We are driving faster than we can see the road.</p>
+                        <p class="card-sub"><b class="card-title">We can't measure or govern fast enough.</b><br>More incidents, less disclosure, breaking tests. We're driving faster than we can see the road.</p>
                     </div>
                 </div>
 
@@ -609,44 +618,36 @@
                     <div class="cap">Everyone has the same model. The difference is <b>the system around it</b></div>
                 </div>
 
-                <h2 class="article-h2 fade-in">My opinion</h2>
+                <h2 class="article-h2 fade-in">What to do with all this</h2>
 
                 <p class="article-p fade-in">
-                    Now the author's take. I read these numbers not as an outside analyst but as someone who has rebuilt engineering inside large companies and shipped AI products alone. Here is what I see in them.
+                    The model is no longer an advantage. When six labs run neck and neck and free models trail by a few percent, strong AI is available to everyone. So it's not about the model anymore. The winner is whoever rebuilt everything around it: how tasks are framed, where the data lives, how results get checked, who's accountable. Just handing your team access to a neural network doesn't speed up work — it speeds up the mess.
                 </p>
 
                 <p class="article-p fade-in">
-                    <b>First. The model has stopped being the advantage.</b> When six labs sit within 25 Elo points and open models trail by 3.3%, everyone has access to strong AI. So competition moves one level up — into the production system around the model: specs, data, process, quality evaluation, people. Whoever simply "handed teams access to an LLM" did not accelerate development — they accelerated their chaos. The winner is the one who rebuilt the system itself.
+                    Hence the new core skill. Not "writing code," but <b>owning the outcome</b>: framing the task, gathering context, checking it, carrying it to a product. A weak specialist with AI just does bad work faster. A strong one starts running a whole system. And yes, juniors felt it first: their work is exactly what AI took first.
                 </p>
 
                 <p class="article-p fade-in">
-                    <b>Second. The real story of the year is the collapse at the bottom.</b> A 20% drop in junior-developer employment is not about "AI replacing people." It is about an agent now doing the routine on which a young engineer used to grow. The rung where careers began is disappearing. The core human skill is no longer "writing code" but <b>owning the outcome</b>: framing the task, managing context, verifying, and being accountable for the product. A weak engineer with AI just produces bad solutions faster. A strong one starts running a system.
+                    Building became nearly free. $172B of value people get for free is a mountain of value almost no one has learned to turn into money yet. The barrier to entry collapsed: where you once needed a team costing a million a year, one person with agents is now enough. So the winner is not whoever has the better model but whoever can <b>get a product to people and keep them</b>. Investor money has stopped being a precondition for building an AI company.
                 </p>
 
                 <p class="article-p fade-in">
-                    <b>Third. Building became nearly free — and value is being given away.</b> $172B of consumer surplus from mostly-free tools is enormous value that almost no one is monetizing yet. The barrier to building a product collapsed: a team-year used to cost around a million dollars; now a single founder with agents needs a fraction of that. So the winner is not whoever has the better model but whoever masters <b>distribution, retention and trust</b>. Capital is no longer a precondition for building an AI company.
+                    And one more thing. Since we're running faster than we can measure, judging quality becomes your job, not the leaderboard's. For anyone putting AI into a real product — especially in fintech and other strict fields — that means tests, acceptance criteria, traceability, dashboards. Without them, working with agents turns into expensive vibe-coding.
                 </p>
 
                 <p class="article-p fade-in">
-                    <b>Fourth. We are scaling faster than we can measure.</b> Benchmarks saturate in months, labs disclose less, incidents rose to 362. The jagged frontier means the average score cannot be trusted: a system that wins olympiad gold can't read a clock. For anyone deploying AI in production — especially in fintech and other regulated fields — the conclusion is blunt: <b>you can no longer outsource quality evaluation to a leaderboard</b>. That is now your job — tests, acceptance criteria, traceability, dashboards. Without it, agentic development is just expensive vibe-coding.
-                </p>
-
-                <p class="article-p fade-in">
-                    <b>Fifth, and most important.</b> The question of 2026 is no longer whether AI works. It works — unevenly, jaggedly, but it works. The question is whether <b>you have rebuilt yourself to use it</b>. The winners will not be those with the best model access — everyone has that. The winners will be those who rebuilt the production system, the org structure and the culture of ownership. The technology has already outrun us. What remains is to see who catches up faster — not in capability, but in readiness.
+                    And the main thing. The question is no longer whether AI works — it works. The question is whether <b>you're ready to use it</b>. The technology has already outrun us. What's left is to see who catches up faster — not in capability, but in how it's built inside: people, processes, ownership.
                 </p>
 
                 <!-- Accent line -->
                 <div class="grad-card fade-in" style="margin:2.4rem 0; padding:26px 30px; text-align:left">
                     <div class="font-mono text-apple-textMutedLight dark:text-apple-textMutedDark" style="font-size:13px; letter-spacing:.12em; text-transform:uppercase; margin-bottom:12px">The essence of 2026</div>
                     <div class="text-black dark:text-white" style="font-size:20px; font-weight:700; line-height:1.5">
-                        AI is scaling faster than the world around it can adapt.<br>
-                        The advantage is no longer the model — it is the <span class="grad-text">system, the people and ownership</span>.
+                        AI grew faster than everything around it.<br>
+                        And now it's not about the model, but about <span class="grad-text">people, processes and ownership</span>.
                     </div>
                 </div>
-
-                <p class="article-p fade-in">
-                    In upcoming pieces I'll unpack this in practice: what the production system around a model looks like, how to move a team into AI-Native mode, and why ownership became the engineer's most important skill. Stay tuned.
-                </p>
 
                 <!-- CTA -->
                 <div class="relative bg-white dark:bg-[#1C1C1E] border border-black/10 dark:border-white/10 p-8 md:p-12 lg:p-14 rounded-[2rem] md:rounded-[3rem] shadow-[0_8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.03)] overflow-hidden fade-in mb-12 group">

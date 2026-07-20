@@ -1,23 +1,21 @@
-AI in 2026: the technology has outrun us
+AI has outrun us
 
-The new Stanford AI Index reports are out — the 2025 and 2026 editions. I put them side by side and looked not at individual records but at the trajectory. The conclusion is uncomfortable: AI is not plateauing, it's accelerating. And the systems around it — people, processes, regulation, education — are not keeping up. Everything else follows from that.
+The new Stanford AI Index reports are out — the 2025 and 2026 editions. I put them side by side and looked not at individual records but at what actually changed over the year. The takeaway is uncomfortable: AI itself shot ahead, while everything around it — people, companies, laws, the job market — is failing to keep up.
 
-Start with the money. U.S. private AI investment grew from $109B to $286B in a year, global corporate investment more than doubled, and generative AI added over 200%. This is no longer cautious interest — it's an entire industry betting a decade ahead.
+Money. U.S. private AI investment grew from $109B to $286B in a year, and global investment more than doubled. This is no longer cautious interest — it's the whole industry betting ten years ahead.
 
-On capability there's no ambiguity: it's rising, fast. On the key coding benchmark models jumped from 60% to nearly 100% of the human level in a year, and AI took gold at the International Math Olympiad. Yet the same model reads an analog clock correctly only half the time, and robots manage just 12% of household tasks. Researchers call this the "jagged frontier": AI is brilliant and helpless at once, and no average score tells you where it will trip. For anyone shipping AI in a real product the lesson is blunt — don't trust the leaderboard, test it on your own scenario.
+Capability. On the coding test, models climbed from 60% to nearly 100% of the human level in a year, and AI won gold at the Math Olympiad. Yet the same model can't read an analog clock — it gets the time right only half the time — and robots handle just 12% of household chores. AI is powerful and helpless within a single step. The lesson for anyone shipping it: don't trust the leaderboard, test it on your own task.
 
-And one more shift that changes the economics. The top has compressed: six leading labs sit within 25 rating points, the U.S.–China gap is just 2.7%, and open models trail by 3.3%. Put simply, everyone now has access to a strong model. Which means the model itself has stopped being the advantage.
+The best models are now nearly identical. Six leading labs run neck and neck, the U.S.–China gap is 2.7%, and free models trail by 3.3%. Which means strong AI is available to everyone — and the model itself has stopped being an advantage.
 
-But the most underrated part is the labor market. Employment of developers aged 22–25 fell nearly 20% since 2024, even as the headcount of senior engineers keeps growing. AI didn't "replace programmers." It took the routine — the very work on which juniors used to grow. The career ladder is breaking at its first rung.
+Work. Here's the underrated part. Employment of developers aged 22–25 fell nearly 20% since 2024, while more experienced engineers are being hired. AI didn't "replace programmers" — it took the routine juniors used to grow on. The first rung of the career ladder is simply vanishing. Students already feel it: CS enrollment dropped 11% in a year.
 
-Now my opinion. The main shift of the year is that value is moving from the model to the system around it. Since everyone has the same model, the winner is not whoever has better access but whoever rebuilt the production system: specs, data, process, quality evaluation, people. Just handing teams access to an LLM doesn't accelerate development — it accelerates chaos.
+What to do with all this. Since everyone has the same model, the winner is not whoever has better access but whoever rebuilt everything around it: how tasks are framed, where the data lives, how results get checked, who's accountable. Just handing your team access to a neural network doesn't speed up work — it speeds up the mess.
 
-Hence the second point: the core skill is no longer "writing code" but owning the outcome. A weak engineer with AI just produces bad solutions faster. A strong one starts running a system.
+Hence the new core skill — not "writing code," but owning the outcome. A weak specialist with AI just does bad work faster. A strong one starts running a whole system.
 
-And third. Building became nearly free, while the industry gives away $172B of consumer value for free. The barrier to entry collapsed: where you once needed a team costing a million a year, one person with agents is now enough. Capital has stopped being a precondition for building an AI company.
+And one more thing. Building became nearly free, and people get $172B of value for free — a mountain of value almost no one has learned to turn into money yet. The barrier to entry collapsed: where you once needed a team costing a million a year, one person with agents is now enough.
 
-The honest bottom line: the question is no longer whether AI works — it works. The question is whether you've rebuilt yourself to use it. The technology has already outrun us. What's left is to see who catches up faster — not in capability, but in readiness.
-
-Full breakdown with numbers and infographics — in the linked article.
+The honest bottom line: the question is no longer whether AI works — it works. The question is whether you're ready to use it. The technology has already outrun us. What's left is to see who catches up faster — not in capability, but in readiness.
 
 #thoughts
