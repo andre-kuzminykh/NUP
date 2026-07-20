@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Датаист / Аналитика | ИИ в 2026: масштаб против готовности</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/andre-kuzminykh/dataist/refs/heads/main/favicon.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/andre-kuzminykh/dataist/refs/heads/main/favicon.png">
+
+    <!-- Open Graph -->
+    <!-- После публикации замените og:url и og:image на финальные адреса -->
+    <meta property="og:site_name" content="Датаист / Аналитика" />
+    <meta property="og:title" content="ИИ в 2026: масштаб против готовности" />
+    <meta property="og:description" content="Что изменилось в искусственном интеллекте между 2025 и 2026 годом — по данным отчётов Stanford HAI AI Index — и почему масштаб технологии обгоняет готовность систем вокруг неё. Авторский разбор трендов и личное мнение." />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://dataist.ai/ai-2026/" />
+    <meta property="og:image" content="https://raw.githubusercontent.com/andre-kuzminykh/dataist/refs/heads/main/favicon.png" />
+    <meta property="article:published_time" content="2026-07-20T10:00:00+03:00" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Инициализация темы -->
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('theme');
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var dark = stored ? stored === 'dark' : prefersDark;
+                if (dark) document.documentElement.classList.add('dark');
+            } catch (e) { document.documentElement.classList.add('dark'); }
+        })();
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Шрифты: Inter и Space Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- Иконки Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        apple: {
+                            light: '#F5F5F7',
+                            dark: '#000000',
+                            grayLight: '#E5E5EA',
+                            grayDark: '#1C1C1E',
+                            textMutedLight: '#86868B',
+                            textMutedDark: '#8E8E93',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"Inter"', 'sans-serif'],
+                        mono: ['"Space Mono"', 'monospace']
+                    },
+                    boxShadow: {
+                        'apple': '0 4px 24px rgba(0, 0, 0, 0.04)',
+                        'apple-dark': '0 4px 24px rgba(255, 255, 255, 0.04)',
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-header {
+                @apply bg-white/70 dark:bg-black/70 backdrop-blur-2xl border-b border-black/5 dark:border-white/10;
+            }
+            .glass-panel {
+                @apply bg-white dark:bg-[#1C1C1E] border border-black/5 dark:border-white/10 shadow-apple dark:shadow-apple-dark;
+            }
+        }
+
+        body {
+            @apply bg-apple-light dark:bg-apple-dark text-black dark:text-white transition-colors duration-300;
+        }
+
+        ::selection {
+            @apply bg-black text-white dark:bg-white dark:text-black;
+        }
+
+        /* Типографика статьи */
+        .article-p {
+            @apply font-sans text-lg md:text-[21px] leading-relaxed mb-6 md:mb-8 text-black/85 dark:text-white/85;
+        }
+        .article-h2 {
+            @apply font-sans font-bold text-2xl md:text-3xl lg:text-4xl mt-16 mb-8 tracking-tight text-black dark:text-white;
+        }
+        .reason-num {
+            @apply font-mono text-apple-textMutedLight dark:text-apple-textMutedDark mr-3 text-xl md:text-2xl;
+        }
+        .list-card {
+            @apply flex items-start gap-4 p-5 md:p-6 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/5 dark:border-white/10 shadow-apple dark:shadow-apple-dark mb-4;
+        }
+        .emoji-chip {
+            @apply w-11 h-11 md:w-12 md:h-12 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-xl md:text-2xl shrink-0 leading-none;
+        }
+        .card-title {
+            @apply font-sans font-semibold text-black dark:text-white text-base md:text-lg leading-snug;
+        }
+        .card-sub {
+            @apply text-apple-textMutedLight dark:text-apple-textMutedDark text-sm md:text-base leading-relaxed;
+        }
+
+        /* Анимации скролла */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: opacity, transform;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+
+    <!-- Инфографика: лёгкие адаптивные схемы в стиле статьи (светлая/тёмная тема) -->
+    <style>
+        .figx{
+            --ink:#0a0a0a; --mut:rgba(0,0,0,.55); --faint:rgba(0,0,0,.34);
+            --line:rgba(0,0,0,.30); --brd:rgba(0,0,0,.10); --soft:rgba(0,0,0,.035);
+            --card:#ffffff; --flame:#F97316; --plum:#8B5CF6; --rail:rgba(0,0,0,.16);
+            background:var(--card); border:1px solid var(--brd); border-radius:22px;
+            padding:36px 22px; margin:2.6rem 0; box-shadow:0 4px 24px rgba(0,0,0,.04);
+            color:var(--ink); overflow:hidden;
+            font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
+        }
+        .dark .figx{
+            --ink:#F5F5F7; --mut:rgba(255,255,255,.60); --faint:rgba(255,255,255,.36);
+            --line:rgba(255,255,255,.32); --brd:rgba(255,255,255,.12); --soft:rgba(255,255,255,.05);
+            --card:#1C1C1E; --rail:rgba(255,255,255,.20); box-shadow:0 4px 24px rgba(255,255,255,.04);
+        }
+        @media (min-width:768px){ .figx{padding:44px 36px; border-radius:26px} }
+
+        .figx .cap{margin-top:26px; text-align:center; font-size:13.5px; line-height:1.5; color:var(--mut)}
+        .figx .cap b{color:var(--ink); font-weight:600}
+
+        .fxrow{display:flex; align-items:center; justify-content:center; gap:14px 16px; flex-wrap:wrap}
+        .fxcol{display:flex; flex-direction:column; align-items:center; gap:18px}
+
+        .fxchip{border:1.5px solid var(--brd); background:var(--soft); border-radius:999px;
+            padding:9px 16px; font-size:14.5px; font-weight:600; white-space:nowrap; line-height:1.2}
+        .fxchip.f{border-color:rgba(249,115,22,.55); color:var(--flame); background:rgba(249,115,22,.07)}
+        .fxchip.p{border-color:rgba(139,92,246,.55); color:var(--plum); background:rgba(139,92,246,.08)}
+        .fxchip.dim{opacity:.52}
+
+        .fxnode{display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; min-width:86px}
+        .fxnode .em{font-size:34px; line-height:1}
+        .fxnode .lb{font-size:13.5px; font-weight:600; line-height:1.25; white-space:nowrap}
+        .fxnode.dim{opacity:.5}
+
+        .fxarr{position:relative; flex:0 0 auto; width:15px; height:15px;
+            border-top:2.5px solid var(--line); border-right:2.5px solid var(--line);
+            transform:rotate(45deg); border-radius:2px; margin:0 4px}
+        .fxarr::before{content:""; position:absolute; left:50%; top:50%; width:21px; height:2.5px;
+            background:var(--line); border-radius:2px; transform:translate(-50%,-50%) rotate(-45deg)}
+        .fxarr.down{transform:rotate(135deg); margin:6px 0}
+        .fxseq{display:flex; align-items:center; gap:14px}
+        .fxrow.tight{flex-wrap:nowrap; gap:10px; align-items:flex-start; width:100%}
+        .fxrow.tight .fxnode{flex:1 1 0; min-width:0}
+        .fxrow.tight .fxnode .lb{white-space:normal; font-size:12.5px}
+        @media (max-width:640px){ .fxrow.tight .fxnode .lb{font-size:11px} .fxrow.tight .fxnode .em{font-size:26px} }
+
+        .grad-text{background:linear-gradient(100deg,var(--flame),var(--plum));
+            -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent}
+        .grad-card{border:1.5px solid transparent; border-radius:20px; padding:20px 26px; text-align:center;
+            background:linear-gradient(var(--card,#fff),var(--card,#fff)) padding-box,
+                       linear-gradient(140deg,#F97316,#8B5CF6) border-box}
+        .dark .grad-card{--card:#1C1C1E}
+
+        /* Степпер / шкала */
+        .fxsteps{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; width:100%; max-width:860px; margin:0 auto}
+        .fxstep .dotrow{position:relative; width:100%; display:flex; justify-content:center}
+        .fxstep .dotrow::before{content:""; position:absolute; left:-6px; right:-6px; top:50%; height:2px;
+            transform:translateY(-50%); background:var(--rail)}
+        .fxstep:first-child .dotrow::before{left:50%}
+        .fxstep:last-child .dotrow::before{right:50%}
+        .fxstep{position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; z-index:1}
+        .fxstep .em{font-size:32px; line-height:1; margin-bottom:4px}
+        .fxstep .dot{position:relative; z-index:1; width:34px; height:34px; border-radius:50%; background:var(--card); border:2px solid var(--brd);
+            display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--mut)}
+        .fxstep.hot .dot{border-color:var(--flame); color:var(--flame); box-shadow:0 0 22px -6px rgba(249,115,22,.65)}
+        .fxstep .lb{font-size:12.5px; font-weight:600; text-align:center; line-height:1.25}
+        @media (max-width:640px){
+            .fxsteps{grid-template-columns:repeat(3,1fr); gap:22px 10px}
+            .fxstep .dotrow::before{display:none}
+        }
+
+        /* Шкала веса утверждений / метрик */
+        .fxscale{display:grid; grid-template-columns:repeat(4,1fr); gap:18px; max-width:860px; margin:0 auto}
+        .fxscale .cell{display:flex; flex-direction:column; gap:8px; text-align:center; align-items:center}
+        .fxscale .tt{font-family:'Space Mono',monospace; font-size:12.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase}
+        .fxscale .ex{font-size:13.5px; color:var(--mut); line-height:1.45; max-width:190px}
+        .fxscale-bar{height:6px; border-radius:3px; margin:22px auto 10px; max-width:860px;
+            background:linear-gradient(90deg,var(--brd),var(--flame),var(--plum))}
+        .fxscale-ends{display:flex; justify-content:space-between; max-width:860px; margin:0 auto;
+            font-size:12px; color:var(--faint); letter-spacing:.06em; text-transform:uppercase; font-weight:600}
+        @media (max-width:640px){ .fxscale{grid-template-columns:1fr 1fr; gap:20px 12px} }
+
+        /* Полоса-формула / доли */
+        .fxweights{display:flex; width:100%; max-width:760px; margin:0 auto; height:46px; border-radius:12px; overflow:hidden}
+        .fxweights div{display:flex; align-items:center; justify-content:center; font-size:13.5px; font-weight:700; color:#fff; white-space:nowrap}
+        .fxw1{width:48%; background:#F97316}
+        .fxw2{width:22%; background:#B364B1}
+        .fxw3{width:18%; background:#8B5CF6}
+        .fxw4{width:12%; background:var(--faint); color:var(--card)}
+        .fxlegend{display:flex; flex-wrap:wrap; gap:8px 18px; justify-content:center; margin-top:16px; font-size:13px; color:var(--mut)}
+        .fxlegend b{color:var(--ink)}
+
+        /* Пара «было → стало» */
+        .fxdelta{display:grid; grid-template-columns:1fr auto 1fr; gap:16px 10px; align-items:center; max-width:720px; margin:0 auto}
+        .fxdelta .box{border:1px solid var(--brd); background:var(--soft); border-radius:18px; padding:18px 16px; text-align:center}
+        .fxdelta .box.to{border-color:transparent;
+            background:linear-gradient(var(--card),var(--card)) padding-box, linear-gradient(140deg,#F97316,#8B5CF6) border-box}
+        .fxdelta .yr{font-family:'Space Mono',monospace; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+        .fxdelta .big{font-size:clamp(24px,6vw,40px); font-weight:800; line-height:1.05; margin-top:6px}
+        .fxdelta .sub{font-size:12.5px; color:var(--mut); margin-top:6px; line-height:1.3}
+        .fxdelta .mid{display:flex; flex-direction:column; align-items:center; gap:4px}
+        .fxdelta .mid .fxarr{margin:0}
+        .fxdelta .mid .pct{font-size:13px; font-weight:800; color:var(--flame); white-space:nowrap}
+        @media (max-width:560px){ .fxdelta{grid-template-columns:1fr; gap:10px}
+            .fxdelta .mid{flex-direction:row; gap:10px} .fxdelta .mid .fxarr{transform:rotate(135deg)} }
+
+        /* Двойные бары (сравнение долей) */
+        .fxbars{max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
+        .fxbar-row{display:grid; grid-template-columns:130px 1fr; gap:14px; align-items:center}
+        .fxbar-row .rl{font-size:14px; font-weight:600; text-align:right; color:var(--ink)}
+        .fxbar-track{position:relative; display:flex; flex-direction:column; gap:7px}
+        .fxbar{height:26px; border-radius:8px; display:flex; align-items:center; padding-left:12px; font-size:13px; font-weight:800; color:#fff; min-width:44px}
+        .fxbar.a{background:linear-gradient(90deg,#F97316,#F59E0B)}
+        .fxbar.b{background:var(--soft); color:var(--mut); border:1px solid var(--brd)}
+        @media (max-width:560px){ .fxbar-row{grid-template-columns:96px 1fr} .fxbar-row .rl{font-size:12.5px} }
+
+        /* Сравнение ❌ / ✅ / было / стало */
+        .vsx{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:2.2rem 0;
+            --ink:#0a0a0a; --mut:rgba(0,0,0,.55); --brd:rgba(0,0,0,.10); --card:#fff; color:var(--ink)}
+        .dark .vsx{--ink:#F5F5F7; --mut:rgba(255,255,255,.6); --brd:rgba(255,255,255,.12); --card:#1C1C1E}
+        @media (max-width:640px){ .vsx{grid-template-columns:1fr} }
+        .vsx .col{border:1px solid var(--brd); background:var(--card); border-radius:18px; padding:20px 22px;
+            box-shadow:0 4px 24px rgba(0,0,0,.04)}
+        .dark .vsx .col{box-shadow:0 4px 24px rgba(255,255,255,.03)}
+        .vsx .hd{font-size:15px; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px; color:var(--ink)}
+        .vsx .tx{font-size:15.5px; line-height:1.55; color:var(--mut)}
+        .vsx .tx b{color:var(--ink); font-weight:600}
+        .vsx .tx + .tx{margin-top:8px}
+
+        /* Градиентный герой-обложка */
+        .hero-cover{position:relative; border-radius:24px; overflow:hidden; border:1px solid rgba(0,0,0,.08);
+            background:radial-gradient(120% 140% at 15% 10%, rgba(249,115,22,.20), transparent 55%),
+                       radial-gradient(120% 140% at 90% 90%, rgba(139,92,246,.24), transparent 55%),
+                       #0b0b0d;
+            padding:56px 32px; text-align:center; color:#fff}
+        .dark .hero-cover{border-color:rgba(255,255,255,.10)}
+        @media (min-width:768px){ .hero-cover{border-radius:30px; padding:88px 48px} }
+        .hero-cover .badge{font-family:'Space Mono',monospace; font-size:12px; letter-spacing:.28em; text-transform:uppercase; color:rgba(255,255,255,.7)}
+        .hero-cover .yy{display:flex; align-items:baseline; justify-content:center; gap:16px; margin-top:18px}
+        .hero-cover .yy .n{font-size:clamp(40px,13vw,110px); font-weight:800; line-height:.9; letter-spacing:-.03em}
+        .hero-cover .yy .n.old{color:rgba(255,255,255,.35)}
+        .hero-cover .yy .ar{font-size:clamp(26px,7vw,60px); color:rgba(255,255,255,.5)}
+        .hero-cover .tagline{margin-top:22px; font-size:15px; color:rgba(255,255,255,.72); letter-spacing:.02em}
+    </style>
+
+</head>
+<body class="font-sans antialiased min-h-[100dvh] w-full flex flex-col relative pb-12">
+
+    <!-- Хедер -->
+    <header class="fixed top-0 w-full h-16 md:h-20 z-50 flex justify-between items-center px-4 md:px-8 glass-header transition-colors shrink-0 gap-4">
+
+        <div class="flex items-center gap-4">
+            <a href="/" class="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-black dark:text-white">
+                <i data-lucide="arrow-left" class="w-5 h-5 md:w-6 md:h-6"></i>
+            </a>
+
+            <a href="/" class="flex items-center gap-3 shrink-0 no-underline group">
+                <div class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs md:text-sm font-bold font-mono leading-none transition-transform group-hover:scale-105">
+                    i
+                </div>
+                <div class="font-sans font-semibold text-lg md:text-xl tracking-tight text-black dark:text-white leading-none mt-[2px]">
+                    ДАТАИСТ
+                </div>
+            </a>
+        </div>
+
+        <div class="flex items-center gap-2 md:gap-4 shrink-0">
+            <a href="en.html" class="px-2.5 py-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all text-black dark:text-white text-xs md:text-sm font-mono font-bold tracking-wide" title="English version">EN</a>
+            <button id="theme-toggle" class="p-2 md:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all text-black dark:text-white cursor-pointer" title="Сменить тему">
+                <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+            </button>
+
+            <a href="https://t.me/andre_dataist" target="_blank" rel="noopener"
+               class="flex items-center gap-2 px-4 py-2 md:px-6 md:py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-full transition-all text-[12px] md:text-sm font-sans font-medium hover:scale-105 active:scale-95">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Telegram</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Основной контейнер статьи -->
+    <main class="pt-28 md:pt-36 pb-16 px-4 md:px-8 w-full max-w-4xl mx-auto relative z-30">
+        <article class="w-full flex flex-col relative">
+
+            <!-- ОБЛОЖКА СТАТЬИ -->
+            <header class="text-center mb-6 md:mb-10 fade-in">
+
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full border border-black/10 dark:border-white/20 text-black dark:text-white text-xs font-mono font-bold tracking-widest uppercase bg-black/5 dark:bg-white/5">
+                    <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+                    <span>Аналитика</span>
+                </div>
+
+                <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-[4.5rem] font-sans font-bold tracking-tighter mb-6 leading-[1.05] text-black dark:text-white">
+                    ИИ в 2026
+                </h1>
+
+                <p class="text-xl md:text-2xl lg:text-3xl text-apple-textMutedLight dark:text-apple-textMutedDark font-medium tracking-tight mt-6 max-w-3xl mx-auto">
+                    Масштаб против готовности: что изменилось за год
+                </p>
+
+                <!-- Обложка (градиентный герой; при желании замените на свою картинку) -->
+                <div class="w-full mt-10 md:mt-14 mb-4 md:mb-8 shadow-apple dark:shadow-apple-dark">
+                    <div class="hero-cover">
+                        <div class="badge">AI Index · 2025 → 2026</div>
+                        <div class="yy">
+                            <span class="n old">2025</span>
+                            <span class="ar">→</span>
+                            <span class="n">2026</span>
+                        </div>
+                        <div class="tagline">Технология масштабируется быстрее, чем адаптируются системы вокруг неё</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- КОНТЕНТ СТАТЬИ -->
+            <div class="max-w-3xl mx-auto w-full">
+
+                <!-- Лид -->
+                <p class="article-p fade-in font-medium text-xl md:text-2xl border-l-2 border-black dark:border-white pl-5 md:pl-8 mt-2 mb-12 text-apple-textMutedLight dark:text-apple-textMutedDark">
+                    Год назад отчёт AI Index зафиксировал главное: искусственный интеллект стал массовой технологией. Издание 2026 года отвечает на следующий вопрос — что происходит после прибытия. Короткий ответ: способности ИИ не выходят на плато. Они ускоряются и доходят до людей быстрее, чем в своё время персональный компьютер или интернет. Но данные не указывают в одну сторону. Они показывают технологию, которая масштабируется быстрее, чем успевают адаптироваться системы вокруг неё — регуляторика, способы оценки, образование, рынок труда.
+                </p>
+
+                <p class="article-p fade-in">
+                    Все цифры ниже — из двух отчётов <b>Stanford HAI AI Index</b>, изданий 2025 и 2026 годов. Это независимая инициатива, которая почти десять лет сводит воедино данные о развитии ИИ и на которую опираются правительства, компании и исследователи. Я взял из них сопоставимые метрики и посмотрел не на отдельные рекорды, а на <b>динамику</b>: куда движется система целиком. Сначала — что изменилось между 2025 и 2026, честно и с цифрами. Потом — что за этим стоит и моё мнение.
+                </p>
+
+                <h2 class="article-h2 fade-in">Деньги: удвоение за один год</h2>
+
+                <p class="article-p fade-in">
+                    Первое, что бросается в глаза, — это капитал. Частные инвестиции в ИИ в США выросли с <b>$109 млрд</b> до <b>$286 млрд</b> за год. Глобальные корпоративные вложения в ИИ более чем удвоились: частные инвестиции прибавили 127,5% и теперь составляют 60% от общего объёма. Генеративный ИИ вырос более чем на 200% и забрал почти половину всего частного финансирования. Число новых профинансированных ИИ-компаний прибавило 71%, а количество раундов на миллиард долларов почти удвоилось.
+                </p>
+
+                <!-- ИНФОГРАФИКА 1: удвоение инвестиций -->
+                <div class="figx fade-in" role="img" aria-label="Частные инвестиции в ИИ в США выросли с 109 до 286 млрд долларов">
+                    <div class="fxdelta">
+                        <div class="box">
+                            <div class="yr">2024</div>
+                            <div class="big">$109<span style="font-size:.5em; font-weight:700"> млрд</span></div>
+                            <div class="sub">частные инвестиции в ИИ в США</div>
+                        </div>
+                        <div class="mid">
+                            <span class="fxarr"></span>
+                            <span class="pct">× 2,6</span>
+                        </div>
+                        <div class="box to">
+                            <div class="yr">2025</div>
+                            <div class="big grad-text">$286<span style="font-size:.5em; font-weight:700"> млрд</span></div>
+                            <div class="sub">рекорд десятилетия</div>
+                        </div>
+                    </div>
+                    <div class="cap">Глобальные корпоративные вложения <b>более чем удвоились</b>, генеративный ИИ вырос на 200%+. Проект Stargate заявлен на сумму до $500 млрд</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    Но у этого дождя денег есть тень: доходы ИИ-компаний растут исторически быстро, а расходы на вычисления и инфраструктуру — ещё быстрее. Только Google отчитался о капитальных затратах более $150 млрд за год. Это не пузырь в чистом виде, но и не бесплатный рост: индустрия закладывается на десятилетие вперёд, ещё не зная, окупятся ли эти мощности.
+                </p>
+
+                <h2 class="article-h2 fade-in">Внедрение: от любопытства к инфраструктуре</h2>
+
+                <p class="article-p fade-in">
+                    Деньги идут туда, где есть спрос, — а спрос стал массовым. Организационное внедрение ИИ выросло с 78% до <b>88%</b> за год (и с 55% двумя годами ранее). Генеративный ИИ уже используется хотя бы в одной бизнес-функции у 70% компаний. На уровне населения генеративный ИИ достиг <b>53% проникновения за три года</b> — быстрее, чем персональный компьютер или интернет.
+                </p>
+
+                <!-- ИНФОГРАФИКА 2: рост внедрения -->
+                <div class="figx fade-in" role="img" aria-label="Организационное внедрение ИИ: 55 процентов, 78 процентов, 88 процентов">
+                    <div class="fxsteps" style="grid-template-columns:repeat(3,1fr); max-width:560px">
+                        <div class="fxstep"><div class="em">🌱</div><div class="dotrow"><div class="dot">55%</div></div><div class="lb">2023</div></div>
+                        <div class="fxstep"><div class="em">📈</div><div class="dotrow"><div class="dot">78%</div></div><div class="lb">2024</div></div>
+                        <div class="fxstep hot"><div class="em">🏢</div><div class="dotrow"><div class="dot">88%</div></div><div class="lb">2025</div></div>
+                    </div>
+                    <div class="cap">Организационное внедрение ИИ. Но <b>развёртывание ИИ-агентов — всё ещё единицы процентов</b> почти во всех функциях</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    И вот здесь появляется первая важная трещина между шумом и реальностью. Внедрение «ИИ вообще» — 88%. А развёртывание автономных <b>ИИ-агентов</b> — единицы процентов почти во всех бизнес-функциях. Между «мы пользуемся ChatGPT» и «у нас в проде работает агент, который сам доводит задачу до результата» — пропасть. Большинство компаний пока стоит на её краю.
+                </p>
+
+                <p class="article-p fade-in">
+                    Ещё интереснее — ценность для потребителя. Оценка потребительского излишка от генеративного ИИ в США выросла на <b>54% за год</b>: с $112 млрд до $172 млрд, причём медианная ценность на пользователя утроилась. И почти всё это люди получают бесплатно. Огромная ценность создаётся и раздаётся даром — этот разрыв ещё аукнется, к нему вернёмся в конце.
+                </p>
+
+                <h2 class="article-h2 fade-in">Способности: граница стала зубчатой</h2>
+
+                <p class="article-p fade-in">
+                    С чистыми способностями всё однозначно: они растут, и быстро. На ключевом бенчмарке для кода SWE-bench Verified результат за год поднялся <b>с 60% до почти 100%</b> человеческого уровня. На Humanity's Last Exam — экзамене, специально сделанном сложным для ИИ, — модели прибавили 30 процентных пунктов за год. Gemini Deep Think взял <b>золото</b> Международной математической олимпиады. ИИ-агенты на OSWorld (реальные задачи за компьютером) выросли с 12% до 66% успеха.
+                </p>
+
+                <p class="article-p fade-in">
+                    Но та же модель, что берёт золото на олимпиаде, не умеет читать аналоговые часы — правильно определяет время лишь в 50,6% случаев против 90,1% у человека. Роботы справляются лишь с 12% бытовых задач. Исследователи называют это <b>«зубчатой границей»</b> (jagged frontier): ИИ гениален и беспомощен одновременно, и предсказать, где именно он споткнётся, по среднему баллу невозможно.
+                </p>
+
+                <!-- ИНФОГРАФИКА 3: зубчатая граница -->
+                <div class="vsx fade-in">
+                    <div class="col">
+                        <div class="hd">🚀 Уже превосходит человека</div>
+                        <p class="tx"><b>Золото</b> Международной матолимпиады</p>
+                        <p class="tx"><b>SWE-bench</b>: с 60% до ~100% уровня человека за год</p>
+                        <p class="tx"><b>Агенты OSWorld</b>: 12% → 66% успеха</p>
+                        <p class="tx">Экзамены в праве, налогах, финансах: <b>60–90%</b></p>
+                    </div>
+                    <div class="col">
+                        <div class="hd">🧩 Всё ещё проваливает</div>
+                        <p class="tx"><b>Аналоговые часы</b>: 50,6% против 90,1% у человека</p>
+                        <p class="tx"><b>Роботы</b>: только 12% бытовых задач</p>
+                        <p class="tx">На структурированных бенчмарках — <b>ошибка в 1 попытке из 3</b></p>
+                        <p class="tx">Задачи, где нужны суждение и надёжность</p>
+                    </div>
+                </div>
+
+                <p class="article-p fade-in">
+                    Практический вывод из зубчатой границы простой и жёсткий: <b>среднему баллу верить нельзя</b>. Систему нужно проверять именно на вашем сценарии, а не на лидерборде. Особенно если она стоит там, где цена ошибки высока.
+                </p>
+
+                <h2 class="article-h2 fade-in">Вершина сжалась — и это меняет экономику</h2>
+
+                <p class="article-p fade-in">
+                    Год назад топовые модели ещё заметно отличались друг от друга. Сегодня — почти нет. Четыре компании укладываются в 25 пунктов Elo (рейтинг по слепому голосованию людей). Разрыв в качестве между США и Китаем <b>фактически закрылся</b>: в феврале 2025-го DeepSeek-R1 на короткое время сравнялся с лучшей американской моделью, а к марту 2026-го лидер США впереди всего на 2,7%.
+                </p>
+
+                <!-- ИНФОГРАФИКА 4: вершина сходится -->
+                <div class="figx fade-in" role="img" aria-label="Топ моделей укладывается в 25 пунктов Elo">
+                    <div class="fxrow" style="gap:10px 12px">
+                        <span class="fxchip f">Anthropic · 1503</span>
+                        <span class="fxchip">xAI · 1495</span>
+                        <span class="fxchip">Google · 1494</span>
+                        <span class="fxchip">OpenAI · 1481</span>
+                        <span class="fxchip p">Alibaba · 1449</span>
+                        <span class="fxchip p">DeepSeek · 1424</span>
+                    </div>
+                    <div class="cap">Топ Arena Elo, март 2026. Четыре лидера — <b>в пределах 25 пунктов</b>. Разрыв США–Китай — 2,7%, открытые модели отстают всего на 3,3%</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    Когда лидеры неотличимы, а открытые модели дышат в спину (отставание — 3,3%), сама модель перестаёт быть преимуществом. Конкуренция смещается на цену, надёжность и специализацию. Релиз DeepSeek-R1, показавшего сильный результат за долю стоимости, за один день обвалил капитализацию американских техов более чем на триллион долларов — рынок вдруг осознал, что дешёвый и открытый ИИ ставит под вопрос привычные бизнес-модели.
+                </p>
+
+                <p class="article-p fade-in">
+                    Параллельно ломается наш измерительный инструмент. Бенчмарки насыщаются за месяцы; в широко используемых тестах находят до 42% некорректных вопросов; часть лидерства в Arena объясняется подстройкой под площадку, а не реальными способностями. Мы теряем приборы ровно тогда, когда они нужнее всего.
+                </p>
+
+                <h2 class="article-h2 fade-in">Риск не поспевает за способностями</h2>
+
+                <p class="article-p fade-in">
+                    Пока способности растут по экспоненте, ответственный ИИ плетётся следом. Задокументированные инциденты с ИИ выросли с <b>233 до 362</b> за год. Почти все ведущие разработчики отчитываются по бенчмаркам способностей, но по бенчмаркам безопасности — выборочно и неохотно. И хуже того: свежие исследования показывают, что улучшение одного измерения ответственности (например, безопасности) может ухудшать другое (например, точность).
+                </p>
+
+                <!-- ИНФОГРАФИКА 5: инциденты -->
+                <div class="figx fade-in" role="img" aria-label="Инциденты с ИИ выросли с 233 до 362">
+                    <div class="fxdelta">
+                        <div class="box">
+                            <div class="yr">2024</div>
+                            <div class="big">233</div>
+                            <div class="sub">задокументированных инцидента</div>
+                        </div>
+                        <div class="mid">
+                            <span class="fxarr"></span>
+                            <span class="pct">+ 55%</span>
+                        </div>
+                        <div class="box to">
+                            <div class="yr">2025</div>
+                            <div class="big grad-text">362</div>
+                            <div class="sub">новый максимум</div>
+                        </div>
+                    </div>
+                    <div class="cap">След растёт и физически: обучение Grok 4 оценивают в <b>72 816 тонн CO₂</b>, а годовое потребление воды на инференс одной модели сопоставимо с питьевой нормой 1,2 млн человек</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    К этому добавляется физический след. Обучение Grok 4 оценивают в 72 816 тонн CO₂-эквивалента; мощность ИИ-дата-центров достигла 29,6 ГВт — как пиковое потребление штата Нью-Йорк. Почти все передовые чипы делает одна тайваньская фабрика, TSMC, — то есть весь мировой ИИ висит на одной точке отказа.
+                </p>
+
+                <h2 class="article-h2 fade-in">Труд: тихий сдвиг начинается снизу</h2>
+
+                <p class="article-p fade-in">
+                    Самое недооценённое в данных 2026 года — рынок труда. Прирост производительности от ИИ уже измерим: <b>14–15%</b> в поддержке, <b>26%</b> в разработке, до <b>50%</b> в маркетинговом выпуске. Но эффект неравномерен, и первыми его чувствуют не все.
+                </p>
+
+                <!-- ИНФОГРАФИКА 6: труд -->
+                <div class="vsx fade-in">
+                    <div class="col">
+                        <div class="hd">⚡ Где ИИ ускоряет</div>
+                        <p class="tx">Поддержка клиентов — <b>+14–15%</b></p>
+                        <p class="tx">Разработка ПО — <b>+26%</b></p>
+                        <p class="tx">Маркетинговый выпуск — <b>+50%</b></p>
+                        <p class="tx">Слабее там, где нужны глубокие суждения</p>
+                    </div>
+                    <div class="col">
+                        <div class="hd">📉 Кто платит первым</div>
+                        <p class="tx">Занятость <b>junior-разработчиков 22–25 лет: −20%</b> с 2024-го</p>
+                        <p class="tx">При этом штат <b>senior-инженеров растёт</b></p>
+                        <p class="tx">Треть компаний ждут сокращений в течение года</p>
+                        <p class="tx">Приток ИИ-специалистов в США: <b>−89%</b> с 2017-го</p>
+                    </div>
+                </div>
+
+                <p class="article-p fade-in">
+                    Вот ключевая деталь: занятость молодых разработчиков 22–25 лет упала почти на 20% с 2024 года, тогда как число опытных инженеров продолжает расти. ИИ не «заменил программистов». Он забрал <b>рутинную часть</b> работы — ту самую, на которой раньше рос джуниор. Карьерная лестница ломается на первой ступени. Треть организаций уже ждут сокращений штата в течение года.
+                </p>
+
+                <h2 class="article-h2 fade-in">Геополитика: суверенитет как новая ось</h2>
+
+                <p class="article-p fade-in">
+                    Правительства действовали активно, но в разные стороны. В ЕС вступили в силу первые запреты AI Act; США развернулись в сторону дерегулирования; Япония, Южная Корея и Италия приняли национальные законы об ИИ. Больше половины новых национальных стратегий пришли из развивающихся стран, впервые вышедших на это поле. Общий знаменатель — <b>ИИ-суверенитет</b>: желание контролировать собственную ИИ-инфраструктуру.
+                </p>
+
+                <p class="article-p fade-in">
+                    При этом производство моделей по-прежнему сконцентрировано в США и Китае, но открытый код перераспределяет участие: вклад «остального мира» на GitHub уже обгоняет Европу и приближается к США, порождая более разнообразные по языкам модели. Открытость стала главным уравнителем — и одновременно инструментом суверенитета.
+                </p>
+
+                <h2 class="article-h2 fade-in">Люди: оптимизм вырос, но и тревога тоже</h2>
+
+                <p class="article-p fade-in">
+                    Общество считывает противоречивые сигналы. Доля тех, кто видит в ИИ больше пользы, чем вреда, выросла с 55% до 59% за год — но и доля тех, кого ИИ нервирует, поднялась до 52%. А самый показательный разрыв — между экспертами и обществом.
+                </p>
+
+                <!-- ИНФОГРАФИКА 7: эксперты против общества -->
+                <div class="figx fade-in" role="img" aria-label="Разрыв в ожиданиях между экспертами и обществом">
+                    <div class="fxbars">
+                        <div class="fxbar-row">
+                            <div class="rl">Влияние на работу</div>
+                            <div class="fxbar-track">
+                                <div class="fxbar a" style="width:73%">Эксперты · 73%</div>
+                                <div class="fxbar b" style="width:23%">Общество · 23%</div>
+                            </div>
+                        </div>
+                        <div class="fxbar-row">
+                            <div class="rl">Влияние на экономику</div>
+                            <div class="fxbar-track">
+                                <div class="fxbar a" style="width:69%">Эксперты · 69%</div>
+                                <div class="fxbar b" style="width:21%">Общество · 21%</div>
+                            </div>
+                        </div>
+                        <div class="fxbar-row">
+                            <div class="rl">Влияние на медицину</div>
+                            <div class="fxbar-track">
+                                <div class="fxbar a" style="width:84%">Эксперты · 84%</div>
+                                <div class="fxbar b" style="width:44%">Общество · 44%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cap">Доля ожидающих позитивного эффекта. Разрыв по работе — <b>50 пунктов</b>. 64% американцев ждут, что рабочих мест станет меньше</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    73% экспертов ждут позитивного влияния ИИ на работу — против всего 23% у широкой публики. Разрыв в 50 пунктов. При этом США показали самое низкое доверие граждан к собственному правительству в вопросе регулирования ИИ — 31% при мировом среднем 54%. Тот, кто ближе всего к технологии, настроен куда оптимистичнее тех, кто дальше. Обычно это значит, что общество ещё не увидело того, что уже видят практики.
+                </p>
+
+                <h2 class="article-h2 fade-in">Что меняется на самом деле</h2>
+
+                <p class="article-p fade-in">
+                    Если отвлечься от отдельных рекордов и посмотреть на динамику, вырисовываются пять сдвигов. Именно они, а не конкретные проценты, определяют 2026 год.
+                </p>
+
+                <div class="fade-in">
+                    <div class="list-card">
+                        <div class="emoji-chip">🚀</div>
+                        <p class="card-sub"><b class="card-title">Способности ускоряются, а не выходят на плато.</b><br>Бенчмарки, задуманные на годы, насыщаются за месяцы. Плато, которого все ждали, не наступило.</p>
+                    </div>
+                    <div class="list-card">
+                        <div class="emoji-chip">📉</div>
+                        <p class="card-sub"><b class="card-title">Стоимость падает, а вершина сходится.</b><br>Лидеры неотличимы, открытые модели в 3,3% позади. Сильная модель — уже почти commodity.</p>
+                    </div>
+                    <div class="list-card">
+                        <div class="emoji-chip">🧩</div>
+                        <p class="card-sub"><b class="card-title">Граница зубчатая, а не ровная.</b><br>Золото олимпиады и неумение читать часы в одной модели. Среднему баллу верить нельзя.</p>
+                    </div>
+                    <div class="list-card">
+                        <div class="emoji-chip">🏗️</div>
+                        <p class="card-sub"><b class="card-title">Ценность уходит от модели к системе.</b><br>Раз доступ к модели есть у всех, преимущество — в процессах, данных и людях вокруг неё.</p>
+                    </div>
+                    <div class="list-card">
+                        <div class="emoji-chip">⚠️</div>
+                        <p class="card-sub"><b class="card-title">Измеримость и управление отстают.</b><br>Инциденты растут, лаборатории раскрывают меньше, бенчмарки ломаются. Мы едем быстрее, чем видим дорогу.</p>
+                    </div>
+                </div>
+
+                <!-- ИНФОГРАФИКА 8: сдвиг от модели к системе -->
+                <div class="figx fade-in" role="img" aria-label="Преимущество смещается от модели к производственной системе">
+                    <div class="fxrow tight" style="align-items:center; gap:12px">
+                        <div class="fxnode"><div class="em">🤖</div><div class="lb">Доступ<br>к модели</div></div>
+                        <span class="fxarr"></span>
+                        <div class="grad-card" style="flex:1.5 1 0; min-width:0; padding:16px 20px">
+                            <div style="font-size:26px; line-height:1; margin-bottom:6px">🏗️</div>
+                            <div style="font-size:15px; font-weight:800; line-height:1.35">Производственная система: спецификации · процессы · данные · люди</div>
+                        </div>
+                        <span class="fxarr"></span>
+                        <div class="fxnode"><div class="em">💎</div><div class="lb" style="color:var(--flame)">Реальное<br>преимущество</div></div>
+                    </div>
+                    <div class="cap">Модель у всех одна и та же. Разница — <b>в системе вокруг неё</b></div>
+                </div>
+
+                <h2 class="article-h2 fade-in">Моё мнение</h2>
+
+                <p class="article-p fade-in">
+                    Теперь позиция автора. Я смотрю на эти цифры не как аналитик со стороны, а как человек, который перестраивал разработку в крупных компаниях и строил ИИ-продукты сам. Вот что я в них вижу.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>Первое. Модель перестала быть преимуществом.</b> Когда шесть лабораторий укладываются в 25 пунктов Elo, а открытые модели отстают на 3,3%, доступ к сильному ИИ есть у всех. Значит, конкуренция уходит на уровень выше — в производственную систему вокруг модели: спецификации, данные, процессы, оценку качества, людей. Тот, кто просто «раздал командам доступ к LLM», не ускорил разработку — он ускорил свой хаос. Выигрывает тот, кто перестроил саму систему.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>Второе. Настоящая новость года — обвал входа снизу.</b> Минус 20% занятости у джунов-разработчиков — это не про то, что «ИИ заменил людей». Это про то, что рутину, на которой раньше рос молодой инженер, теперь делает агент. Ступенька, с которой начиналась карьера, исчезает. Главным человеческим навыком становится не «писать код», а <b>брать ответственность за результат</b>: ставить задачу, управлять контекстом, проверять и отвечать за продукт. Плохой инженер с ИИ просто быстрее производит плохие решения. Хороший — начинает управлять системой.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>Третье. Строить стало почти бесплатно — а ценность раздают даром.</b> $172 млрд потребительского излишка от в основном бесплатных инструментов — это гигантская ценность, которую пока почти никто не монетизирует. Порог входа в продукт рухнул: год работы команды раньше стоил около миллиона долларов, теперь одному основателю с агентами нужно кратно меньше. Поэтому выигрывает не тот, у кого лучше модель, а тот, кто умеет <b>дистрибуцию, удержание и доверие</b>. Капитал перестаёт быть обязательным условием, чтобы построить ИИ-компанию.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>Четвёртое. Мы масштабируемся быстрее, чем успеваем измерять.</b> Бенчмарки насыщаются за месяцы, лаборатории раскрывают всё меньше, инциденты выросли до 362. «Зубчатая граница» означает, что среднему баллу верить нельзя: система, берущая золото на олимпиаде, не умеет читать часы. Для тех, кто внедряет ИИ в проде — особенно в финтехе и других регулируемых отраслях — вывод жёсткий: <b>оценку качества больше нельзя отдать лидерборду</b>. Это теперь ваша работа — тесты, критерии приёмки, трассируемость, дашборды. Без этого агентная разработка превращается в дорогой вайбкодинг.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>Пятое, и главное.</b> Вопрос 2026 года давно не в том, работает ли ИИ. Он работает — неравномерно, зубчато, но работает. Вопрос в том, <b>перестроили ли вы себя, чтобы им пользоваться</b>. Победят не те, у кого лучший доступ к модели, — он есть у всех. Победят те, кто перестроил производственную систему, оргструктуру и культуру ответственности. Технология уже обогнала нас. Осталось выяснить, кто быстрее её догонит — не в способностях, а в готовности.
+                </p>
+
+                <!-- Акцентная строка -->
+                <div class="grad-card fade-in" style="margin:2.4rem 0; padding:26px 30px; text-align:left">
+                    <div class="font-mono text-apple-textMutedLight dark:text-apple-textMutedDark" style="font-size:13px; letter-spacing:.12em; text-transform:uppercase; margin-bottom:12px">Суть 2026 года</div>
+                    <div class="text-black dark:text-white" style="font-size:20px; font-weight:700; line-height:1.5">
+                        ИИ масштабируется быстрее, чем адаптируется мир вокруг него.<br>
+                        Преимущество больше не в модели — оно в <span class="grad-text">системе, людях и ответственности</span>.
+                    </div>
+                </div>
+
+                <p class="article-p fade-in">
+                    В следующих материалах разберу это на практике: как выглядит производственная система вокруг модели, как перестроить команду в AI-Native режим и почему ответственность стала главным навыком инженера. Следите за новостями.
+                </p>
+
+                <!-- Финал / CTA -->
+                <div class="relative bg-white dark:bg-[#1C1C1E] border border-black/10 dark:border-white/10 p-8 md:p-12 lg:p-14 rounded-[2rem] md:rounded-[3rem] shadow-[0_8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.03)] overflow-hidden fade-in mb-12 group">
+
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-black dark:bg-white opacity-90"></div>
+                    <div class="absolute -top-32 -right-32 w-64 h-64 bg-black/[0.02] dark:bg-white/[0.02] rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-4 mb-8">
+                            <div class="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
+                                <i data-lucide="zap" class="w-6 h-6 text-black dark:text-white"></i>
+                            </div>
+                            <h2 class="font-sans font-bold text-2xl md:text-3xl lg:text-4xl text-black dark:text-white tracking-tight m-0">
+                                Подписывайтесь на Датаист
+                            </h2>
+                        </div>
+
+                        <div class="space-y-6 mb-10">
+                            <p class="font-sans text-lg md:text-xl leading-relaxed text-black/80 dark:text-white/80 font-medium">
+                                Разбираю реальные кейсы внедрения ИИ, делюсь практикой и мыслями о том, как меняется работа и бизнес.
+                            </p>
+                        </div>
+
+                        <div class="pt-8 md:pt-10 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
+                            <p class="text-xl md:text-2xl font-bold text-black dark:text-white tracking-tight max-w-md">
+                                Кейсы, мысли и практика ИИ<br>— в Telegram.
+                            </p>
+
+                            <a href="https://t.me/andre_dataist" target="_blank" rel="noopener" class="shrink-0 inline-flex items-center gap-3 px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl hover:shadow-2xl group/btn">
+                                <span class="font-sans text-base md:text-lg font-semibold">В Telegram</span>
+                                <i data-lucide="arrow-up-right" class="w-5 h-5 transition-transform group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Источники -->
+                <p class="card-sub fade-in text-center mb-4">
+                    Источники: Stanford HAI, «Artificial Intelligence Index Report» 2025 и 2026. Все цифры приведены по данным этих отчётов.
+                </p>
+
+            </div>
+        </article>
+    </main>
+
+    <!-- Прогресс бар снизу -->
+    <div class="fixed bottom-0 left-0 w-full h-1.5 bg-transparent z-50">
+        <div id="progress-bar" class="h-full bg-black dark:bg-white w-0 transition-all duration-100 ease-out"></div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+
+        function applyTheme(isDark) {
+            if (isDark) {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        const tg = window.Telegram?.WebApp;
+        if (tg && tg.initData) {
+            tg.ready();
+            tg.expand();
+            if (tg.colorScheme) {
+                applyTheme(tg.colorScheme === 'dark');
+                tg.onEvent('themeChanged', function() {
+                    applyTheme(tg.colorScheme === 'dark');
+                });
+            }
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const isCurrentlyDark = html.classList.contains('dark');
+            applyTheme(!isCurrentlyDark);
+        });
+
+        window.addEventListener('scroll', () => {
+            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            let scrolled = (winScroll / height) * 100;
+            document.getElementById("progress-bar").style.width = scrolled + "%";
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const observerOptions = { root: null, rootMargin: '0px', threshold: 0.05 };
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+        });
+    </script>
+
+</body>
+</html>

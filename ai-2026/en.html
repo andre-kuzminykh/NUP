@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dataist / Analysis | AI in 2026: Scale vs. Readiness</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/andre-kuzminykh/dataist/refs/heads/main/favicon.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/andre-kuzminykh/dataist/refs/heads/main/favicon.png">
+
+    <!-- Open Graph -->
+    <!-- Replace og:url and og:image with final addresses after publishing -->
+    <meta property="og:site_name" content="Dataist / Analysis" />
+    <meta property="og:title" content="AI in 2026: Scale vs. Readiness" />
+    <meta property="og:description" content="What changed in AI between 2025 and 2026 — based on the Stanford HAI AI Index reports — and why the technology is scaling faster than the systems around it can adapt. An author's read of the trends, plus a personal opinion." />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://dataist.ai/ai-2026/en" />
+    <meta property="og:image" content="https://raw.githubusercontent.com/andre-kuzminykh/dataist/refs/heads/main/favicon.png" />
+    <meta property="article:published_time" content="2026-07-20T10:00:00+03:00" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Theme init -->
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('theme');
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var dark = stored ? stored === 'dark' : prefersDark;
+                if (dark) document.documentElement.classList.add('dark');
+            } catch (e) { document.documentElement.classList.add('dark'); }
+        })();
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Fonts: Inter & Space Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- Lucide icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        apple: {
+                            light: '#F5F5F7',
+                            dark: '#000000',
+                            grayLight: '#E5E5EA',
+                            grayDark: '#1C1C1E',
+                            textMutedLight: '#86868B',
+                            textMutedDark: '#8E8E93',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"Inter"', 'sans-serif'],
+                        mono: ['"Space Mono"', 'monospace']
+                    },
+                    boxShadow: {
+                        'apple': '0 4px 24px rgba(0, 0, 0, 0.04)',
+                        'apple-dark': '0 4px 24px rgba(255, 255, 255, 0.04)',
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-header {
+                @apply bg-white/70 dark:bg-black/70 backdrop-blur-2xl border-b border-black/5 dark:border-white/10;
+            }
+            .glass-panel {
+                @apply bg-white dark:bg-[#1C1C1E] border border-black/5 dark:border-white/10 shadow-apple dark:shadow-apple-dark;
+            }
+        }
+
+        body {
+            @apply bg-apple-light dark:bg-apple-dark text-black dark:text-white transition-colors duration-300;
+        }
+
+        ::selection {
+            @apply bg-black text-white dark:bg-white dark:text-black;
+        }
+
+        .article-p {
+            @apply font-sans text-lg md:text-[21px] leading-relaxed mb-6 md:mb-8 text-black/85 dark:text-white/85;
+        }
+        .article-h2 {
+            @apply font-sans font-bold text-2xl md:text-3xl lg:text-4xl mt-16 mb-8 tracking-tight text-black dark:text-white;
+        }
+        .reason-num {
+            @apply font-mono text-apple-textMutedLight dark:text-apple-textMutedDark mr-3 text-xl md:text-2xl;
+        }
+        .list-card {
+            @apply flex items-start gap-4 p-5 md:p-6 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/5 dark:border-white/10 shadow-apple dark:shadow-apple-dark mb-4;
+        }
+        .emoji-chip {
+            @apply w-11 h-11 md:w-12 md:h-12 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-xl md:text-2xl shrink-0 leading-none;
+        }
+        .card-title {
+            @apply font-sans font-semibold text-black dark:text-white text-base md:text-lg leading-snug;
+        }
+        .card-sub {
+            @apply text-apple-textMutedLight dark:text-apple-textMutedDark text-sm md:text-base leading-relaxed;
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: opacity, transform;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+
+    <!-- Infographics: lightweight responsive schemas (light/dark) -->
+    <style>
+        .figx{
+            --ink:#0a0a0a; --mut:rgba(0,0,0,.55); --faint:rgba(0,0,0,.34);
+            --line:rgba(0,0,0,.30); --brd:rgba(0,0,0,.10); --soft:rgba(0,0,0,.035);
+            --card:#ffffff; --flame:#F97316; --plum:#8B5CF6; --rail:rgba(0,0,0,.16);
+            background:var(--card); border:1px solid var(--brd); border-radius:22px;
+            padding:36px 22px; margin:2.6rem 0; box-shadow:0 4px 24px rgba(0,0,0,.04);
+            color:var(--ink); overflow:hidden;
+            font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
+        }
+        .dark .figx{
+            --ink:#F5F5F7; --mut:rgba(255,255,255,.60); --faint:rgba(255,255,255,.36);
+            --line:rgba(255,255,255,.32); --brd:rgba(255,255,255,.12); --soft:rgba(255,255,255,.05);
+            --card:#1C1C1E; --rail:rgba(255,255,255,.20); box-shadow:0 4px 24px rgba(255,255,255,.04);
+        }
+        @media (min-width:768px){ .figx{padding:44px 36px; border-radius:26px} }
+
+        .figx .cap{margin-top:26px; text-align:center; font-size:13.5px; line-height:1.5; color:var(--mut)}
+        .figx .cap b{color:var(--ink); font-weight:600}
+
+        .fxrow{display:flex; align-items:center; justify-content:center; gap:14px 16px; flex-wrap:wrap}
+        .fxcol{display:flex; flex-direction:column; align-items:center; gap:18px}
+
+        .fxchip{border:1.5px solid var(--brd); background:var(--soft); border-radius:999px;
+            padding:9px 16px; font-size:14.5px; font-weight:600; white-space:nowrap; line-height:1.2}
+        .fxchip.f{border-color:rgba(249,115,22,.55); color:var(--flame); background:rgba(249,115,22,.07)}
+        .fxchip.p{border-color:rgba(139,92,246,.55); color:var(--plum); background:rgba(139,92,246,.08)}
+        .fxchip.dim{opacity:.52}
+
+        .fxnode{display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; min-width:86px}
+        .fxnode .em{font-size:34px; line-height:1}
+        .fxnode .lb{font-size:13.5px; font-weight:600; line-height:1.25; white-space:nowrap}
+        .fxnode.dim{opacity:.5}
+
+        .fxarr{position:relative; flex:0 0 auto; width:15px; height:15px;
+            border-top:2.5px solid var(--line); border-right:2.5px solid var(--line);
+            transform:rotate(45deg); border-radius:2px; margin:0 4px}
+        .fxarr::before{content:""; position:absolute; left:50%; top:50%; width:21px; height:2.5px;
+            background:var(--line); border-radius:2px; transform:translate(-50%,-50%) rotate(-45deg)}
+        .fxarr.down{transform:rotate(135deg); margin:6px 0}
+        .fxseq{display:flex; align-items:center; gap:14px}
+        .fxrow.tight{flex-wrap:nowrap; gap:10px; align-items:flex-start; width:100%}
+        .fxrow.tight .fxnode{flex:1 1 0; min-width:0}
+        .fxrow.tight .fxnode .lb{white-space:normal; font-size:12.5px}
+        @media (max-width:640px){ .fxrow.tight .fxnode .lb{font-size:11px} .fxrow.tight .fxnode .em{font-size:26px} }
+
+        .grad-text{background:linear-gradient(100deg,var(--flame),var(--plum));
+            -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent}
+        .grad-card{border:1.5px solid transparent; border-radius:20px; padding:20px 26px; text-align:center;
+            background:linear-gradient(var(--card,#fff),var(--card,#fff)) padding-box,
+                       linear-gradient(140deg,#F97316,#8B5CF6) border-box}
+        .dark .grad-card{--card:#1C1C1E}
+
+        .fxsteps{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; width:100%; max-width:860px; margin:0 auto}
+        .fxstep .dotrow{position:relative; width:100%; display:flex; justify-content:center}
+        .fxstep .dotrow::before{content:""; position:absolute; left:-6px; right:-6px; top:50%; height:2px;
+            transform:translateY(-50%); background:var(--rail)}
+        .fxstep:first-child .dotrow::before{left:50%}
+        .fxstep:last-child .dotrow::before{right:50%}
+        .fxstep{position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; z-index:1}
+        .fxstep .em{font-size:32px; line-height:1; margin-bottom:4px}
+        .fxstep .dot{position:relative; z-index:1; width:34px; height:34px; border-radius:50%; background:var(--card); border:2px solid var(--brd);
+            display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--mut)}
+        .fxstep.hot .dot{border-color:var(--flame); color:var(--flame); box-shadow:0 0 22px -6px rgba(249,115,22,.65)}
+        .fxstep .lb{font-size:12.5px; font-weight:600; text-align:center; line-height:1.25}
+        @media (max-width:640px){
+            .fxsteps{grid-template-columns:repeat(3,1fr); gap:22px 10px}
+            .fxstep .dotrow::before{display:none}
+        }
+
+        .fxscale{display:grid; grid-template-columns:repeat(4,1fr); gap:18px; max-width:860px; margin:0 auto}
+        .fxscale .cell{display:flex; flex-direction:column; gap:8px; text-align:center; align-items:center}
+        .fxscale .tt{font-family:'Space Mono',monospace; font-size:12.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase}
+        .fxscale .ex{font-size:13.5px; color:var(--mut); line-height:1.45; max-width:190px}
+        .fxscale-bar{height:6px; border-radius:3px; margin:22px auto 10px; max-width:860px;
+            background:linear-gradient(90deg,var(--brd),var(--flame),var(--plum))}
+        .fxscale-ends{display:flex; justify-content:space-between; max-width:860px; margin:0 auto;
+            font-size:12px; color:var(--faint); letter-spacing:.06em; text-transform:uppercase; font-weight:600}
+        @media (max-width:640px){ .fxscale{grid-template-columns:1fr 1fr; gap:20px 12px} }
+
+        .fxweights{display:flex; width:100%; max-width:760px; margin:0 auto; height:46px; border-radius:12px; overflow:hidden}
+        .fxweights div{display:flex; align-items:center; justify-content:center; font-size:13.5px; font-weight:700; color:#fff; white-space:nowrap}
+        .fxlegend{display:flex; flex-wrap:wrap; gap:8px 18px; justify-content:center; margin-top:16px; font-size:13px; color:var(--mut)}
+        .fxlegend b{color:var(--ink)}
+
+        .fxdelta{display:grid; grid-template-columns:1fr auto 1fr; gap:16px 10px; align-items:center; max-width:720px; margin:0 auto}
+        .fxdelta .box{border:1px solid var(--brd); background:var(--soft); border-radius:18px; padding:18px 16px; text-align:center}
+        .fxdelta .box.to{border-color:transparent;
+            background:linear-gradient(var(--card),var(--card)) padding-box, linear-gradient(140deg,#F97316,#8B5CF6) border-box}
+        .fxdelta .yr{font-family:'Space Mono',monospace; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+        .fxdelta .big{font-size:clamp(24px,6vw,40px); font-weight:800; line-height:1.05; margin-top:6px}
+        .fxdelta .sub{font-size:12.5px; color:var(--mut); margin-top:6px; line-height:1.3}
+        .fxdelta .mid{display:flex; flex-direction:column; align-items:center; gap:4px}
+        .fxdelta .mid .fxarr{margin:0}
+        .fxdelta .mid .pct{font-size:13px; font-weight:800; color:var(--flame); white-space:nowrap}
+        @media (max-width:560px){ .fxdelta{grid-template-columns:1fr; gap:10px}
+            .fxdelta .mid{flex-direction:row; gap:10px} .fxdelta .mid .fxarr{transform:rotate(135deg)} }
+
+        .fxbars{max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
+        .fxbar-row{display:grid; grid-template-columns:130px 1fr; gap:14px; align-items:center}
+        .fxbar-row .rl{font-size:14px; font-weight:600; text-align:right; color:var(--ink)}
+        .fxbar-track{position:relative; display:flex; flex-direction:column; gap:7px}
+        .fxbar{height:26px; border-radius:8px; display:flex; align-items:center; padding-left:12px; font-size:13px; font-weight:800; color:#fff; min-width:44px}
+        .fxbar.a{background:linear-gradient(90deg,#F97316,#F59E0B)}
+        .fxbar.b{background:var(--soft); color:var(--mut); border:1px solid var(--brd)}
+        @media (max-width:560px){ .fxbar-row{grid-template-columns:104px 1fr} .fxbar-row .rl{font-size:12.5px} }
+
+        .vsx{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:2.2rem 0;
+            --ink:#0a0a0a; --mut:rgba(0,0,0,.55); --brd:rgba(0,0,0,.10); --card:#fff; color:var(--ink)}
+        .dark .vsx{--ink:#F5F5F7; --mut:rgba(255,255,255,.6); --brd:rgba(255,255,255,.12); --card:#1C1C1E}
+        @media (max-width:640px){ .vsx{grid-template-columns:1fr} }
+        .vsx .col{border:1px solid var(--brd); background:var(--card); border-radius:18px; padding:20px 22px;
+            box-shadow:0 4px 24px rgba(0,0,0,.04)}
+        .dark .vsx .col{box-shadow:0 4px 24px rgba(255,255,255,.03)}
+        .vsx .hd{font-size:15px; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px; color:var(--ink)}
+        .vsx .tx{font-size:15.5px; line-height:1.55; color:var(--mut)}
+        .vsx .tx b{color:var(--ink); font-weight:600}
+        .vsx .tx + .tx{margin-top:8px}
+
+        .hero-cover{position:relative; border-radius:24px; overflow:hidden; border:1px solid rgba(0,0,0,.08);
+            background:radial-gradient(120% 140% at 15% 10%, rgba(249,115,22,.20), transparent 55%),
+                       radial-gradient(120% 140% at 90% 90%, rgba(139,92,246,.24), transparent 55%),
+                       #0b0b0d;
+            padding:56px 32px; text-align:center; color:#fff}
+        .dark .hero-cover{border-color:rgba(255,255,255,.10)}
+        @media (min-width:768px){ .hero-cover{border-radius:30px; padding:88px 48px} }
+        .hero-cover .badge{font-family:'Space Mono',monospace; font-size:12px; letter-spacing:.28em; text-transform:uppercase; color:rgba(255,255,255,.7)}
+        .hero-cover .yy{display:flex; align-items:baseline; justify-content:center; gap:16px; margin-top:18px}
+        .hero-cover .yy .n{font-size:clamp(40px,13vw,110px); font-weight:800; line-height:.9; letter-spacing:-.03em}
+        .hero-cover .yy .n.old{color:rgba(255,255,255,.35)}
+        .hero-cover .yy .ar{font-size:clamp(26px,7vw,60px); color:rgba(255,255,255,.5)}
+        .hero-cover .tagline{margin-top:22px; font-size:15px; color:rgba(255,255,255,.72); letter-spacing:.02em}
+    </style>
+
+</head>
+<body class="font-sans antialiased min-h-[100dvh] w-full flex flex-col relative pb-12">
+
+    <!-- Header -->
+    <header class="fixed top-0 w-full h-16 md:h-20 z-50 flex justify-between items-center px-4 md:px-8 glass-header transition-colors shrink-0 gap-4">
+
+        <div class="flex items-center gap-4">
+            <a href="/" class="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-black dark:text-white">
+                <i data-lucide="arrow-left" class="w-5 h-5 md:w-6 md:h-6"></i>
+            </a>
+
+            <a href="/" class="flex items-center gap-3 shrink-0 no-underline group">
+                <div class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs md:text-sm font-bold font-mono leading-none transition-transform group-hover:scale-105">
+                    i
+                </div>
+                <div class="font-sans font-semibold text-lg md:text-xl tracking-tight text-black dark:text-white leading-none mt-[2px]">
+                    DATAIST
+                </div>
+            </a>
+        </div>
+
+        <div class="flex items-center gap-2 md:gap-4 shrink-0">
+            <a href="index.html" class="px-2.5 py-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all text-black dark:text-white text-xs md:text-sm font-mono font-bold tracking-wide" title="Русская версия">RU</a>
+            <button id="theme-toggle" class="p-2 md:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all text-black dark:text-white cursor-pointer" title="Toggle theme">
+                <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+            </button>
+
+            <a href="https://t.me/andre_dataist" target="_blank" rel="noopener"
+               class="flex items-center gap-2 px-4 py-2 md:px-6 md:py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-full transition-all text-[12px] md:text-sm font-sans font-medium hover:scale-105 active:scale-95">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Telegram</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main article container -->
+    <main class="pt-28 md:pt-36 pb-16 px-4 md:px-8 w-full max-w-4xl mx-auto relative z-30">
+        <article class="w-full flex flex-col relative">
+
+            <!-- COVER -->
+            <header class="text-center mb-6 md:mb-10 fade-in">
+
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full border border-black/10 dark:border-white/20 text-black dark:text-white text-xs font-mono font-bold tracking-widest uppercase bg-black/5 dark:bg-white/5">
+                    <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+                    <span>Analysis</span>
+                </div>
+
+                <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-[4.5rem] font-sans font-bold tracking-tighter mb-6 leading-[1.05] text-black dark:text-white">
+                    AI in 2026
+                </h1>
+
+                <p class="text-xl md:text-2xl lg:text-3xl text-apple-textMutedLight dark:text-apple-textMutedDark font-medium tracking-tight mt-6 max-w-3xl mx-auto">
+                    Scale vs. readiness: what changed in a year
+                </p>
+
+                <!-- Cover (gradient hero; swap for your own image if you like) -->
+                <div class="w-full mt-10 md:mt-14 mb-4 md:mb-8 shadow-apple dark:shadow-apple-dark">
+                    <div class="hero-cover">
+                        <div class="badge">AI Index · 2025 → 2026</div>
+                        <div class="yy">
+                            <span class="n old">2025</span>
+                            <span class="ar">→</span>
+                            <span class="n">2026</span>
+                        </div>
+                        <div class="tagline">The technology is scaling faster than the systems around it can adapt</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- CONTENT -->
+            <div class="max-w-3xl mx-auto w-full">
+
+                <!-- Lead -->
+                <p class="article-p fade-in font-medium text-xl md:text-2xl border-l-2 border-black dark:border-white pl-5 md:pl-8 mt-2 mb-12 text-apple-textMutedLight dark:text-apple-textMutedDark">
+                    A year ago the AI Index recorded the headline: artificial intelligence had become a mainstream force. The 2026 edition answers the next question — what happens after arrival. The short answer: AI capability is not plateauing. It is accelerating and reaching people faster than the personal computer or the internet did. But the data does not point in a single direction. It reveals a technology scaling faster than the systems around it can adapt — regulation, evaluation, education, the labor market.
+                </p>
+
+                <p class="article-p fade-in">
+                    Every figure below comes from two <b>Stanford HAI AI Index</b> reports, the 2025 and 2026 editions — an independent initiative that has spent nearly a decade bringing reliable data to a field that moves faster than most efforts to measure it. I took the comparable metrics and looked not at individual records but at the <b>trajectory</b>: where the whole system is heading. First, what changed between 2025 and 2026, honestly and with numbers. Then, what it means — and my opinion.
+                </p>
+
+                <h2 class="article-h2 fade-in">Money: a doubling in one year</h2>
+
+                <p class="article-p fade-in">
+                    The first thing that jumps out is capital. U.S. private AI investment grew from <b>$109B</b> to <b>$286B</b> in a year. Global corporate AI investment more than doubled: private investment rose 127.5% and now makes up 60% of the total. Generative AI grew more than 200% and captured nearly half of all private AI funding. Newly funded AI companies rose 71%, and billion-dollar funding rounds nearly doubled.
+                </p>
+
+                <!-- INFOGRAPHIC 1: investment doubling -->
+                <div class="figx fade-in" role="img" aria-label="U.S. private AI investment grew from 109 to 286 billion dollars">
+                    <div class="fxdelta">
+                        <div class="box">
+                            <div class="yr">2024</div>
+                            <div class="big">$109<span style="font-size:.5em; font-weight:700"> B</span></div>
+                            <div class="sub">U.S. private AI investment</div>
+                        </div>
+                        <div class="mid">
+                            <span class="fxarr"></span>
+                            <span class="pct">× 2.6</span>
+                        </div>
+                        <div class="box to">
+                            <div class="yr">2025</div>
+                            <div class="big grad-text">$286<span style="font-size:.5em; font-weight:700"> B</span></div>
+                            <div class="sub">a decade record</div>
+                        </div>
+                    </div>
+                    <div class="cap">Global corporate investment <b>more than doubled</b>; generative AI grew 200%+. The Stargate project alone is announced at up to $500B</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    But this money-rain has a shadow: AI company revenue is rising at historic rates, and compute and infrastructure spend is rising even faster. Google alone reported more than $150B in annual capex. This is not a pure bubble, but it is not free growth either: the industry is betting a decade ahead without yet knowing whether all that capacity will pay off.
+                </p>
+
+                <h2 class="article-h2 fade-in">Adoption: from curiosity to infrastructure</h2>
+
+                <p class="article-p fade-in">
+                    Money follows demand — and demand went mass-market. Organizational AI adoption rose from 78% to <b>88%</b> in a year (up from 55% two years earlier). Generative AI is now used in at least one business function at 70% of companies. At the population level, generative AI reached <b>53% adoption in three years</b> — faster than the personal computer or the internet.
+                </p>
+
+                <!-- INFOGRAPHIC 2: adoption growth -->
+                <div class="figx fade-in" role="img" aria-label="Organizational AI adoption: 55 percent, 78 percent, 88 percent">
+                    <div class="fxsteps" style="grid-template-columns:repeat(3,1fr); max-width:560px">
+                        <div class="fxstep"><div class="em">🌱</div><div class="dotrow"><div class="dot">55%</div></div><div class="lb">2023</div></div>
+                        <div class="fxstep"><div class="em">📈</div><div class="dotrow"><div class="dot">78%</div></div><div class="lb">2024</div></div>
+                        <div class="fxstep hot"><div class="em">🏢</div><div class="dotrow"><div class="dot">88%</div></div><div class="lb">2025</div></div>
+                    </div>
+                    <div class="cap">Organizational AI adoption. Yet <b>AI-agent deployment is still in the single digits</b> across nearly every function</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    And here is the first crack between noise and reality. Adoption of "AI in general" is 88%. Deployment of autonomous <b>AI agents</b> is in the single digits across nearly all business functions. Between "we use ChatGPT" and "we have an agent in production that carries a task to completion on its own" lies a chasm. Most companies are still standing at its edge.
+                </p>
+
+                <p class="article-p fade-in">
+                    More striking still is the value to consumers. The estimated U.S. consumer surplus from generative AI grew <b>54% in a year</b>: from $112B to $172B, with the median value per user tripling. And people get almost all of it for free. Enormous value is being created and given away — a gap that will matter later; we'll come back to it.
+                </p>
+
+                <h2 class="article-h2 fade-in">Capability: the frontier turned jagged</h2>
+
+                <p class="article-p fade-in">
+                    On raw capability there is no ambiguity: it is rising, fast. On the key coding benchmark SWE-bench Verified, scores climbed <b>from 60% to nearly 100%</b> of the human baseline in a year. On Humanity's Last Exam — a test built to be hard for AI — models gained 30 percentage points in a year. Gemini Deep Think won a <b>gold medal</b> at the International Mathematical Olympiad. AI agents on OSWorld (real computer tasks) rose from 12% to 66% success.
+                </p>
+
+                <p class="article-p fade-in">
+                    Yet the same model that wins olympiad gold cannot reliably read an analog clock — it tells the time correctly just 50.6% of the time versus 90.1% for humans. Robots succeed at only 12% of household tasks. Researchers call this the <b>jagged frontier</b>: AI is brilliant and helpless at once, and no average score can tell you where exactly it will trip.
+                </p>
+
+                <!-- INFOGRAPHIC 3: jagged frontier -->
+                <div class="vsx fade-in">
+                    <div class="col">
+                        <div class="hd">🚀 Already beats humans</div>
+                        <p class="tx"><b>Gold</b> at the International Math Olympiad</p>
+                        <p class="tx"><b>SWE-bench</b>: 60% → ~100% of human level in a year</p>
+                        <p class="tx"><b>OSWorld agents</b>: 12% → 66% success</p>
+                        <p class="tx">Exams in law, tax, finance: <b>60–90%</b></p>
+                    </div>
+                    <div class="col">
+                        <div class="hd">🧩 Still fails</div>
+                        <p class="tx"><b>Analog clocks</b>: 50.6% vs. 90.1% for humans</p>
+                        <p class="tx"><b>Robots</b>: only 12% of household tasks</p>
+                        <p class="tx">On structured benchmarks — <b>fails 1 attempt in 3</b></p>
+                        <p class="tx">Tasks that require judgment and reliability</p>
+                    </div>
+                </div>
+
+                <p class="article-p fade-in">
+                    The practical lesson of the jagged frontier is simple and hard: <b>never trust the average score</b>. You have to test the system on your exact scenario, not on the leaderboard — especially where the cost of a mistake is high.
+                </p>
+
+                <h2 class="article-h2 fade-in">The top compressed — and it changes the economics</h2>
+
+                <p class="article-p fade-in">
+                    A year ago the top models were still visibly different. Today they barely are. Four companies cluster within 25 Elo points (a rating from blind human voting). The quality gap between the U.S. and China has <b>effectively closed</b>: in February 2025 DeepSeek-R1 briefly matched the best U.S. model, and by March 2026 the top U.S. model leads by just 2.7%.
+                </p>
+
+                <!-- INFOGRAPHIC 4: convergence -->
+                <div class="figx fade-in" role="img" aria-label="Top models cluster within 25 Elo points">
+                    <div class="fxrow" style="gap:10px 12px">
+                        <span class="fxchip f">Anthropic · 1503</span>
+                        <span class="fxchip">xAI · 1495</span>
+                        <span class="fxchip">Google · 1494</span>
+                        <span class="fxchip">OpenAI · 1481</span>
+                        <span class="fxchip p">Alibaba · 1449</span>
+                        <span class="fxchip p">DeepSeek · 1424</span>
+                    </div>
+                    <div class="cap">Arena Elo, March 2026. Four leaders <b>within 25 points</b>. The U.S.–China gap is 2.7%, and open models trail by just 3.3%</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    When the leaders are indistinguishable and open models are breathing down their necks (a 3.3% gap), the model itself stops being an advantage. Competition shifts to cost, reliability and specialization. The release of DeepSeek-R1 — a strong result at a fraction of the cost — wiped more than a trillion dollars off U.S. tech valuations in a single day, as the market suddenly grasped that cheap, open AI puts familiar business models in question.
+                </p>
+
+                <p class="article-p fade-in">
+                    At the same time our measuring instrument is breaking. Benchmarks saturate in months; widely used tests are found to contain up to 42% invalid questions; part of Arena standing reflects adaptation to the platform rather than real capability. We are losing our instruments exactly when we need them most.
+                </p>
+
+                <h2 class="article-h2 fade-in">Risk is not keeping pace with capability</h2>
+
+                <p class="article-p fade-in">
+                    While capability grows exponentially, responsible AI trails behind. Documented AI incidents rose from <b>233 to 362</b> in a year. Almost every leading developer reports capability benchmarks, but reporting on safety benchmarks stays spotty and reluctant. Worse: recent research shows that improving one responsible-AI dimension (say, safety) can degrade another (say, accuracy).
+                </p>
+
+                <!-- INFOGRAPHIC 5: incidents -->
+                <div class="figx fade-in" role="img" aria-label="AI incidents rose from 233 to 362">
+                    <div class="fxdelta">
+                        <div class="box">
+                            <div class="yr">2024</div>
+                            <div class="big">233</div>
+                            <div class="sub">documented incidents</div>
+                        </div>
+                        <div class="mid">
+                            <span class="fxarr"></span>
+                            <span class="pct">+ 55%</span>
+                        </div>
+                        <div class="box to">
+                            <div class="yr">2025</div>
+                            <div class="big grad-text">362</div>
+                            <div class="sub">a new high</div>
+                        </div>
+                    </div>
+                    <div class="cap">The footprint is also physical: training Grok 4 is estimated at <b>72,816 tons of CO₂</b>, and one model's annual inference water use may exceed the drinking needs of 1.2 million people</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    Add the physical footprint. Training Grok 4 is estimated at 72,816 tons of CO₂-equivalent; AI data-center power reached 29.6 GW — comparable to New York state at peak demand. Almost every frontier chip is made by a single Taiwanese foundry, TSMC — which means the entire global AI stack hangs on one point of failure.
+                </p>
+
+                <h2 class="article-h2 fade-in">Labor: the quiet shift starts at the bottom</h2>
+
+                <p class="article-p fade-in">
+                    The most underrated part of the 2026 data is the labor market. AI productivity gains are already measurable: <b>14–15%</b> in customer support, <b>26%</b> in software development, up to <b>50%</b> in marketing output. But the effect is uneven, and not everyone feels it first.
+                </p>
+
+                <!-- INFOGRAPHIC 6: labor -->
+                <div class="vsx fade-in">
+                    <div class="col">
+                        <div class="hd">⚡ Where AI speeds things up</div>
+                        <p class="tx">Customer support — <b>+14–15%</b></p>
+                        <p class="tx">Software development — <b>+26%</b></p>
+                        <p class="tx">Marketing output — <b>+50%</b></p>
+                        <p class="tx">Weaker where deeper judgment is required</p>
+                    </div>
+                    <div class="col">
+                        <div class="hd">📉 Who pays first</div>
+                        <p class="tx">Employment of <b>developers aged 22–25: −20%</b> since 2024</p>
+                        <p class="tx">Meanwhile the <b>senior-engineer headcount grows</b></p>
+                        <p class="tx">A third of firms expect workforce cuts within a year</p>
+                        <p class="tx">AI-talent inflow to the U.S.: <b>−89%</b> since 2017</p>
+                    </div>
+                </div>
+
+                <p class="article-p fade-in">
+                    Here is the key detail: employment of developers aged 22–25 fell nearly 20% since 2024, while the headcount of experienced engineers keeps growing. AI did not "replace programmers." It took the <b>routine part</b> of the work — the very part on which juniors used to grow. The career ladder is breaking at its first rung. A third of organizations already expect to reduce headcount within the year.
+                </p>
+
+                <h2 class="article-h2 fade-in">Geopolitics: sovereignty as the new axis</h2>
+
+                <p class="article-p fade-in">
+                    Governments acted decisively — but in different directions. The EU's first AI Act prohibitions took effect; the U.S. shifted toward deregulation; Japan, South Korea and Italy passed national AI laws. More than half of new national strategies came from developing countries entering the field for the first time. The common denominator is <b>AI sovereignty</b>: the drive to control one's own AI infrastructure.
+                </p>
+
+                <p class="article-p fade-in">
+                    Model production is still concentrated in the U.S. and China, but open source is redistributing participation: contributions from the "rest of the world" on GitHub already outpace Europe and are approaching the U.S., fueling more linguistically diverse models. Openness became the great equalizer — and, at the same time, an instrument of sovereignty.
+                </p>
+
+                <h2 class="article-h2 fade-in">People: optimism rose — but so did anxiety</h2>
+
+                <p class="article-p fade-in">
+                    The public is reading mixed signals. The share of people who see more benefit than harm in AI rose from 55% to 59% in a year — yet the share who say AI makes them nervous climbed to 52%. The most telling divide, though, is between experts and the public.
+                </p>
+
+                <!-- INFOGRAPHIC 7: experts vs public -->
+                <div class="figx fade-in" role="img" aria-label="The expectation gap between experts and the public">
+                    <div class="fxbars">
+                        <div class="fxbar-row">
+                            <div class="rl">Impact on jobs</div>
+                            <div class="fxbar-track">
+                                <div class="fxbar a" style="width:73%">Experts · 73%</div>
+                                <div class="fxbar b" style="width:23%">Public · 23%</div>
+                            </div>
+                        </div>
+                        <div class="fxbar-row">
+                            <div class="rl">Impact on economy</div>
+                            <div class="fxbar-track">
+                                <div class="fxbar a" style="width:69%">Experts · 69%</div>
+                                <div class="fxbar b" style="width:21%">Public · 21%</div>
+                            </div>
+                        </div>
+                        <div class="fxbar-row">
+                            <div class="rl">Impact on healthcare</div>
+                            <div class="fxbar-track">
+                                <div class="fxbar a" style="width:84%">Experts · 84%</div>
+                                <div class="fxbar b" style="width:44%">Public · 44%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cap">Share expecting a positive impact. The jobs gap is <b>50 points</b>. 64% of Americans expect AI to mean fewer jobs</div>
+                </div>
+
+                <p class="article-p fade-in">
+                    73% of experts expect a positive impact of AI on jobs — versus just 23% of the general public. A 50-point gap. And the U.S. reported the lowest trust of any surveyed country in its own government to regulate AI: 31%, against a global average of 54%. Those closest to the technology are far more optimistic than those furthest from it. Usually that means the public hasn't yet seen what practitioners already see.
+                </p>
+
+                <h2 class="article-h2 fade-in">What is actually changing</h2>
+
+                <p class="article-p fade-in">
+                    Step back from the individual records and look at the trajectory, and five shifts emerge. These — not any specific percentage — define 2026.
+                </p>
+
+                <div class="fade-in">
+                    <div class="list-card">
+                        <div class="emoji-chip">🚀</div>
+                        <p class="card-sub"><b class="card-title">Capability accelerates; it is not plateauing.</b><br>Benchmarks meant to last years saturate in months. The plateau everyone expected did not arrive.</p>
+                    </div>
+                    <div class="list-card">
+                        <div class="emoji-chip">📉</div>
+                        <p class="card-sub"><b class="card-title">Cost falls and the top converges.</b><br>The leaders are indistinguishable; open models trail by 3.3%. A strong model is now nearly a commodity.</p>
+                    </div>
+                    <div class="list-card">
+                        <div class="emoji-chip">🧩</div>
+                        <p class="card-sub"><b class="card-title">The frontier is jagged, not smooth.</b><br>Olympiad gold and an inability to read a clock in one model. Never trust the average score.</p>
+                    </div>
+                    <div class="list-card">
+                        <div class="emoji-chip">🏗️</div>
+                        <p class="card-sub"><b class="card-title">Value moves from the model to the system.</b><br>Since everyone has model access, the edge lies in the process, data and people around it.</p>
+                    </div>
+                    <div class="list-card">
+                        <div class="emoji-chip">⚠️</div>
+                        <p class="card-sub"><b class="card-title">Measurement and governance lag behind.</b><br>Incidents rise, labs disclose less, benchmarks break. We are driving faster than we can see the road.</p>
+                    </div>
+                </div>
+
+                <!-- INFOGRAPHIC 8: model to system -->
+                <div class="figx fade-in" role="img" aria-label="Advantage shifts from the model to the production system">
+                    <div class="fxrow tight" style="align-items:center; gap:12px">
+                        <div class="fxnode"><div class="em">🤖</div><div class="lb">Model<br>access</div></div>
+                        <span class="fxarr"></span>
+                        <div class="grad-card" style="flex:1.5 1 0; min-width:0; padding:16px 20px">
+                            <div style="font-size:26px; line-height:1; margin-bottom:6px">🏗️</div>
+                            <div style="font-size:15px; font-weight:800; line-height:1.35">Production system: specs · process · data · people</div>
+                        </div>
+                        <span class="fxarr"></span>
+                        <div class="fxnode"><div class="em">💎</div><div class="lb" style="color:var(--flame)">Real<br>advantage</div></div>
+                    </div>
+                    <div class="cap">Everyone has the same model. The difference is <b>the system around it</b></div>
+                </div>
+
+                <h2 class="article-h2 fade-in">My opinion</h2>
+
+                <p class="article-p fade-in">
+                    Now the author's take. I read these numbers not as an outside analyst but as someone who has rebuilt engineering inside large companies and shipped AI products alone. Here is what I see in them.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>First. The model has stopped being the advantage.</b> When six labs sit within 25 Elo points and open models trail by 3.3%, everyone has access to strong AI. So competition moves one level up — into the production system around the model: specs, data, process, quality evaluation, people. Whoever simply "handed teams access to an LLM" did not accelerate development — they accelerated their chaos. The winner is the one who rebuilt the system itself.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>Second. The real story of the year is the collapse at the bottom.</b> A 20% drop in junior-developer employment is not about "AI replacing people." It is about an agent now doing the routine on which a young engineer used to grow. The rung where careers began is disappearing. The core human skill is no longer "writing code" but <b>owning the outcome</b>: framing the task, managing context, verifying, and being accountable for the product. A weak engineer with AI just produces bad solutions faster. A strong one starts running a system.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>Third. Building became nearly free — and value is being given away.</b> $172B of consumer surplus from mostly-free tools is enormous value that almost no one is monetizing yet. The barrier to building a product collapsed: a team-year used to cost around a million dollars; now a single founder with agents needs a fraction of that. So the winner is not whoever has the better model but whoever masters <b>distribution, retention and trust</b>. Capital is no longer a precondition for building an AI company.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>Fourth. We are scaling faster than we can measure.</b> Benchmarks saturate in months, labs disclose less, incidents rose to 362. The jagged frontier means the average score cannot be trusted: a system that wins olympiad gold can't read a clock. For anyone deploying AI in production — especially in fintech and other regulated fields — the conclusion is blunt: <b>you can no longer outsource quality evaluation to a leaderboard</b>. That is now your job — tests, acceptance criteria, traceability, dashboards. Without it, agentic development is just expensive vibe-coding.
+                </p>
+
+                <p class="article-p fade-in">
+                    <b>Fifth, and most important.</b> The question of 2026 is no longer whether AI works. It works — unevenly, jaggedly, but it works. The question is whether <b>you have rebuilt yourself to use it</b>. The winners will not be those with the best model access — everyone has that. The winners will be those who rebuilt the production system, the org structure and the culture of ownership. The technology has already outrun us. What remains is to see who catches up faster — not in capability, but in readiness.
+                </p>
+
+                <!-- Accent line -->
+                <div class="grad-card fade-in" style="margin:2.4rem 0; padding:26px 30px; text-align:left">
+                    <div class="font-mono text-apple-textMutedLight dark:text-apple-textMutedDark" style="font-size:13px; letter-spacing:.12em; text-transform:uppercase; margin-bottom:12px">The essence of 2026</div>
+                    <div class="text-black dark:text-white" style="font-size:20px; font-weight:700; line-height:1.5">
+                        AI is scaling faster than the world around it can adapt.<br>
+                        The advantage is no longer the model — it is the <span class="grad-text">system, the people and ownership</span>.
+                    </div>
+                </div>
+
+                <p class="article-p fade-in">
+                    In upcoming pieces I'll unpack this in practice: what the production system around a model looks like, how to move a team into AI-Native mode, and why ownership became the engineer's most important skill. Stay tuned.
+                </p>
+
+                <!-- CTA -->
+                <div class="relative bg-white dark:bg-[#1C1C1E] border border-black/10 dark:border-white/10 p-8 md:p-12 lg:p-14 rounded-[2rem] md:rounded-[3rem] shadow-[0_8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.03)] overflow-hidden fade-in mb-12 group">
+
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-black dark:bg-white opacity-90"></div>
+                    <div class="absolute -top-32 -right-32 w-64 h-64 bg-black/[0.02] dark:bg-white/[0.02] rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-4 mb-8">
+                            <div class="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
+                                <i data-lucide="zap" class="w-6 h-6 text-black dark:text-white"></i>
+                            </div>
+                            <h2 class="font-sans font-bold text-2xl md:text-3xl lg:text-4xl text-black dark:text-white tracking-tight m-0">
+                                Subscribe to Dataist
+                            </h2>
+                        </div>
+
+                        <div class="space-y-6 mb-10">
+                            <p class="font-sans text-lg md:text-xl leading-relaxed text-black/80 dark:text-white/80 font-medium">
+                                Real cases of AI adoption, hands-on practice, and thoughts on how work and business are changing.
+                            </p>
+                        </div>
+
+                        <div class="pt-8 md:pt-10 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
+                            <p class="text-xl md:text-2xl font-bold text-black dark:text-white tracking-tight max-w-md">
+                                Cases, thoughts and AI practice<br>— on Telegram.
+                            </p>
+
+                            <a href="https://t.me/andre_dataist" target="_blank" rel="noopener" class="shrink-0 inline-flex items-center gap-3 px-8 py-4 bg-black dark:bg-white text-white dark:text-black rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl hover:shadow-2xl group/btn">
+                                <span class="font-sans text-base md:text-lg font-semibold">Open Telegram</span>
+                                <i data-lucide="arrow-up-right" class="w-5 h-5 transition-transform group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sources -->
+                <p class="card-sub fade-in text-center mb-4">
+                    Sources: Stanford HAI, "Artificial Intelligence Index Report" 2025 and 2026. All figures are drawn from these reports.
+                </p>
+
+            </div>
+        </article>
+    </main>
+
+    <!-- Bottom progress bar -->
+    <div class="fixed bottom-0 left-0 w-full h-1.5 bg-transparent z-50">
+        <div id="progress-bar" class="h-full bg-black dark:bg-white w-0 transition-all duration-100 ease-out"></div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+
+        function applyTheme(isDark) {
+            if (isDark) {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        const tg = window.Telegram?.WebApp;
+        if (tg && tg.initData) {
+            tg.ready();
+            tg.expand();
+            if (tg.colorScheme) {
+                applyTheme(tg.colorScheme === 'dark');
+                tg.onEvent('themeChanged', function() {
+                    applyTheme(tg.colorScheme === 'dark');
+                });
+            }
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const isCurrentlyDark = html.classList.contains('dark');
+            applyTheme(!isCurrentlyDark);
+        });
+
+        window.addEventListener('scroll', () => {
+            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            let scrolled = (winScroll / height) * 100;
+            document.getElementById("progress-bar").style.width = scrolled + "%";
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const observerOptions = { root: null, rootMargin: '0px', threshold: 0.05 };
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+        });
+    </script>
+
+</body>
+</html>
