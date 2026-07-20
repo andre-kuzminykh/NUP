@@ -1,6 +1,6 @@
 AI has outrun us
 
-The new Stanford AI Index reports are out — the 2025 and 2026 editions. I put them side by side and looked not at individual records but at what actually changed over the year. The takeaway is uncomfortable: AI itself shot ahead, while everything around it — people, companies, laws, the job market — is failing to keep up. Everything else follows from that.
+I finally read the fresh Stanford AI Index cover to cover and compared it with last year's edition. What's interesting isn't the 2026 snapshot itself, but the dynamic — what moved, and where, over the year. And the takeaway is uncomfortable: AI itself shot ahead, while everything around it — people, companies, laws, the job market — is failing to keep up. Everything else follows from that.
 
 Money. U.S. private AI investment grew from $109B to $286B in a year, global investment more than doubled, and generative AI added over 200%. This is no longer cautious interest — it's the whole industry betting ten years ahead. With one caveat: revenue is growing fast, but spending on compute is growing faster — Google alone poured over $150B into infrastructure in a year. Whether it pays off, no one yet knows.
 
